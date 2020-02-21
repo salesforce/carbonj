@@ -1,0 +1,38 @@
+#
+# Copyright (c) 2018, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+#
+
+dw:
+    groupId: 00
+metrics:
+    store:
+      enabled: true
+      dataDir: work/carbonj-data
+      checkPoint:
+        dir: work/carbonj-checkpoint
+server:
+    # Spring boot application by default brings up the Jetty with 2001 since we have specified  SpringBootTest.WebEnvironment.DEFINED_PORT
+    # So if we say jetty.port = 56787, carbonjClient uses this port when Jetty is listening on 2001
+    # Hence we get "Connection Refused"
+    port: 2001
+    dataport: 2003
+    host: localhost
+
+kinesis:
+  consumer:
+    enabled: false
+  recovery:
+    enabled: true
+
+## Logging configuration
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    com.salesforce.cc.infra.core.kinesis: FATAL
+    com.amazonaws.services.kinesis: FATAL
+    com.demandware: INFO
+

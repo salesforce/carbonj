@@ -1,0 +1,120 @@
+#
+# Copyright (c) 2018, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+#
+
+# Spring configuration
+spring:
+  #  main:
+  #    banner-mode: "off"
+  profiles:
+    active: dev
+metrics:
+  store:
+    #    enabled: true
+    enabled: false
+    dataDir: work/carbonj-data
+    stagingDir: work/carbonj-staging
+    checkPoint:
+      dir: work/carbonj-checkpoint
+      offset:
+        default:
+          mins: 5
+jetty:
+  # to support import
+  maxFormContentSize: 1000000
+
+server:
+  port: 2001
+  jetty:
+    max-http-post-size: 1000000
+# service id - should not really matter for now
+#dw:
+#  groupId: "00"
+#  podId: 98
+#  svc:
+#    version: "carbonj_svcbox-1_0_204"
+
+
+# for development - effectively disables rpc time out making debugging possible.
+#httpProtocolTimeOut:
+#  3600000
+
+# graphite settings should point to itself - since this is aggregator
+#graphite:
+#  host: 127.0.0.1
+#  port: 2003
+#  transport: TCP
+#  enabled: false
+#relay:
+#  threads: 8
+#  queue: 1000000
+#
+## max queue size per destination
+#  dest:
+#    queue: 100000
+## buffer sizes
+#  tcp:
+#    buff: 4096
+#  udp:
+#    buff: 2097152
+#  pickle:
+#    buff: 64000
+#
+#kinesis:
+#  consumer:
+#    enabled: true
+#  recovery:
+#    enabled: false
+#
+#staging:
+#  systemSort:
+#    tmpDir: /tmp
+#    nParallel: 0
+
+
+aggregation:
+  enabled: false
+---
+spring:
+  profiles: prod
+
+# Logging configuration
+#logging:
+#  file: carbonj.log
+#  pattern:
+#    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+#    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+#  level:
+#    root: WARN
+#    com.salesforce.cc.infra.core.kinesis: INFO
+#    com.demandware: INFO
+---
+spring:
+  profiles: dev
+
+# Logging configuration
+logging:
+  #  file: carbonj.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.salesforce.cc.infra.core.kinesis: DEBUG
+    com.demandware: DEBUG
+---
+spring:
+  profiles: test
+
+
+## Logging configuration
+#logging:
+#  pattern:
+#    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+#  level:
+#    com.salesforce.cc.infra.core.kinesis: INFO
+#    com.demandware: INFO
+

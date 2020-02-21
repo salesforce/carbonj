@@ -1,0 +1,53 @@
+#
+# Copyright (c) 2018, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+#
+
+# Spring configuration
+spring:
+  profiles:
+    active: dev
+metrics:
+  store:
+    enabled: false
+    dataDir: work/carbonj-data
+    stagingDir: work/carbonj-staging
+    checkPoint:
+      dir: work/carbonj-checkpoint
+      offset:
+        default:
+          mins: 5
+jetty:
+  # to support import
+  maxFormContentSize: 1000000
+
+server:
+  port: 2001
+  jetty:
+    max-http-post-size: 1000000
+
+
+aggregation:
+  enabled: false
+---
+spring:
+  profiles: prod
+---
+spring:
+  profiles: dev
+
+# Logging configuration
+#logging:
+#  #  file: carbonj.log
+#  pattern:
+#    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+#    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+#  level:
+#    root: INFO
+#    com.salesforce.cc.infra.core.kinesis: DEBUG
+#    com.demandware: DEBUG
+---
+spring:
+  profiles: test

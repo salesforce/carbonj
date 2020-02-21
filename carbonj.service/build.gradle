@@ -1,0 +1,218 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.2.2.RELEASE")
+        classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
+        classpath 'net.researchgate:gradle-release:2.6.0'
+
+    }
+}
+
+plugins {
+    id "com.github.hierynomus.license"
+    id 'maven-publish'
+    id 'net.researchgate.release'
+    id 'org.springframework.boot'
+//    id 'jacoco'
+}
+
+license {
+    header rootProject.file('LICENSE-HEADER-JAVA')
+    exclude "**/banner.txt"
+//    include "**/*.conf"
+}
+
+task licenseFormatDockerFiles(type: com.hierynomus.gradle.license.tasks.LicenseFormat) {
+    source = fileTree(dir: "src").include("main/docker/files/*")
+}
+licenseFormat.dependsOn licenseFormatDockerFiles
+
+task licenseCheckDockerFiles(type: com.hierynomus.gradle.license.tasks.LicenseFormat) {
+    source = fileTree(dir: "src").include("main/docker/files/*")
+}
+licenseMain.dependsOn licenseCheckDockerFiles
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'com.palantir.docker'
+apply plugin: 'org.sonarqube'
+//apply plugin: "jacoco"
+apply plugin: 'maven-publish'
+apply plugin: 'maven-publish-auth'
+apply plugin: 'net.researchgate.release'
+apply plugin: 'org.springframework.boot'
+//apply plugin: "com.github.hierynomus.license"
+apply plugin: 'distribution'
+
+// TODO it looks like jacoco messes with the jni interface to rocksdb. when enabled, there is a high likelyhood of the
+// build failing although it does not fail always. this happens with rocksdb 4 and 6. for now disable jacoco.
+
+//jacocoTestReport {
+//    reports {
+//        xml.enabled false
+//        csv.enabled false
+//        html.destination "${buildDir}/jacocoHtml"
+//    }
+//}
+
+ext {
+    dockerRepo = ""
+    dockerGroup = 'umon/carbonj'
+    isSnapshot = version.endsWith('-SNAPSHOT')
+}
+
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+bootJar {
+//    classifier = 'boot'
+//    launchScript()
+}
+
+task unpack(type: Copy) {
+    dependsOn bootJar
+    from(zipTree(tasks.bootJar.outputs.files.singleFile))
+    into("build/dependency")
+}
+
+docker {
+    print "name of the docker image is ${dockerRepo}${project.dockerGroup}:${project.version}"
+    name "${dockerRepo}${project.dockerGroup}:${project.version}"
+    files tasks.unpack.outputs, "src/main/docker/files"
+    copySpec.into("dependency")
+    buildArgs(['DEPENDENCY': "dependency", 'VERSION': "${project.version}"])
+    noCache true
+}
+
+configurations {
+    compile.exclude module: "spring-boot-starter-tomcat"
+//    compile.exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
+}
+
+distributions {
+    custom {
+        baseName = project.name
+        contents {
+            from { 'build/libs' }
+            from { 'carbonj.sh' }
+            from { 'README.md' }
+        }
+    }
+}
+// for release automatically push released docker and mvn image to repo
+afterReleaseBuild.dependsOn publish
+publish.dependsOn dockerPush
+publish.dependsOn build
+
+publishing {
+    publications {
+        myDistribution(MavenPublication) {
+            artifact customDistTar
+        }
+    }
+
+    repositories {
+        mavenLocal()
+    }
+}
+
+
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+}
+
+release {
+    failOnCommitNeeded = false
+    failOnUpdateNeeded = false
+}
+sourceCompatibility = 1.8
+
+
+description = 'CarbonJ Service Implementation'
+dependencies {
+    // TODO needs to be open-sourced too
+    compile project(':cc-metrics-reporter')
+//    compile group: 'com.sfcc.um', name: 'metrics_reporter', version:'0.0.2'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api'
+    compile group: 'org.slf4j', name: 'slf4j-api'
+    compile group: 'org.rocksdb', name: 'rocksdbjni', version: '6.4.6'
+    compile group: 'com.google.code.gson', name: 'gson', version: '2.6.2'
+    compile group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: '0.1.9'
+    compile group: 'com.google.guava', name: 'guava', version: '24.0-jre'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.5'
+    compile group: 'commons-io', name: 'commons-io', version: '2.5'
+    compile group: 'joda-time', name: 'joda-time', version: '2.7'
+    compile group: 'io.netty', name: 'netty-all', version: '4.0.33.Final'
+    compile group: 'net.razorvine', name: 'pyrolite', version: '4.13'
+    compile group: 'org.python', name: 'jython-standalone', version: '2.5.2'
+    compile group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.9.1'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.0.0'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.0.0'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.0.0'
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
+
+    compile group:"org.springframework.boot", name:"spring-boot-starter-logging", version:"2.2.2.RELEASE"
+    compile group:"org.springframework.boot", name:"spring-boot-starter-web", version:"2.2.2.RELEASE"
+    compile group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"2.2.2.RELEASE"
+
+    compile group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"2.2.2.RELEASE"
+    testCompile (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"2.2.2.RELEASE")
+
+}
+
+test {
+    maxHeapSize = "2g"
+}
+
+tasks.withType(Test) {
+    testLogging {
+        // set options for log level LIFECYCLE
+        events TestLogEvent.FAILED,
+                TestLogEvent.PASSED,
+                TestLogEvent.SKIPPED,
+                TestLogEvent.STANDARD_OUT
+        exceptionFormat TestExceptionFormat.FULL
+        showExceptions true
+        showCauses true
+        showStackTraces false
+
+        // set options for log level DEBUG and INFO
+        debug {
+            events TestLogEvent.STARTED,
+                    TestLogEvent.FAILED,
+                    TestLogEvent.PASSED,
+                    TestLogEvent.SKIPPED,
+                    TestLogEvent.STANDARD_ERROR,
+                    TestLogEvent.STANDARD_OUT
+            exceptionFormat TestExceptionFormat.FULL
+        }
+        info.events = debug.events
+        info.exceptionFormat = debug.exceptionFormat
+
+        afterSuite { desc, result ->
+            if (!desc.parent) {
+                // will match the outermost suite
+                def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+                def startItem = '|  ', endItem = '  |'
+                def repeatLength = startItem.length() + output.length() + endItem.length()
+                println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
+            }
+        }
+    }
+}

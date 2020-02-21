@@ -1,0 +1,53 @@
+#
+# Copyright (c) 2018, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+#
+
+#XE and OAnda Exchange Rate service providers are currently not active:
+#test.oanda.exchangerates.url=http://www.oanda.com/cgi-bin/fxml/fxml?fxmlrequest=%3Cconvert%3E%3Cclient_id%3Eoandatest%3C/client_id%3E%3Cexpr%3EUSD%3C/expr%3E%3Cexch%3EAFN_AFA_ALL_DZD_ADF_ADP_AOA_AON_ARS_AMD_AWG_AUD_ATS_AZM_AZN_BSD_BHD_BDT_BBD_BEF_BZD_BMD_BTN_BOB_BAM_BWP_BRL_GBP_BND_BGN_BGL_BIF_BYR_XOF_XAF_XPF_KHR_CAD_CVE_KYD_CLP_CNY_COP_KMF_CDF_CRC_HRK_CUC_CUP_CYP_CZK_DKK_DJF_DOP_NLG_XCD_XEU_ECS_EGP_SVC_EEK_ETB_EUR_FKP_FJD_FIM_FRF_GMD_GEL_DEM_GHC_GHS_GIP_XAU_GRD_GTQ_GNF_GYD_HTG_HNL_HKD_HUF_ISK_INR_IDR_IRR_IQD_IEP_ILS_ITL_JMD_JPY_JOD_KHR_KZT_KES_KRW_KWD_KGS_LAK_LVL_LBP_LSL_LRD_LYD_LTL_LUF_MOP_MKD_MGF_MWK_MGA_MYR_MVR_MTL_MRO_MUR_MXN_MDL_MNT_MAD_MZM_MZN_MMK_ANG_NAD_NPR_NLG_NZD_NIO_NGN_KPW_NOK_OMR_PKR_XPD_PAB_PGK_PYG_PEN_PHP_XPT_PLN_PTE_GBP_QAR_ROL_RON_RUB_RWF_WST_STD_SAR_RSD_SCR_SLL_XAG_SGD_SKK_SIT_SBD_SOS_ZAR_ESP_LKR_SHP_SDD_SDG_SDP_SRD_SRG_SZL_SEK_CHF_SYP_TWD_TJS_TZS_THB_TMM_TMT_TOP_TTD_TND_TRL_TRY_UGX_UAH_UAH_GBP_USD_UYU_UZS_AED_VUV_VEB_VEF_VND_YER_YUN_ZMK_ZMW_ZWD_%3C/exch%3E%3C/convert%3E
+#
+##Geo IP tests use these IPs for some of the tests:
+#test.well.known.ip=128.101.101.101
+#test.google.ip=74.125.226.212
+#dw.groupId=00
+#httpProtocolTimeOut=3600000
+#fs.work=./target/
+#fs.resources=./target/resources
+#cj.home=work/cj
+#demandware.logging.settings.logcenter.enabled=true
+
+
+dw:
+    groupId: 00
+metric:
+    aggregation:
+        rules: /tmp/aggregation-rules.conf
+metrics:
+    store:
+      enabled: false
+      checkPoint:
+        dir: work/carbonj-checkpoint
+server:
+    # Spring boot application by default brings up the Jetty with 2001 since we have specified  SpringBootTest.WebEnvironment.DEFINED_PORT
+    # So if we say jetty.port = 56787, carbonjClient uses this port when Jetty is listening on 2001
+    # Hence we get "Connection Refused"
+    port: 2001
+    dataport: 2003
+    host: localhost
+
+kinesis:
+  consumer:
+    enabled: true
+  recovery:
+    enabled: true
+
+## Logging configuration
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    com.salesforce.cc.infra.core.kinesis: FATAL
+    com.amazonaws.services.kinesis: FATAL
+    com.demandware: INFO

@@ -1,0 +1,58 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+//    dependencies {
+//        classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
+//        classpath 'net.researchgate:gradle-release:2.6.0'
+//    }
+}
+
+apply plugin: 'java-library'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: "maven"
+//apply plugin: 'maven-publish'
+//apply plugin: 'maven-publish-auth'
+//apply plugin: 'net.researchgate.release'
+apply plugin: 'distribution'
+
+//group = 'com.sfcc.um'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+
+dependencies {
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.2'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.26'
+    compile group: 'com.google.guava', name: 'guava', version: '24.0-jre'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.0.0'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.0.0'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.0.0'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+//publish.dependsOn build
+//afterReleaseBuild.dependsOn publish
+//
+//publishing {
+//    publications {
+//        artifact(MavenPublication) {
+//            from components.java
+//        }
+//    }
+//
+//    repositories {
+//        mavenLocal{
+//
+//        }
+//    }
+//}

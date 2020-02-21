@@ -1,0 +1,5 @@
+rootProject.name = 'carbonj'
+include ':carbonj.service'
+include ':cc-metrics-reporter'
+project(':carbonj.service').projectDir = "$rootDir/carbonj.service" as File
+project(':cc-metrics-reporter').projectDir = "$rootDir/cc-metrics-reporter" as File
