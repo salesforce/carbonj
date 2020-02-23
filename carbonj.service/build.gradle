@@ -49,7 +49,6 @@ apply plugin: 'org.sonarqube'
 apply plugin: 'maven-publish'
 apply plugin: 'maven-publish-auth'
 apply plugin: 'net.researchgate.release'
-apply plugin: 'org.springframework.boot'
 //apply plugin: "com.github.hierynomus.license"
 apply plugin: 'distribution'
 
