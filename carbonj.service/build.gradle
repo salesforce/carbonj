@@ -182,6 +182,7 @@ dependencies {
 
 test {
     maxHeapSize = "2g"
+    environment "AWS_REGION", "us-east-1"
 }
 
 tasks.withType(Test) {
