@@ -102,7 +102,7 @@ docker {
     name "${dockerRepo}${project.dockerGroup}:${project.version}"
     files tasks.unpack.outputs, "src/main/docker/files"
     copySpec.into("dependency")
-    buildArgs(['DEPENDENCY': "dependency", 'VERSION': project.isSnapshot ? "latest" : "${project.version}"])
+    buildArgs(['DEPENDENCY': "dependency", 'VERSION': "${project.version}"])
     noCache true
 }
 
