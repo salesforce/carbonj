@@ -66,9 +66,13 @@ apply plugin: 'distribution'
 ext {
     if (project.hasProperty('dockerRepo')) {
         dockerRepo = project.dockerRepo
-        dockerGroup = 'umon/carbonj'
     } else {
         dockerRepo = "";
+    }
+
+    if (project.hasProperty('dockerGroup')) {
+        dockerGroup = project.dockerGroup
+    } else {
         dockerGroup = 'carbonj'
     }
     println("dockerRepo:" + dockerRepo)
@@ -98,7 +102,7 @@ docker {
     name "${dockerRepo}${project.dockerGroup}:${project.version}"
     files tasks.unpack.outputs, "src/main/docker/files"
     copySpec.into("dependency")
-    buildArgs(['DEPENDENCY': "dependency", 'VERSION': "${project.version}"])
+    buildArgs(['DEPENDENCY': "dependency", 'VERSION': project.isSnapshot ? "latest" : "${project.version}"])
     noCache true
 }
 
