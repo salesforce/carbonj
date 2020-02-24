@@ -31,6 +31,5 @@ https://docs.google.com/presentation/d/1SIUnGp94ieygPh2ZzQhlX6NDco-xejwJbY_1oXUr
 
 # How to build
 
-Run `gradle build` to run the test suite and create the Spring boot jar. Run `Run
-`./gradle build` to run the test suite and create the Spring boot jar. Run
+Run `gradle build` to run the test suite and create the Spring boot jar. Run `./gradle build` to run the test suite and create the Spring boot jar. Run
 `./gradlew carbonj.service:docker -PdockerRepo="my-docker-repo.com/"` to build the docker image. 
