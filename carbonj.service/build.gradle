@@ -66,11 +66,12 @@ apply plugin: 'distribution'
 ext {
     if (project.hasProperty('dockerRepo')) {
         dockerRepo = project.dockerRepo
+        dockerGroup = 'umon/carbonj'
     } else {
         dockerRepo = "";
+        dockerGroup = 'carbonj'
     }
     println("dockerRepo:" + dockerRepo)
-    dockerGroup = 'umon/carbonj'
     isSnapshot = version.endsWith('-SNAPSHOT')
 }
 
