@@ -18,7 +18,9 @@ jobs:
     - name: Log into registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
     - name: Build with Gradle
-      run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/  build carbonj.service:docker
+      run: ./gradlew build --info
+    - name: Publish Docker container
+      run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
 #    - name: Push image
 #      run: |
 #        IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
