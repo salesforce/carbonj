@@ -593,16 +593,4 @@ public class cfgCarbonJ
     {
         return new DatabaseMetrics( metricRegistry );
     }
-
-    @Autowired ScheduledExecutorService centralExecutor;
-
-    @PostConstruct public void test()
-    {
-        centralExecutor.scheduleWithFixedDelay( () -> {
-            log.info( "info" );
-            log.warn( "warn" );
-            log.debug( "debug" );
-        }, 0, 10, TimeUnit.SECONDS );
-
-    }
 }

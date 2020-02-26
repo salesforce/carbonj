@@ -15,141 +15,50 @@
     <property name="CONSOLE_LOG_PATTERN" value="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
     <property name="FILE_LOG_PATTERN" value="%d %p %c{1.} [%t] %m%n"/>
 
-    <springProfile name="dev">
-        <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
-        <appender name="ROLLING-FILE"
-                  class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <encoder>
-                <pattern>${CONSOLE_LOG_PATTERN}</pattern>
-            </encoder>
-            <file>${LOG_FILE}</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
-                <maxHistory>5</maxHistory>
-            </rollingPolicy>
-        </appender>
-        <root level="WARN">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="ROLLING-FILE"/>
-        </root>
-        <logger name="com.demandware" level="DEBUG" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-        <logger name="com.salesforce" level="INFO" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-        <logger name="com.amazonaws.services.kinesis" level="FATAL" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-    </springProfile>
-
-    <springProfile name="test">
-        <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
-        <root level="WARN">
-            <appender-ref ref="CONSOLE"/>
-        </root>
-        <logger name="com.demandware" level="TRACE" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-        <logger name="com.salesforce" level="TRACE" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-        <logger name="com.amazonaws.services.kinesis" level="FATAL" additivity="false">
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-    </springProfile>
-
-    <springProfile name="prod">
-        <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
-        <appender name="ROLLING-FILE"
-                  class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <encoder>
-                <pattern>${FILE_LOG_PATTERN}</pattern>
-            </encoder>
-            <file>${LOG_FILE}</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
-                <maxHistory>5</maxHistory>
-            </rollingPolicy>
-        </appender>
-        <appender name="KINESIS-FILE"
-                  class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <encoder>
-                <pattern>${FILE_LOG_PATTERN}</pattern>
-            </encoder>
-            <file>${KINESIS_LOG_FILE}</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>${KINESIS_LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
-                <maxHistory>5</maxHistory>
-            </rollingPolicy>
-        </appender>
-        <root level="INFO">
-            <appender-ref ref="ROLLING-FILE"/>
-            <appender-ref ref="CONSOLE"/>
-        </root>
-        <logger name="com.demandware.carbonj.service.engine.recovery" level="DEBUG" additivity="false">
-            <appender-ref ref="ROLLING-FILE"/>
-        </logger>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    <appender name="ROLLING-FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+        <file>${LOG_FILE}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>5</maxHistory>
+        </rollingPolicy>
+    </appender>
+    <appender name="KINESIS-FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+        <file>${KINESIS_LOG_FILE}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${KINESIS_LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>5</maxHistory>
+        </rollingPolicy>
+    </appender>
+    <root level="INFO">
+        <appender-ref ref="ROLLING-FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
+    <logger name="com.demandware.carbonj.service.engine.recovery" level="DEBUG" additivity="false">
+        <appender-ref ref="ROLLING-FILE"/>
+    </logger>
 <!--
-    separate kinesis log file
+separate kinesis log file
 -->
-        <logger name="com.amazonaws.services.kinesis" level="DEBUG" additivity="false">
-            <appender-ref ref="KINESIS-FILE"/>
-        </logger>
-        <logger name="com.demandware" level="INFO" additivity="false">
-            <appender-ref ref="ROLLING-FILE"/>
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-        <logger name="com.salesforce" level="INFO" additivity="false">
-            <appender-ref ref="ROLLING-FILE"/>
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-    </springProfile>
-    <springProfile name="debug">
-        <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
-        <appender name="ROLLING-FILE"
-                  class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <encoder>
-                <pattern>${FILE_LOG_PATTERN}</pattern>
-            </encoder>
-            <file>${LOG_FILE}</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
-                <maxHistory>5</maxHistory>
-            </rollingPolicy>
-        </appender>
-        <appender name="KINESIS-FILE"
-                  class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <encoder>
-                <pattern>${FILE_LOG_PATTERN}</pattern>
-            </encoder>
-            <file>${KINESIS_LOG_FILE}</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>${KINESIS_LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
-                <maxHistory>5</maxHistory>
-            </rollingPolicy>
-        </appender>
-        <root level="DEBUG">
-            <appender-ref ref="ROLLING-FILE"/>
-            <appender-ref ref="CONSOLE"/>
-        </root>
-        <logger name="com.demandware.carbonj.service.engine.recovery" level="DEBUG" additivity="false">
-            <appender-ref ref="ROLLING-FILE"/>
-        </logger>
-<!--
-    separate kinesis log file
--->
-        <logger name="com.amazonaws.services.kinesis" level="DEBUG" additivity="false">
-            <appender-ref ref="KINESIS-FILE"/>
-        </logger>
-        <logger name="com.demandware" level="DEBUG" additivity="false">
-            <appender-ref ref="ROLLING-FILE"/>
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-        <logger name="com.salesforce" level="DEBUG" additivity="false">
-            <appender-ref ref="ROLLING-FILE"/>
-            <appender-ref ref="CONSOLE"/>
-        </logger>
-    </springProfile>
+    <logger name="com.amazonaws.services.kinesis" level="DEBUG" additivity="false">
+        <appender-ref ref="KINESIS-FILE"/>
+    </logger>
+    <logger name="com.demandware" level="INFO" additivity="false">
+        <appender-ref ref="ROLLING-FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+    <logger name="com.salesforce" level="INFO" additivity="false">
+        <appender-ref ref="ROLLING-FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
 
 </configuration>
