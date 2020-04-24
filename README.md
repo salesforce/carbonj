@@ -27,7 +27,7 @@ It is currently running the Salesforce CommerceCloud Grafana/Graphite metrics st
 - carbon-relay compatible blacklisting
 - AWS Kinesis streams: Instead of routing metrics data to CarbonJ, Kinesis streams can be used instead. This allows for loss-free restarts of CarbonJ storage nodes.
 
-https://docs.google.com/presentation/d/1SIUnGp94ieygPh2ZzQhlX6NDco-xejwJbY_1oXUr-m8/edit
+https://github.com/salesforce/carbonj/blob/master/CarbonJ.pdf
 
 # How to build
 
