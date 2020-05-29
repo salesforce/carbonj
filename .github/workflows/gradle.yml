@@ -15,13 +15,14 @@ jobs:
         java-version: 1.8
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    #- name: Log into registry
-    #  run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+    - name: Log into registry
+      #  run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+      run: echo "${{ secrets.DOCKER_HUB_SECRET }}" | docker login --username chrbayer84 --password-stdin
     - name: Build with Gradle
       run: ./gradlew build --info
     - name: Publish Docker container
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
-      run: ./gradlew -PdockerRepo=hub.docker.com/chrbayer84/ -x test publish  --info
+      run: ./gradlew -PdockerRepo=chrbayer84/ -x test publish  --info
 #    - name: Push image
 #      run: |
 #        IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
