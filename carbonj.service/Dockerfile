@@ -31,7 +31,7 @@ RUN yum update -y && \
   sysstat \
   epel-release \
   less \
-  && wget https://centos7.iuscommunity.org/ius-release.rpm \
+  && wget https://repo.ius.io/ius-release-el7.rpm \
   && rpm -Uvh ius-release*rpm \
   && rm ius-release*rpm \
   && yum install -y   python36u \
