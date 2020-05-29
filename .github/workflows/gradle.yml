@@ -21,7 +21,7 @@ jobs:
       run: ./gradlew build --info
     - name: Publish Docker container
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
-      run: ./gradlew -PdockerRepo=chrbayer84/ -x test publish  --info
+      run: ./gradlew -PdockerRepo=hub.docker.com/chrbayer84/ -x test publish  --info
 #    - name: Push image
 #      run: |
 #        IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
