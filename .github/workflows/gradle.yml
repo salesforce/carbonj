@@ -20,6 +20,10 @@ jobs:
       run: echo "${{ secrets.DOCKER_HUB_SECRET }}" | docker login --username chrbayer84 --password-stdin
     - name: Build with Gradle
       run: ./gradlew build --info
+    - name: scan docker image
+      uses: azure/container-scan@v0
+      with:
+        image-name: carbonj:1.1.5-SNAPSHOT
     - name: Publish Docker container
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
       run: ./gradlew -PdockerRepo=chrbayer84/ -x test publish  --info
