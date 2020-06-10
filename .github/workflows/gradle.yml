@@ -24,7 +24,7 @@ jobs:
       uses: azure/container-scan@v0
       with:
         image-name: chrbayer84/carbonj:1.1.5-SNAPSHOT
-        severity-threshold: CRITICAL
+        # severity-threshold: CRITICAL
         # run-quality-checks: false
     - name: Publish Docker container
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
