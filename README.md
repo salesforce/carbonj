@@ -6,7 +6,7 @@ This project seeks to sequentialize the random write i/o typically typically gen
 
 CarbonJ instead uses JVM-embedded RocksDB to store all metrics datapoints once per interval and different buckets for different resolutions, avoiding churn on aggregation.
 
-It is currently running the Salesforce CommerceCloud Grafana/Graphite metrics stack. 
+It is currently running the Salesforce CommerceCloud Grafana/Graphite metrics stack and handles ~45M metric data points arriving every minute using 6 shards.
 
 # Features
 
