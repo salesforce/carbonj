@@ -1,0 +1,216 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: carbonj-conf
+  namespace: carbonj
+data:
+  # current PRD config for storage node
+  aggregation-rules.conf: |
+    # Aggregation rules
+    # rules use carbon-aggregator syntax. There is one additional extention - to indicate that original metric should be dropped include "drop", and s
+    # Example: to drop raw metrics for <namespace> metrics after aggregation:
+    # namespace.<metric>.mean (60) drop c = avg <namespace>[0-9]{1,2}.othernamespace.*.*.*.*.namespace.<<metric>>.mean
+    #
+    # For time interval only "(60)" is supported for now.
+
+
+  query-blacklist.conf: |
+    ^\*\.\*\.\*\.
+
+  service.properties: |
+    #
+    # CarbonJ Beta Config
+    #
+
+    # self reporting metrics go into this: pod<dw.podId>.<dw.groupId>
+    dw.groupId=carbonj
+    dw.podId=98
+    dw.groupFormat=.*
+
+    #
+    # Jetty Port
+    #
+
+    # Port to listen for rpc traffic on
+    # Line Protocol Channel : jetty.port + 2
+    # Pickle Protocol Channel : jetty.port + 3
+    jetty.port=2001
+
+    #
+    # Self Metric Destination
+    #
+    graphite.host=relay-udp.carbonj.svc.cluster.local
+    graphite.port=2003
+    graphite.transport=UDP
+    graphite.transport.tcp.reconnect=true
+
+    #
+    # Aggregation
+    #
+    aggregation.enabled=true
+
+    #
+    # Metrics Store Config
+    #
+    metrics.store.enabled=true
+    metrics.store.lowerResolutionArchives.enabled=true
+    metrics.store.dataDir=work/carbonj-data
+    metrics.store.stagingDir=work/carbonj-staging
+    metrics.store.stagingIntervalsQueueConsumersPerDb=4
+    metrics.store.stagingIntervalQueueConsumerBatchSize=30000
+
+    metrics.tasks.queueSize=500000
+    metrics.tasks.queueReadBatchSize=10000
+
+    #
+    # Max Query Restriction
+    #
+
+    # request for 10000 metrics over 500 days
+    metrics.store.maxDataPointsPerRequest=240000000
+
+    # request for 10000 metrics over a day
+    metrics.store.heavyQueryThreshold=14400000
+
+    #
+    # Caches
+    #
+    metrics.store.nameIndexCacheSize=12000000
+    metrics.store.expireAfterWriteQueryCacheInSeconds=300
+    string.cache.maxSize=13000000
+
+    # Sort Dir
+    staging.systemSort.tmpDir=work/carbonj-tmp
+
+    staging.timeAggrJob.threads=6
+
+    # TODO probably being ignored right now:
+    # to support import
+    #jetty.maxFormContentSize=1000000
+
+    metrics.store.fetchSeriesThreads=50
+    metrics.store.threadBlockingQueueSize=100
+
+    metrics.store.heavyQueryThreads=5
+    metrics.store.heavyQueryBlockingQueueSize=10
+
+    metrics.store.batchedSeriesSize=200
+
+    #
+    # Relay Options
+    #
+    relay.queue.rejectPolicy=block
+    relay.queue=3000000
+    relay.threads=3
+
+    #
+    # Debug
+    #
+    #debug.dumpIndex=true
+    #debug.dumpIndexFile=/data/carbonj/index-dump.out
+
+    #
+    # RocksDB Write Buffer
+    # 64m, 265m, 512m
+    #
+    #rocksdb.writeBufferSize=67108864
+    rocksdb.writeBufferSize=268435456
+    #rocksdb.writeBufferSize=536870912
+
+    rocksdb.maxWriteBufferNumber=4
+    rocksdb.minWriteBufferNumberToMerge=1
+
+    #
+    # RocksDB Tuning
+    #
+    # https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide
+    # https://github.com/facebook/rocksdb/wiki/Write-Stalls
+
+    #
+    # Level 0
+    #
+    # L0 file size =  writeBufferSize * minWriteBufferNumberToMerge = 256MB
+    # L0 stable size = writeBufferSize * minWriteBufferNumberToMerge * levelZeroFileNumCompactionTrigger = 256MB
+    rocksdb.levelZeroFileNumCompactionTrigger=1
+    rocksdb.levelZeroSlowDownWriteTrigger=8
+    rocksdb.levelZeroStopWritesTrigger=10
+    #rocksdb.increaseParallelism=
+
+    # Compactions
+    rocksdb.maxBackgroundCompactions=48
+    rocksdb.compactionThreadPoolSize=48
+
+    # 100MB Target file size in L1. Recommended value: maxBytesForLevelBase / 10
+    rocksdb.maxBytesForLevelBase=268435456
+    #rocksdb.maxBytesForLevelBase=536870912
+    #rocksdb.maxBytesForLevelBase=1073741824
+
+    rocksdb.targetFileSizeBase=26843545
+    #rocksdb.targetFileSizeBase=536870912
+    #rocksdb.targetFileSizeBase=134217728
+
+    rocksdb.numLevels=5
+    rocksdb.targetFileSizeMultiplier=10
+    #rocksdb.maxBytesForLevelMultiplier=20
+    #rocksdb.blockSize=8192
+    rocksdb.blockCacheSize=1073741274
+    # disable dup point detection on CJ. Relay does all the work.
+    pointFilter.dupPointCacheMaxSize=0
+
+    # to enable kinesis consumers
+    kinesis.consumer.enabled=true
+
+    kinesis.kcl.prefix.default=dev
+
+    events.kinesis.stream=dev-logging
+
+    kinesis.consumer.leaseExpirationTimeInSecs=120
+
+    # drop points older than 1 hour
+    pointFilter.maxAge=3600
+    # drop points which have timestamps > 1hr in the future
+    pointFilter.maxFutureAge=3600
+
+  storage-aggregation.conf: |
+    sum = ^OM-.*\Q.sum\E$
+    min = .*\Q.min\E$
+    max = .*\Q.max\E$
+    avg = *
+
+  shard1-consumer-rules.conf: |
+        kinesis:dev-metricsS1
+
+  shard2-consumer-rules.conf: |
+        kinesis:dev-metricsS2
+
+  log4j2.xml: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Configuration monitorInterval="30" status="WARN" name="carbonj" packages="com.demandware.core.logging2">
+      <Properties>
+          <Property name="serverFilePattern">[%d{yyyy-MM-dd HH:mm:ss.SSS z}] %p |%X{tid}|%X{id}|%X{type}|%X{name}|%X{eid}| %t %c %x %X{prefix} %m%n %supprex</Property>
+      </Properties>
+      <Appenders>
+         <RollingFile name="serverFile" fileName="${dw:logHome}/server-${dw:hostname}.log"
+                              filePattern="${dw:logHome}/server-${dw:hostname}.%d{yyyy-MM-dd}.log">
+            <PatternLayout pattern="${serverFilePattern}" charset="UTF-8"/>
+            <TimeBasedTriggeringPolicy/>
+
+             <!-- Delete strategy: delete matching filePattern (files) older than 7days-->
+             <DefaultRolloverStrategy>
+                 <Delete basePath="${dw:logHome}" maxDepth="2" followLinks="true">
+                     <IfAny>
+                         <IfFileName regex="server-${dw:hostname}.*.log"/>
+                         <IfFileName regex="log_archive/server-${dw:hostname}.*.[log|log.gz]"/>
+                     </IfAny>
+                     <IfLastModified age="7d" />
+                 </Delete>
+             </DefaultRolloverStrategy>
+         </RollingFile>
+      </Appenders>
+      <Loggers>
+        <Logger name="com.amazonaws.services.kinesis.leases.impl.LeaseTaker" level="DEBUG"/>
+        <root level="INFO">
+               <AppenderRef ref="serverFile"/>
+        </root>
+      </Loggers>
+      </Configuration>

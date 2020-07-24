@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: relay-conf
+  namespace: carbonj
+data:
+  # current PRD config for relay node
+  blacklist.conf: |
+    # regexes supported
+    #^namespace[0-9]{1,3}\.subnamespace\..*\.(min|stddev)$
+    #^namespace[0-9]{1,3}\.subnamespace\..*\.(multicast|health|graphite)\.
+    ^jenkins\..*_test_case\.
+
+  relay-rules.conf: |
+    ^jenkins.*=kinesis:dev-metricsS1
+    .*=kinesis:dev-metricsS2
+
+  service.properties: |
+    #####################
+    # CarbonJ Settings  #
+    #####################
+
+    # port to listen for rpc traffic on
+    jetty.port=2001
+
+    # Line Protocol Channel is on jetty.port + 2
+
+    # PICKLE Protocol Channel is on jetty.port + 3
+
+    # Relay properties
+    relay.destination=
+
+    graphite.host=relay-udp.carbonj.svc.cluster.local
+    graphite.port=2003
+    graphite.transport=UDP
+    graphite.transport.tcp.reconnect=true
+
+    # self reporting metrics go into this: pod<dw.podId>.<dw.groupId>
+    dw.groupId=carbonj
+    dw.podId=98
+    dw.groupFormat=.*
+
+    aggregation.enabled=false
+    metrics.store.enabled=false
+
+    relay.queue=3000000
+    relay.threads=12
+    relay.dest.queue=6000000
+
+    relay.rules=config/relay-rules.conf
+    blacklist=config/blacklist.conf
+
+    # drop points older than 2 years
+    pointFilter.maxAge=63072000
+    # drop points which have timestamps > 1hr in the future
+    pointFilter.maxFutureAge=3600
+
+  kinesis-dev-metricsS1-dest.conf: |
+    kinesisBatchSize=60
+    kinesisShardCount=1
+    threadCount=1
+
+  kinesis-dev-metricsS2-dest.conf: |
+    kinesisBatchSize=60
+    kinesisShardCount=1
+    threadCount=1
+
+  log4j2.xml: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Configuration monitorInterval="30" status="WARN" name="carbonj" packages="com.demandware.core.logging2">
+      <Properties>
+          <Property name="serverFilePattern">[%d{yyyy-MM-dd HH:mm:ss.SSS z}] %p |%X{tid}|%X{id}|%X{type}|%X{name}|%X{eid}| %t %c %x %X{prefix} %m%n %supprex</Property>
+      </Properties>
+      <Appenders>
+         <RollingFile name="serverFile" fileName="${dw:logHome}/server-${dw:hostname}.log"
+                              filePattern="${dw:logHome}/server-${dw:hostname}.%d{yyyy-MM-dd}.log">
+            <PatternLayout pattern="${serverFilePattern}" charset="UTF-8"/>
+            <TimeBasedTriggeringPolicy/>
+
+             <!-- Delete strategy: delete matching filePattern (files) older than 7days-->
+             <DefaultRolloverStrategy>
+                 <Delete basePath="${dw:logHome}" maxDepth="2" followLinks="true">
+                     <IfAny>
+                         <IfFileName regex="server-${dw:hostname}.*.log"/>
+                         <IfFileName regex="log_archive/server-${dw:hostname}.*.[log|log.gz]"/>
+                     </IfAny>
+                     <IfLastModified age="7d" />
+                 </Delete>
+             </DefaultRolloverStrategy>
+         </RollingFile>
+      </Appenders>
+      <Loggers>
+        <root level="INFO">
+               <AppenderRef ref="serverFile"/>
+        </root>
+      </Loggers>
+      </Configuration>

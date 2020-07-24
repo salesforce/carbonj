@@ -1,0 +1,47 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: memcached
+    stack: dev
+  name: memcached
+  namespace: carbonj
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: memcached
+    spec:
+      containers:
+      - name: memcached
+        image: memcached
+        env:
+        - name: ENV
+          value: "dev"
+        ports:
+        - name: memcached
+          containerPort: 11211
+          protocol: TCP
+        resources:
+          requests:
+            memory: 20Mi
+          limits:
+            memory: 100Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memcached
+  labels:
+    app: memcached
+    stack: dev
+  namespace: carbonj
+spec:
+  clusterIP: None
+  selector:
+    app: memcached
+  ports:
+  - port: 11211
+    targetPort: 11211
+    name: memcached
