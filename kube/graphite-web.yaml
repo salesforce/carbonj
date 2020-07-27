@@ -50,13 +50,15 @@ spec:
           - name: LOG_CACHE_PERFORMANCE
             value: "True"
             # we can't cache more than <resolution> here since
+          - name: CACHE_DURATION
+            value: "60"
           - name: DEFAULT_CACHE_DURATION
             value: "60"
           - name: HEALTH_SENSOR_BASED_EXPIRATION_ENABLED
             value: "1"
         ports:
         - name: graphite-web
-          containerPort: 80
+          containerPort: 8000
           protocol: TCP
         resources:
           requests:
@@ -68,7 +70,7 @@ spec:
 #        livenessProbe:
 #          httpGet:
 #            path: /
-#            port: 8080
+#            port: 8000
 #          initialDelaySeconds: 10
 #          periodSeconds: 5
 #          timeoutSeconds: 5
@@ -76,7 +78,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /
-            port: 80
+            port: 8000
           initialDelaySeconds: 15
           periodSeconds: 5
           timeoutSeconds: 10
@@ -94,23 +96,6 @@ spec:
   selector:
     app: graphite-web
   ports:
-  - port: 80
-    targetPort: 80
+  - port: 8000
+    targetPort: 8000
     name: graphite-web
----
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: graphite-web-ingress
-  namespace: carbonj
-  annotations:
-    kubernetes.io/ingress.class: traefik
-    traefik.frontend.rule.type: PathPrefixStrip
-spec:
-  rules:
-  - http:
-      paths:
-      - path: /carbonj-graphite-web
-        backend:
-          serviceName: graphite-web
-          servicePort: 80
