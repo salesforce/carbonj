@@ -1,4 +1,4 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: carbonj-p2
@@ -10,6 +10,9 @@ metadata:
 spec:
   serviceName: "carbonj-p2"
   replicas: 1
+  selector:
+    matchLabels:
+      app: carbonj-p2
   template:
     metadata:
       labels:
