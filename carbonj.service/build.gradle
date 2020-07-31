@@ -20,6 +20,8 @@ plugins {
     id 'net.researchgate.release'
     id 'org.springframework.boot'
 //    id 'jacoco'
+    id "com.jfrog.bintray" version "1.8.5"
+    id 'java-library'
 }
 
 license {
@@ -86,11 +88,11 @@ repositories {
     jcenter()
 }
 
-bootJar {
-    from("$projectDir/carbonj.sh") {
-        into '.'
-    }
-}
+//bootJar {
+//    from("$projectDir/carbonj.sh") {
+//        into '.'
+//    }
+//}
 
 task unpack(type: Copy) {
     dependsOn bootJar
@@ -136,13 +138,55 @@ publishing {
         carbonjDist( MavenPublication ) {
             groupId = "${group}"
             version = "${version}"
-            artifact distZip
             artifact distTar
+            pom {
+                name = 'CarbonJ'
+                description = 'High performance replacement for carbon-cache and carbon-relay'
+                url = 'https://github.com/salesforce/carbonj'
+                licenses {
+                    license {
+                        name = 'BSD-3-Clause'
+                        url = 'https://opensource.org/licenses/BSD-3-Clause'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'chrbayer84'
+                    }
+                }
+                scm {
+                    connection = 'scm:git@github.com:salesforce/carbonj.git'
+                    url = 'https://github.com/salesforce/carbonj'
+                }
+            }
+        }
+        carbonjBootJar( MavenPublication ) {
+            groupId = "${group}"
+            version = "${version}"
+            artifact bootJar
+            pom {
+                name = 'CarbonJ'
+                description = 'High performance replacement for carbon-cache and carbon-relay'
+                url = 'https://github.com/salesforce/carbonj'
+                licenses {
+                    license {
+                        name = 'BSD-3-Clause'
+                        url = 'https://opensource.org/licenses/BSD-3-Clause'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'chrbayer84'
+                    }
+                }
+                scm {
+                    connection = 'scm:git@github.com:salesforce/carbonj.git'
+                    url = 'https://github.com/salesforce/carbonj'
+                }
+            }
         }
     }
-
     repositories {
-//        mavenLocal()
         maven {
             name = "GitHubPackages"
             url = "https://maven.pkg.github.com/twoversionsofme/carbonj"
@@ -150,6 +194,31 @@ publishing {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
             }
+        }
+        maven {
+            name = 'Bintray'
+            url = 'https://dl.bintray.com/salesforce-cc/carbonj'
+//            credentials {
+//                username = 'salesforce-cc'
+//                password = System.getenv("BINTRAY_API_KEY")
+//            }
+        }
+    }
+}
+
+bintray {
+    user = 'salesforce-cc'
+    key = System.getenv("BINTRAY_API_KEY")
+    publications = ['carbonjBootJar']
+    pkg {
+        repo = 'carbonj'
+        name = 'carbonj.service'
+        userOrg = 'salesforce-cc'
+        licenses = ['BSD-3-Clause']
+        vcsUrl = 'https://github.com/salesforce/carbonj.git'
+        version {
+            name = "${version}"
+            vcsTag = "${version}"
         }
     }
 }

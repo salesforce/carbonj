@@ -1,0 +1,23 @@
+name: Publish To Bintray
+
+on:
+  workflow_dispatch:
+    branches: [ master, twoversionsofme.pushToBintray ]
+  release:
+    types: [created, edited]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: action-upload-bintray
+        uses: bpicode/github-action-upload-bintray@v0.9.0
+        with:
+          subject: salesforce-cc
+          repository: carbonj
+          package: carbonj.service
+          version: "${version}"
+          sourcePath: "$rootProject/carbonj.service/build/libs/carbonj.service-${version}.jar"
+          override: 1
+          username: reznikmm
+          apiKey: ${{secrets.BINTRAY_API_KEY}}
