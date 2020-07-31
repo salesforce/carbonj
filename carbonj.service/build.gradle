@@ -87,8 +87,9 @@ repositories {
 }
 
 bootJar {
-//    classifier = 'boot'
-//    launchScript()
+    from("$projectDir/carbonj.sh") {
+        into '.'
+    }
 }
 
 task unpack(type: Copy) {
@@ -111,16 +112,20 @@ configurations {
 //    compile.exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
 }
 
+distZip.dependsOn bootJar
+distTar.dependsOn bootJar
+
 distributions {
-    custom {
-        baseName = project.name
+    main {
+        distributionBaseName = project.name
         contents {
-            from { 'build/libs' }
-            from { 'carbonj.sh' }
-            from { 'README.md' }
+            from 'build/libs'
+            from "$projectDir/carbonj.sh"
+            from 'README.md'
         }
     }
 }
+
 // for release automatically push released docker and mvn image to repo
 afterReleaseBuild.dependsOn publish
 publish.dependsOn dockerPush
@@ -128,17 +133,26 @@ publish.dependsOn build
 
 publishing {
     publications {
-        myDistribution(MavenPublication) {
-            artifact customDistTar
+        carbonjDist( MavenPublication ) {
+            groupId = "${group}"
+            version = "${version}"
+            artifact distZip
+            artifact distTar
         }
     }
 
     repositories {
         mavenLocal()
+        maven {
+            name = "GitHubPackages"
+            url = "https://maven.pkg.github.com/twoversionsofme/carbonj"
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
     }
 }
-
-
 
 task sourceJar(type: Jar) {
     from sourceSets.main.allJava
@@ -147,6 +161,19 @@ task sourceJar(type: Jar) {
 release {
     failOnCommitNeeded = false
     failOnUpdateNeeded = false
+    revertOnFail = true
+
+    scmAdapters = [
+            net.researchgate.release.GitAdapter,
+    ]
+
+    git {
+        requireBranch = 'master'
+        pushToRemote = 'origin'
+        pushToBranchPrefix = ''
+        commitVersionFileOnly = false
+        signTag = false
+    }
 }
 sourceCompatibility = 1.8
 
