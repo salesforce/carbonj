@@ -20,4 +20,4 @@ jobs:
       - name: Release with Gradle
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew :carbonj.service:release -Prelease.useAutomaticVersion=true -x test distTar publish
+        run: ./gradlew clean distTar -x test :carbonj.service:release -Prelease.useAutomaticVersion=true publish

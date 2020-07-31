@@ -127,9 +127,9 @@ distributions {
 }
 
 // for release automatically push released docker and mvn image to repo
-afterReleaseBuild.dependsOn publish
-publish.dependsOn dockerPush
-publish.dependsOn build
+//afterReleaseBuild.dependsOn publish
+//publish.dependsOn dockerPush
+//publish.dependsOn build
 
 publishing {
     publications {
@@ -142,7 +142,7 @@ publishing {
     }
 
     repositories {
-        mavenLocal()
+//        mavenLocal()
         maven {
             name = "GitHubPackages"
             url = "https://maven.pkg.github.com/twoversionsofme/carbonj"
@@ -162,6 +162,9 @@ release {
     failOnCommitNeeded = false
     failOnUpdateNeeded = false
     revertOnFail = true
+    versionPropertyFile = "$rootProject/gradle.properties"
+//    snapshotSuffix = '-SNAPSHOT'
+    failOnSnapshotDependencies = false
 
     scmAdapters = [
             net.researchgate.release.GitAdapter,
