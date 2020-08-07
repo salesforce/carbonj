@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: relay
+    stack: dev
+  name: relay
+  namespace: carbonj
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: relay
+  template:
+    metadata:
+      labels:
+        app: relay
+    spec:
+      containers:
+      - name: relay
+        image: "chrbayer84/carbonj:1.1.5-SNAPSHOT"
+        imagePullPolicy: Always
+        env:
+          - name: XMS_SIZE
+            value: "256M"
+          - name: XMX_SIZE
+            value: "512M"
+        ports:
+        - name: relay-line
+          containerPort: 2003
+          protocol: TCP
+        - name: relay-pickle
+          containerPort: 2004
+          protocol: TCP
+        resources:
+          requests:
+            memory: 512M
+          limits:
+            memory: 768M
+        livenessProbe:
+          tcpSocket:
+            port: 2003
+          initialDelaySeconds: 30
+          timeoutSeconds: 15
+        volumeMounts:
+          - name: conf
+            mountPath: /conf
+            readOnly: false # to allow overrides through ENV and service startup script
+      volumes:
+      - name: conf
+        configMap:
+           name: relay-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  relay
+  labels:
+    app: relay
+    stack: dev
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+  namespace: carbonj
+spec:
+  type: LoadBalancer
+  selector:
+    app: relay
+  ports:
+  - port: 2003
+    protocol: TCP 
+    targetPort: 2003
+    nodePort: 32113
+    name: relay-line
+  - port: 2001
+    targetPort: 2001
+    nodePort: 32111
+    name: relay-http
+  - port: 2004
+    targetPort: 2004
+    nodePort: 32114
+    name: relay-pickle
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: relay-udp
+  labels:
+    app: relay
+    stack: dev
+  namespace: carbonj
+spec:
+  selector:
+    app: relay
+  ports:
+  - port: 2003
+    targetPort: 2003
+    protocol: UDP
+    name: relay-line-udp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  relay-headless
+  labels:
+    app: relay
+    stack: dev
+  namespace: carbonj
+spec:
+  clusterIP: None
+  selector:
+    app: relay
+  ports:
+  - port: 2003
+    protocol: TCP
+    targetPort: 2003
+    name: relay-line
+  - port: 2001
+    targetPort: 2001
+    name: relay-http
+  - port: 2004
+    targetPort: 2004
+    name: relay-pickle

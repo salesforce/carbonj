@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: carbonj-p1
+  labels:
+    app: carbonj-p1
+    stack: dev
+    sub-stack: carbonj
+  namespace: carbonj
+spec:
+  serviceName: "carbonj-p1"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carbonj-p1
+  template:
+    metadata:
+      labels:
+        app: carbonj-p1
+    spec:
+      containers:
+      - name: carbonj-p1
+        image: "chrbayer84/carbonj:1.1.5-SNAPSHOT"
+        imagePullPolicy: Always
+        env:
+          - name: XMS_SIZE
+            value: "256M"
+          - name: XMX_SIZE
+            value: "512M"
+          - name: DW_GROUP_ID
+            value: "carbonj"
+          - name: DW_GRAPHITE_HOST
+            value: "relay-udp.carbonj"
+          - name: ROCKSDB_REPORTING_ENABLED
+            value: "1"
+          - name: DW_PREFIX
+            value: "jetty"
+          - name: consumerRules
+            value: "config/shard1-consumer-rules.conf"
+        ports:
+        - name: carbonj-p1-http
+          containerPort: 2001
+          protocol: TCP
+        - name: carbonj-p1-line
+          containerPort: 2003
+          protocol: TCP
+        - name: carbonj-p1-pick
+          containerPort: 2004
+          protocol: TCP
+        - name: carbonj-p1-prof
+          containerPort: 20001
+          protocol: TCP
+        resources:
+          requests:
+            memory: 512M
+          limits:
+            memory: 768M
+        livenessProbe:
+          tcpSocket:
+            port: 2003
+          initialDelaySeconds: 30
+          timeoutSeconds: 2
+        volumeMounts:
+        - name: carbonj-p1-data
+          mountPath: /data
+        - name: conf
+          mountPath: /conf
+          readOnly: false # to allow overrides through ENV and service startup script
+      volumes:
+      - name: conf
+        configMap:
+           name: carbonj-conf
+  volumeClaimTemplates:
+  - metadata:
+      name: carbonj-p1-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10G
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: carbonj-p1
+  labels:
+    app: carbonj-p1
+    stack: dev
+  namespace: carbonj
+spec:
+  clusterIP: None
+  selector:
+    app: carbonj-p1
+  ports:
+    # jetty port to serve qeuries to graphite-web
+  - port: 2001
+    targetPort: 2001
+    name: carbonj-p1-http
+    # line/plaintext metrics ingestion
+  - port: 2003
+    targetPort: 2003
+    name: carbonj-p1-line
+    # pickle metrics ingestion
+  - port: 2004
+    targetPort: 2004
+    name: carbonj-p1-pick
+    # yourkit java profiler port
+  - port: 20001
+    targetPort: 20001
+    name: carbonj-p1-prof
