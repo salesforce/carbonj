@@ -104,8 +104,7 @@ ENV SERVICEDIR=/app/
 ENV app_servicedir=/app/
 
 # Add Tini for proper sigkill handling https://github.com/krallin/tini
-ENV TINI_VERSION v0.18.0
-RUN curl -o /sbin/tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /sbin/tini
+RUN curl -o /sbin/tini https://github.com/krallin/tini/releases/download/v0.18.0/tini /sbin/tini
 RUN chmod +x /sbin/tini
 ENTRYPOINT ["/sbin/tini", "--"]
 
