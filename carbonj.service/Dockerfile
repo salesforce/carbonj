@@ -10,8 +10,8 @@ ARG DEPENDENCY=target/dependency
 ARG VERSION=latest
 
 # install dependencies
-RUN yum update -y && \
-    yum install -y yum-plugin-ovl
+RUN yum update -y  # && \
+#    yum install -y yum-plugin-ovl
 RUN yum update -y && \
   yum install -y \
   sysvinit-tools \
