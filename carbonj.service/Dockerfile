@@ -45,7 +45,7 @@ RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
      yum clean all
 
 # Install aiohttp required by the script
-RUN pip3.6 install aiohttp
+RUN pip3 install aiohttp
 
 # Ensure crontab starts
 RUN /sbin/chkconfig crond on && \
