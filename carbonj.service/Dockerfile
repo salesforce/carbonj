@@ -21,15 +21,15 @@ RUN yum update -y && \
   nc \
   lsof \
   sysstat \
-  epel-release \
-  python3 \
-  perl-URI-Encode \
-  perl-Data-Dumper
+  epel-release
 
 RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
      curl -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
      yum update -y && \
      yum install -y zulu-11 && \
+     python3 \
+     perl-URI-Encode \
+     perl-Data-Dumper && \
      yum clean all
 
 # Install aiohttp required by the script
