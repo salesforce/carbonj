@@ -26,7 +26,7 @@ RUN yum update -y && \
 RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
      curl -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
      yum update -y && \
-     yum install -y zulu-11 && \
+     yum install -y zulu-11 \
      python3 \
      perl-URI-Encode \
      perl-Data-Dumper && \
