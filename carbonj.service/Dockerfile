@@ -5,38 +5,26 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-FROM centos:latest
+FROM centos:8
 ARG DEPENDENCY=target/dependency
 ARG VERSION=latest
 
 # install dependencies
-RUN yum update -y  # && \
-#    yum install -y yum-plugin-ovl
 RUN yum update -y && \
   yum install -y \
-  sysvinit-tools \
-  curl \
   libevent \
   perl \
-  tar \
   wget \
   util-linux-ng \
   cronie \
   procps \
-  bash \
-  gzip \
   nc \
   lsof \
   sysstat \
   epel-release \
-  less \
-  && wget https://repo.ius.io/ius-release-el7.rpm \
-  && rpm -Uvh ius-release*rpm \
-  && rm ius-release*rpm \
-  && yum install -y   python36u \
-    python36u-pip \
-    perl-URI-Encode \
-    perl-Data-Dumper
+  python3 \
+  perl-URI-Encode \
+  perl-Data-Dumper
 
 RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
      curl -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
