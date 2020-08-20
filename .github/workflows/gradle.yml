@@ -21,7 +21,7 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build --info
     - name: Extract project version
-      run: echo "::set-env name=GRADLE_PROJECT_VERSION::`./gradlew properties|grep version |cut -c 10-`}"
+      run: echo "::set-env name=GRADLE_PROJECT_VERSION::`./gradlew properties|grep version |cut -c 10-`"
     - name: Show project version
       run: echo "$GRADLE_PROJECT_VERSION"
     - name: Publish Docker container
