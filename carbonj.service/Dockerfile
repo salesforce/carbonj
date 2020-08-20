@@ -5,48 +5,35 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-FROM centos:7
+FROM centos:8
 ARG DEPENDENCY=target/dependency
 ARG VERSION=latest
 
 # install dependencies
 RUN yum update -y && \
-    yum install -y yum-plugin-ovl
-RUN yum update -y && \
   yum install -y \
-  sysvinit-tools \
-  curl \
   libevent \
   perl \
-  tar \
   wget \
   util-linux-ng \
   cronie \
   procps \
-  bash \
-  gzip \
   nc \
-  sudo \
   lsof \
   sysstat \
-  epel-release \
-  less \
-  && wget https://repo.ius.io/ius-release-el7.rpm \
-  && rpm -Uvh ius-release*rpm \
-  && rm ius-release*rpm \
-  && yum install -y   python36u \
-    python36u-pip \
-    perl-URI-Encode \
-    perl-Data-Dumper
+  epel-release
 
 RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
      curl -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
      yum update -y && \
-     yum install -y zulu-11 && \
+     yum install -y zulu-11 \
+     python3 \
+     perl-URI-Encode \
+     perl-Data-Dumper && \
      yum clean all
 
 # Install aiohttp required by the script
-RUN pip3.6 install aiohttp
+RUN pip3 install aiohttp
 
 # Ensure crontab starts
 RUN /sbin/chkconfig crond on && \
@@ -105,8 +92,7 @@ ENV SERVICEDIR=/app/
 ENV app_servicedir=/app/
 
 # Add Tini for proper sigkill handling https://github.com/krallin/tini
-ENV TINI_VERSION v0.18.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /sbin/tini
+RUN curl -o /sbin/tini https://github.com/krallin/tini/releases/download/v0.18.0/tini
 RUN chmod +x /sbin/tini
 ENTRYPOINT ["/sbin/tini", "--"]
 
