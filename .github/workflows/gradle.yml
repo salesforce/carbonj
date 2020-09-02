@@ -19,7 +19,7 @@ jobs:
       #  run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
       run: echo "${{ secrets.DOCKER_HUB_SECRET }}" | docker login --username chrbayer84 --password-stdin
     - name: Build with Gradle
-      run: ./gradlew build --info
+      run: ./gradlew build --info --stacktrace
     - name: Extract project version
       run: echo "::set-env name=GRADLE_PROJECT_VERSION::`./gradlew properties|grep version |cut -c 10-`"
     - name: Show project version
