@@ -8,7 +8,7 @@ CarbonJ instead uses JVM-embedded RocksDB to store all metrics datapoints once p
 
 It is currently running the Salesforce CommerceCloud Grafana/Graphite metrics stack and handles ~45M metric data points arriving every minute using 6 shards.
 
-![](https://github.com/salesforce/carbonj/workflows/Java%20CI/badge.svg)
+![https://github.com/salesforce/carbonj/actions?query=workflow%3A%22Java+CI%22](https://github.com/salesforce/carbonj/workflows/Java%20CI/badge.svg)
 
 
 # Features
