@@ -491,6 +491,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
         }
         catch(Throwable t)
         {
+            if (DatabaseMetrics.getSeriesErrors!=null)
             DatabaseMetrics.getSeriesErrors.mark();
 
             long time = System.currentTimeMillis();
