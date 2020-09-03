@@ -6,7 +6,7 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.*;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.TimeSeriesStoreImpl;
 import com.demandware.carbonj.service.db.model.DataPointStore;
@@ -25,7 +25,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
+import org.mockito.*;
+import org.mockito.junit.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
@@ -189,8 +190,8 @@ public class _GraphiteSeriesDataServlet {
         }
 
         @Bean
-        DatabaseMetrics dbMetrics() {
-            return Mockito.mock(DatabaseMetrics.class);
+        DatabaseMetrics dbMetrics(MetricRegistry metricRegistry) {
+            return new DatabaseMetrics( metricRegistry);
         }
 
         @Bean MetricRegistry metricRegistry(){
