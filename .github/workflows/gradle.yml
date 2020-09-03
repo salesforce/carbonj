@@ -20,7 +20,8 @@ jobs:
       run: echo "${{ secrets.DOCKER_HUB_SECRET }}" | docker login --username chrbayer84 --password-stdin
     - name: Build with Gradle
       run: ./gradlew build --info --stacktrace
-    - name: Publish Test Report
+    - name: Publish Failure Test Report
+      if: ${{ failure() }} # doesn't run unless it specifically grabs the failure condition of the previous step..
       uses: scacap/action-surefire-report@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
