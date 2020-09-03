@@ -20,6 +20,11 @@ jobs:
       run: echo "${{ secrets.DOCKER_HUB_SECRET }}" | docker login --username chrbayer84 --password-stdin
     - name: Build with Gradle
       run: ./gradlew build --info --stacktrace
+    - name: Publish Test Report
+      uses: scacap/action-surefire-report@v1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        report_paths: '**/build/test-results/test/TEST-*.xml'
     - name: Extract project version
       run: echo "::set-env name=GRADLE_PROJECT_VERSION::`./gradlew properties|grep version |cut -c 10-`"
     - name: Show project version
