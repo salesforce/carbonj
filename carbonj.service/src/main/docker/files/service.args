@@ -29,6 +29,8 @@
 -Duser.timezone=GMT
 -Duser.language=en
 -Duser.country=US
+# metrics reporting not working without: https://stackoverflow.com/questions/55952859/unable-to-make-public-long-com-sun-management-internal-operatingsystemimpl-getop
+--add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED
     
 #
 # GC Logging
