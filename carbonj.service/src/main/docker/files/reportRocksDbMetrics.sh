@@ -26,7 +26,7 @@ do
     # Format date: 2017/11/24-12:22
     LAST_MIN=`date --date='-1 minute' "+%Y/%m/%d-%H:%M"`
     #bytes=`awk -v last_min="$LAST_MIN" 'BEGIN { x=0; } $1 ~"^"last_min && $6=="Compacted" { x+=$(NF-1); } END {  print x }' $log`
-    bytes=`tail -n 10000 $log | awk -v last_min="$LAST_MIN" 'BEGIN { x=0; } $1 ~"^"last_min && $6=="Compacted" { x+=$(NF-1); } END {  print x }'`
+    bytes=`tail -n 10000 $log | stdbuf -o0 awk -v last_min="$LAST_MIN" 'BEGIN {x=0;} $1~"^"last_min && /Compacted/{ x+=$(NF-1); } END {  print x }'`
     line="$metric_name $bytes $time"
     echo "${line}"
     echo "${line}" | nc -u -v $graphite_host $graphite_port
