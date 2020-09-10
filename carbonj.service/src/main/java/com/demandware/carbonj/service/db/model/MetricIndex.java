@@ -80,6 +80,8 @@ public interface MetricIndex
 
     Metric getMetric( int metricId );
 
+    String getMetricName( int metricId );
+
     boolean isValidName( String name );
 
     Metric selectRandomMetric();

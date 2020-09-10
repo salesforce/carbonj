@@ -272,6 +272,20 @@ public class MetricIndexImpl implements MetricIndex {
     }
 
     @Override
+    public String getMetricName( int metricId )
+    {
+        IdRecord e = idIndex.dbGet(metricId);
+        if (e != null)
+        {
+            return e.metricName();
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    @Override
     public Metric forId( int metricId )
     {
         return getMetric( metricId );

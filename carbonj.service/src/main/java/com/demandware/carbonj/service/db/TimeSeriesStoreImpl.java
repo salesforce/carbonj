@@ -647,6 +647,12 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
     }
 
     @Override
+    public String getMetricName( int metricId )
+    {
+        return nameIndex.getMetricName( metricId );
+    }
+
+    @Override
     public void deleteAll()
     {
         for ( String m : nameIndex.getTopLevelNames() )
