@@ -49,6 +49,8 @@ public interface TimeSeriesStore
 
     Metric getMetric( int metricId );
 
+    String getMetricName( int metricId );
+
     void scanMetrics( Consumer<Metric> m );
 
     int scanMetrics( int start, int end, Consumer<Metric> m );

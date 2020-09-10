@@ -863,6 +863,21 @@ public class CarbonjAdmin
         }
     }
 
+    @RequestMapping( value = "/getIdStoreName/{name:.+}", method = RequestMethod.GET )
+    public @ResponseBody String getIdStoreName( @PathVariable final String name )
+            throws IOException
+    {
+        Metric m = tsStore().getMetric( name );
+        if ( m != null )
+        {
+            return tsStore().getMetricName(m.id);
+        }
+        else
+        {
+            throw new RuntimeException( String.format( "Metric [%s] not found.", name ) );
+        }
+    }
+
     /**
      * Removes metric name and associated data points from all databases.
      */

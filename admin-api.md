@@ -63,7 +63,7 @@ curl "http://localhost:56787/_dw/rest/carbonj/listpoints/60s24h/pod1x.ecom_ag.10
 Format:
 
 `
-http://localhost:56787/_dw/rest/carbonj/listpointswithid/{dbname}/{metricId}
+http://localhost:2001/_dw/rest/carbonj/listpointswithid/{dbname}/{metricId}
 `
 
 At this time valid dbNames are "60s24h", "5m7d", "30m2y"
