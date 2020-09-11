@@ -120,7 +120,7 @@ public class CarbonjAdmin
     }
 
     @RequestMapping( value = "/dumpnames", method = RequestMethod.GET )
-    public void dumpNames( @RequestParam( value = "startId", required = false, defaultValue = "0" ) int startId,
+    public void dumpNames( @RequestParam( value = "startId", required = false, defaultValue = "0" ) long startId,
                            @RequestParam( value = "startName", required = false ) String startName,
                            @RequestParam( value = "count", required = false ) Integer count,
                            @RequestParam( value = "filter", required = false ) String wildcard, Writer response )
@@ -138,7 +138,7 @@ public class CarbonjAdmin
         }
         try
         {
-            tsStore().scanMetrics( startId, Integer.MAX_VALUE, m -> {
+            tsStore().scanMetrics( startId, Long.MAX_VALUE, m -> {
                 if ( !filter.test( m ) )
                 {
                     return;

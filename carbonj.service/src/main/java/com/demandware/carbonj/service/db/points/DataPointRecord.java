@@ -13,10 +13,10 @@ import com.google.common.primitives.Longs;
 
 class DataPointRecord
 {
-    public static byte[] toKeyBytes(int metricId, int ts)
+    public static byte[] toKeyBytes(long metricId, int ts)
     {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeInt( metricId );
+        out.writeLong( metricId );
         out.writeInt( ts );
         return out.toByteArray();
     }

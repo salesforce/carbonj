@@ -92,9 +92,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     }
 
     @Override
-    public int scan( K startKey, K endKey, Consumer<R> c )
+    public long scan( K startKey, K endKey, Consumer<R> c )
     {
-        int processed = 0;
+        long processed = 0;
         byte[] endKeyBytes = null == endKey ? null : recSerializer.keyBytes( endKey );
         try (RocksIterator iter = db.newIterator( new ReadOptions() ))
         {

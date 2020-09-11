@@ -58,7 +58,7 @@ class NameRecordSerializer
     {
 
         ByteArrayDataInput in = ByteStreams.newDataInput( valueBytes );
-        int id = in.readInt();
+        long id = in.readLong();
         byte entryType = in.readByte();
         NameRecord e = new NameRecord( key, id, entryType == 1 );
         if( e.isLeaf() )
@@ -99,7 +99,7 @@ class NameRecordSerializer
     public byte[] valueBytes(NameRecord e)
     {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeInt( e.getId() );
+        out.writeLong( e.getId() );
         if( e.isLeaf())
         {
             out.writeByte( 1 ); // leaf node type

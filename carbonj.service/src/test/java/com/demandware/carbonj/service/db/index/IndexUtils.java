@@ -6,15 +6,14 @@
  */
 package com.demandware.carbonj.service.db.index;
 
-import java.io.File;
-
 import com.codahale.metrics.MetricRegistry;
-import com.demandware.carbonj.service.BaseTest;
 import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.MetricIndex;
 import com.demandware.carbonj.service.db.model.StorageAggregationPolicySource;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.engine.StorageAggregationRulesLoader;
+
+import java.io.File;
 
 /**
  * Test utils
@@ -27,7 +26,7 @@ public class IndexUtils
         return new IndexStoreRocksDB<>( metricRegistry, "index-name", dir( dbDir, "index-name" ), new NameRecordSerializer() );
     }
 
-    private static IndexStore<Integer, IdRecord> metricIdIndexStore( File dbDir )
+    private static IndexStore<Long, IdRecord> metricIdIndexStore( File dbDir )
     {
         return new IndexStoreRocksDB<>(metricRegistry, "index-id", dir( dbDir, "index-id" ), new IdRecordSerializer() );
     }
@@ -38,7 +37,7 @@ public class IndexUtils
     }
 
     private static MetricIndex metricIndex( IndexStore<String, NameRecord> nameIndex,
-                                            IndexStore<Integer, IdRecord> idIndex, DatabaseMetrics dbMetrics )
+                                            IndexStore<Long, IdRecord> idIndex, DatabaseMetrics dbMetrics )
     {
         StorageAggregationRulesLoader rulesLoader = new StorageAggregationRulesLoader( new File("unknownFile") );
         StorageAggregationPolicySource policySource = new StorageAggregationPolicySource( rulesLoader );

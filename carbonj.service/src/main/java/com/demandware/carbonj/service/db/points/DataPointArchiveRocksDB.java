@@ -119,13 +119,13 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public void deleteMetric( int metricId )
+    public void deleteMetric( long metricId )
     {
         deleteMetric( metricId, 0, Integer.MAX_VALUE );
     }
 
     @Override
-    public void deleteMetric( int metricId, int from, int until )
+    public void deleteMetric( long metricId, int from, int until )
     {
         RocksIterator iter = null;
         try
@@ -289,7 +289,7 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public void put( int metricId, int interval, double v )
+    public void put( long metricId, int interval, double v )
     {
         byte[] key = DataPointRecord.toKeyBytes( metricId, interval );
         byte[] value = DataPointRecord.toValueBytes( v );
@@ -309,12 +309,12 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public List<DataPointValue> getDataPoints( int metricId, int startTime, int endTime )
+    public List<DataPointValue> getDataPoints( long metricId, int startTime, int endTime )
     {
         return getDataPointsWithLimit( metricId, startTime, endTime, Integer.MAX_VALUE );
     }
 
-    private List<DataPointValue> getDataPointsWithLimit( int metricId, int startTime, int endTime, int resultLimit )
+    private List<DataPointValue> getDataPointsWithLimit( long metricId, int startTime, int endTime, int resultLimit )
     {
         List<DataPointValue> points = new ArrayList<>();
         RocksIterator iter = null;
@@ -359,7 +359,7 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public List<Double> getDataPoints( int metricId, int startTime, int endTime, int step )
+    public List<Double> getDataPoints( long metricId, int startTime, int endTime, int step )
     {
         // TODO: SB code duplication!!! the method needs to be rewritten to utilize getDataPoints()
         // API and implementation needs to be consistent.
@@ -559,7 +559,7 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public DataPointValue getFirst( int metricId, int from, int to )
+    public DataPointValue getFirst( long metricId, int from, int to )
     {
         List<DataPointValue> r = getDataPointsWithLimit( metricId, from, to, 1 );
         return r.isEmpty() ? null : r.get( 0 );

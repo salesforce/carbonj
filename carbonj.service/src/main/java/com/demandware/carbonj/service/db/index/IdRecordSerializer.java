@@ -7,40 +7,41 @@
 package com.demandware.carbonj.service.db.index;
 
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 class IdRecordSerializer
-                implements RecordSerializer<Integer, IdRecord>
+                implements RecordSerializer<Long, IdRecord>
 {
     public IdRecordSerializer()
     {
     }
 
     @Override
-    public Integer key( byte[] keyBytes )
+    public Long key( byte[] keyBytes )
     {
-        return Ints.fromByteArray( keyBytes );
+        return Longs.fromByteArray( keyBytes );
     }
 
     @Override
     public IdRecord toIndexEntry( byte[] keyBytes, byte[] valueBytes)
     {
-        Integer key = key(keyBytes);
+        Long key = key(keyBytes);
         return toIndexEntry( key, valueBytes);
     }
 
     @Override
-    public IdRecord toIndexEntry( Integer key, byte[] valueBytes)
+    public IdRecord toIndexEntry( Long key, byte[] valueBytes)
     {
         String value = new String(valueBytes, UTF_8);
         return new IdRecord( key, value );
     }
 
     @Override
-    public byte[] keyBytes(Integer key)
+    public byte[] keyBytes(Long key)
     {
-        return Ints.toByteArray(key);
+        return Longs.toByteArray(key);
     }
 
     @Override

@@ -78,7 +78,7 @@ public class cfgMetricIndex
     }
 
     @Bean( name = "metricIdIndexStore" )
-    IndexStore<Integer, IdRecord> metricIdIndexStore()
+    IndexStore<Long, IdRecord> metricIdIndexStore()
     {
         File dbDir = dbDir( "index-id" );
         return new IndexStoreRocksDB<>( metricRegistry,"index-id", dbDir, new IdRecordSerializer() );
@@ -99,7 +99,7 @@ public class cfgMetricIndex
 
     @Bean
     MetricIndex metricIndex( @Qualifier( "metricNameIndexStore" ) IndexStore<String, NameRecord> nameIndex,
-                             @Qualifier( "metricIdIndexStore" ) IndexStore<Integer, IdRecord> idIndex,
+                             @Qualifier( "metricIdIndexStore" ) IndexStore<Long, IdRecord> idIndex,
                              DatabaseMetrics dbMetrics, NameUtils nameUtils,
                              StorageAggregationPolicySource policySource, ScheduledExecutorService s )
     {
