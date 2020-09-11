@@ -4,12 +4,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
-
 dw:
     groupId: 00
 metrics:
     store:
       enabled: true
+      longId: false
       dataDir: work/carbonj-data
       checkPoint:
         dir: work/carbonj-checkpoint
@@ -36,3 +36,16 @@ logging:
     com.amazonaws.services.kinesis: FATAL
     com.demandware: INFO
 
+---
+spring:
+  profiles: testMaxInt
+metrics:
+  store:
+    longId: false
+
+---
+spring:
+  profiles: testLongId
+metrics:
+  store:
+    longId: true

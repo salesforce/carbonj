@@ -29,6 +29,9 @@ import static com.demandware.carbonj.service.config.ConfigUtils.locateConfigFile
 @Configuration
 public class cfgMetricIndex
 {
+    @Value( "${metrics.store.longId:false}" )
+    private boolean longId;
+
     @Value( "${metrics.store.indexDir:}" )
     private String indexDir = null;
 
@@ -69,19 +72,18 @@ public class cfgMetricIndex
     @Autowired
     MetricRegistry metricRegistry;
 
-
     @Bean( name = "metricNameIndexStore" )
     IndexStore<String, NameRecord> metricNameIndexStore()
     {
         File dbDir = dbDir( "index-name" );
-        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dbDir, new NameRecordSerializer() );
+        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dbDir, new NameRecordSerializer(longId));
     }
 
     @Bean( name = "metricIdIndexStore" )
-    IndexStore<Integer, IdRecord> metricIdIndexStore()
+    IndexStore<Long, IdRecord> metricIdIndexStore()
     {
         File dbDir = dbDir( "index-id" );
-        return new IndexStoreRocksDB<>( metricRegistry,"index-id", dbDir, new IdRecordSerializer() );
+        return new IndexStoreRocksDB<>( metricRegistry,"index-id", dbDir, new IdRecordSerializer(longId));
     }
 
     @Bean
@@ -99,13 +101,13 @@ public class cfgMetricIndex
 
     @Bean
     MetricIndex metricIndex( @Qualifier( "metricNameIndexStore" ) IndexStore<String, NameRecord> nameIndex,
-                             @Qualifier( "metricIdIndexStore" ) IndexStore<Integer, IdRecord> idIndex,
+                             @Qualifier( "metricIdIndexStore" ) IndexStore<Long, IdRecord> idIndex,
                              DatabaseMetrics dbMetrics, NameUtils nameUtils,
                              StorageAggregationPolicySource policySource, ScheduledExecutorService s )
     {
         MetricIndexImpl metricIndex = new MetricIndexImpl(metricRegistry, metricStoreConfigFile, nameIndex, idIndex, dbMetrics,
                 nameIndexMaxCacheSize, metricCacheExpireAfterAccessInMinutes, nameUtils, policySource,
-                nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache);
+                nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache, longId);
         s.scheduleWithFixedDelay(metricIndex::reload, 300, 300, TimeUnit.SECONDS );
         return metricIndex;
     }

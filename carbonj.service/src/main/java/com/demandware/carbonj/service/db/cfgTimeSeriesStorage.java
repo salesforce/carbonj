@@ -6,11 +6,12 @@
  */
 package com.demandware.carbonj.service.db;
 
-import java.io.File;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.db.index.cfgMetricIndex;
+import com.demandware.carbonj.service.db.model.DataPointStore;
+import com.demandware.carbonj.service.db.model.MetricIndex;
+import com.demandware.carbonj.service.db.points.cfgDataPoints;
+import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.engine.cfgCentralThreadPools;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.events.cfgCarbonjEventsLogger;
@@ -21,15 +22,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Import;
 
-import com.demandware.carbonj.service.db.index.cfgMetricIndex;
-import com.demandware.carbonj.service.db.model.DataPointStore;
-import com.demandware.carbonj.service.db.model.MetricIndex;
-import com.demandware.carbonj.service.db.points.cfgDataPoints;
-import com.demandware.carbonj.service.db.util.DatabaseMetrics;
+import java.io.File;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Import( { cfgMetricIndex.class, cfgDataPoints.class, cfgCentralThreadPools.class, cfgCarbonjEventsLogger.class } )
 @ConditionalOnProperty(name=cfgTimeSeriesStorage.DB_ENABLED_PROPERTY_KEY, havingValue="true", matchIfMissing=true)
@@ -38,6 +36,9 @@ public class cfgTimeSeriesStorage
     private static Logger log = LoggerFactory.getLogger( cfgTimeSeriesStorage.class );
 
     public static final String DB_ENABLED_PROPERTY_KEY = "metrics.store.enabled";
+
+    @Value( "${metrics.store.longId:false}" )
+    private boolean longId;
 
     @Value( "${metrics.store.fetchSeriesThreads:20}" )
     private int nTaskThreads;
@@ -85,7 +86,8 @@ public class cfgTimeSeriesStorage
                 TimeSeriesStoreImpl.newHeavyQueryTaskQueue( nHeavyQueryThreads, heavyQueryBlockingQueueSize ),
                 TimeSeriesStoreImpl.newSerialTaskQueue( serialQueueSize ), pointStore,
             dbMetrics, batchedSeriesRetrieval,
-            batchedSeriesSize, dumpIndex, new File( dumpIndexFile ), maxNonLeafPointsLoggedPerMin, metricStoreConfigFile);
+            batchedSeriesSize, dumpIndex, new File( dumpIndexFile ), maxNonLeafPointsLoggedPerMin, metricStoreConfigFile,
+                longId);
 
         s.scheduleWithFixedDelay(timeSeriesStore::reload, 60, 60, TimeUnit.SECONDS );
         s.scheduleWithFixedDelay(timeSeriesStore::refreshStats, 60, 10, TimeUnit.SECONDS );
