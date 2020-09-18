@@ -4,19 +4,19 @@ buildscript {
         mavenCentral()
         jcenter()
     }
-//    dependencies {
-//        classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
-//        classpath 'net.researchgate:gradle-release:2.6.0'
-//    }
+    dependencies {
+        classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
+        classpath 'net.researchgate:gradle-release:2.6.0'
+    }
 }
 
 apply plugin: 'java-library'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: "maven"
-//apply plugin: 'maven-publish'
-//apply plugin: 'maven-publish-auth'
-//apply plugin: 'net.researchgate.release'
+apply plugin: 'maven-publish'
+apply plugin: 'maven-publish-auth'
+apply plugin: 'net.researchgate.release'
 apply plugin: 'distribution'
 
 //group = 'com.sfcc.um'
@@ -40,19 +40,23 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
 
-//publish.dependsOn build
-//afterReleaseBuild.dependsOn publish
-//
-//publishing {
-//    publications {
-//        artifact(MavenPublication) {
-//            from components.java
-//        }
-//    }
-//
-//    repositories {
-//        mavenLocal{
-//
-//        }
-//    }
-//}
+release {
+    failOnCommitNeeded = false
+    failOnUpdateNeeded = false
+}
+
+// for release automatically push released docker and mvn image to repo
+afterReleaseBuild.dependsOn publish
+publish.dependsOn build
+
+publishing {
+    publications {
+        artifact(MavenPublication) {
+            from components.java
+        }
+    }
+
+    repositories {
+        mavenLocal()
+    }
+}
