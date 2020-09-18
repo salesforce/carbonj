@@ -29,7 +29,7 @@ jobs:
     - name: Release with Gradle
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: ./gradlew clean build -Prelease.useAutomaticVersion=true -x test :carbonj.service:release  --info --stacktrace
+      run: ./gradlew clean build -Prelease.useAutomaticVersion=true -x test :cc-metrics-reporter:release  :carbonj.service:release --info --stacktrace
     - name: scan docker image
       uses: azure/container-scan@v0
       with:
