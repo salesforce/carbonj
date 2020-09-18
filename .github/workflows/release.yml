@@ -1,8 +1,7 @@
 name: Release
-#on:
-#  workflow_dispatch:
-#    branches: [ master ]
-on: [push]
+on:
+  workflow_dispatch:
+    branches: [ master ]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,6 +13,12 @@ jobs:
         java-version: 1.11
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+    - name: Set git user
+      run: /usr/bin/git config --global user.name release-build && /usr/bin/git config --global user.email release-build@salesforce.com
+    - name: Configure git credentials
+      uses: OleksiyRudenko/gha-git-credentials@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
     - name: Log into registry
       #  run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
       run: echo "${{ secrets.DOCKER_HUB_SECRET }}" | docker login --username chrbayer84 --password-stdin
@@ -22,6 +27,8 @@ jobs:
     - name: Show project version
       run: echo "$GRADLE_PROJECT_VERSION"
     - name: Release with Gradle
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: ./gradlew clean build release -Prelease.useAutomaticVersion=true -x test publish --info --stacktrace
     - name: scan docker image
       uses: azure/container-scan@v0
