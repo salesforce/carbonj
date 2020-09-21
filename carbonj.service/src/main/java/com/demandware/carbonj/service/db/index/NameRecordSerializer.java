@@ -58,8 +58,8 @@ class NameRecordSerializer
     {
 
         ByteArrayDataInput in = ByteStreams.newDataInput( valueBytes );
-        long id = in.readLong();
         byte entryType = in.readByte();
+        long id = in.readLong();
         NameRecord e = new NameRecord( key, id, entryType == 1 );
         if( e.isLeaf() )
         {
@@ -99,10 +99,10 @@ class NameRecordSerializer
     public byte[] valueBytes(NameRecord e)
     {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeLong( e.getId() );
         if( e.isLeaf())
         {
             out.writeByte( 1 ); // leaf node type
+            out.writeLong( e.getId() );
             out.writeDouble( 0.0 ); // xFactor is not used and is always 0
             out.writeByte( 0 ); // aggregationPolicy is derived dynamically based on metric name and configuration file
             List<RetentionPolicy> archives = e.getRetentionPolicies();
@@ -113,6 +113,7 @@ class NameRecordSerializer
         else
         {
             out.writeByte( 0 ); // non-leaf node type
+            out.writeLong( e.getId() );
             int n = e.getChildren().size();
             out.writeInt( n );
             e.getChildren().forEach( out::writeUTF );
