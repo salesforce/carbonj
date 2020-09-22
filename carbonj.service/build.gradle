@@ -148,7 +148,6 @@ release {
     failOnCommitNeeded = false
     failOnUpdateNeeded = false
 }
-sourceCompatibility = 1.8
 
 
 description = 'CarbonJ Service Implementation'

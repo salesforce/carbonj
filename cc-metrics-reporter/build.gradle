@@ -19,10 +19,6 @@ apply plugin: 'maven-publish-auth'
 apply plugin: 'net.researchgate.release'
 apply plugin: 'distribution'
 
-//group = 'com.sfcc.um'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
 repositories {
     mavenLocal()
     mavenCentral()
