@@ -6,6 +6,9 @@
  */
 package com.demandware.carbonj.service.db.index;
 
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
@@ -34,8 +37,10 @@ class IdRecordSerializer
     @Override
     public IdRecord toIndexEntry( Long key, byte[] valueBytes)
     {
-        String value = new String(valueBytes, UTF_8);
-        return new IdRecord( key, value );
+        ByteArrayDataInput in = ByteStreams.newDataInput( valueBytes );
+        // a byte for versioning
+        byte entryType = in.readByte();
+        return new IdRecord( key, in.readUTF() );
     }
 
     @Override
@@ -47,7 +52,11 @@ class IdRecordSerializer
     @Override
     public byte[] valueBytes(IdRecord e)
     {
-        return e.metricName().getBytes( UTF_8 );
+        ByteArrayDataOutput out = ByteStreams.newDataOutput();
+        // leaving a byte for versioning
+        out.writeByte(0);
+        out.writeUTF(e.metricName());
+        return out.toByteArray();
     }
 
 }
