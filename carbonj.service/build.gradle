@@ -147,6 +147,7 @@ task sourceJar(type: Jar) {
 release {
     failOnCommitNeeded = false
     failOnUpdateNeeded = false
+    versionPropertyFile = "$rootProject/gradle.properties"
     failOnSnapshotDependencies = false
 }
 
