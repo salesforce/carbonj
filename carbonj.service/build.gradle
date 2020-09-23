@@ -147,8 +147,8 @@ task sourceJar(type: Jar) {
 release {
     failOnCommitNeeded = false
     failOnUpdateNeeded = false
+    failOnSnapshotDependencies = false
 }
-
 
 description = 'CarbonJ Service Implementation'
 dependencies {
