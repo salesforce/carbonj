@@ -10,7 +10,6 @@ buildscript {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:2.4.3")
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
         classpath 'net.researchgate:gradle-release:2.8.1'
-
     }
 }
 
@@ -121,23 +120,67 @@ distributions {
         }
     }
 }
+//springBoot {
+//    backupSource = false
+//}
+//bootRepackage {
+//}
+//
+//task standaloneJar(type: Jar) {
+//    appendix = 'client'
+//    from sourceSets.main.output
+//    exclude('**/*Something*')
+//}
+//
+//task standaloneBoot(type: BootRepackage, dependsOn: standaloneJar) {
+//    withJarTask = standaloneJar
+//    customConfiguration = "mycustomconfiguration"
+//}
+//configurations {
+//    mycustomconfiguration.files('carbonj.sh')
+//}
+
 // for release automatically push released docker and mvn image to repo
 afterReleaseBuild.dependsOn publish
-publish.dependsOn dockerPush
+//publish.dependsOn dockerPush
 publish.dependsOn build
 
 publishing {
+//    publications {
+//        myDistribution(MavenPublication) {
+//            artifact customDistTar
+//        }
+//    }
     publications {
-        myDistribution(MavenPublication) {
-            artifact customDistTar
-        }
-    }
+		bootJava(MavenPublication) {
+			artifact bootJar
+//			artifact standaloneBoot
+
+		}
+	}
 
     repositories {
         mavenLocal()
+//        maven {
+//            if (isSnapshot) {
+//                name 'snapshots'
+//                url "https://nexusmaster.productivity.cc.sfdcsb.net/nexus/content/repositories/cc-snapshots"
+//                credentials {
+//                    username nexus_user_token
+//                    password nexus_password_token
+//                }
+//            }
+////            else {
+////                name 'releases'
+////                url "https://nexusmaster.productivity.cc.sfdcsb.net/nexus/content/repositories/cc-releases"
+////                credentials {
+////                    username nexus_release_user_token
+////                    password nexus_release_password_token
+////                }
+////            }
+//        }
     }
 }
-
 
 
 task sourceJar(type: Jar) {
