@@ -30,9 +30,9 @@
 //        NamespaceCounter namespaceCounter = new NamespaceCounter(30);
 //        AccumulatorImpl accumulator = new AccumulatorImpl(mock, 1000,  30,
 //                new DefaultSlotStrategy(), namespaceCounter);
-//        Blacklist blackList = getBlackList();
+//        MetricList blackList = getBlackList();
 //        DataPoint dataPoint = new DataPoint("metric1", 1, TimeSource.defaultTimeSource().getEpochSecond());
-//        PointProcessorTask task = new PointProcessorTask(Collections.singletonList(dataPoint), blackList,
+//        PointProcessorTask task = new PointProcessorTask(Collections.singletonList(dataPoint), blackList, null,
 //                accumulator, true, null, this::accept, mock(Relay.class), namespaceCounter);
 //        task.run();
 //
@@ -51,8 +51,8 @@
 //        return mock;
 //    }
 //
-//    private Blacklist getBlackList() {
-//        Blacklist blackList = mock(Blacklist.class);
+//    private MetricList getBlackList() {
+//        MetricList blackList = mock(MetricList.class);
 //        when(blackList.match(any(String.class))).thenReturn(false);
 //        return blackList;
 //    }
