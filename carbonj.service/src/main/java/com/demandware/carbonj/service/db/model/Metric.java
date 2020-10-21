@@ -20,7 +20,7 @@ public class Metric
 {
     final public static Metric METRIC_NULL = NullMetric.getInstance();
 
-    final public int id;
+    final public long id;
     final public String name; // metric name
     final public List<RetentionPolicy> retentionPolicies;
     final private List<String> children;
@@ -31,7 +31,7 @@ public class Metric
     private volatile MetricAggregationPolicy metricAggregationPolicy;
 
 
-    public Metric( String name, int id,
+    public Metric( String name, long id,
                    AggregationPolicy aggregationPolicy, List<RetentionPolicy> retentionPolicies, List<String> children)
     {
         this.id = id;

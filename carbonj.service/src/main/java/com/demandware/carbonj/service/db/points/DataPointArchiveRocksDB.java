@@ -67,6 +67,8 @@ class DataPointArchiveRocksDB
 
     private TimeSource timeSource = TimeSource.defaultTimeSource();
 
+    private boolean longId;
+
     private ThreadPoolExecutor cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
         100000 ), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
     {
@@ -78,7 +80,12 @@ class DataPointArchiveRocksDB
         }
     } );
 
-    DataPointArchiveRocksDB(MetricRegistry metricRegistry, String dbName, RetentionPolicy policy, File dbDir, RocksDBConfig rocksdbConfig )
+    DataPointArchiveRocksDB(MetricRegistry metricRegistry,
+                                String dbName,
+                                RetentionPolicy policy,
+                                File dbDir,
+                                RocksDBConfig rocksdbConfig,
+                                boolean longId)
     {
         this.dbName = Preconditions.checkNotNull( dbName );
         this.policy = Preconditions.checkNotNull( policy );
@@ -90,6 +97,7 @@ class DataPointArchiveRocksDB
         this.readTimer = metricRegistry.timer( dbReadTimerName( dbName ) );
         this.emptyReadTimer = metricRegistry.timer( dbEmptyReadTimerName( dbName ) );
         this.deleteTimer = metricRegistry.timer( dbDeleteTimerName( dbName ) );
+        this.longId = longId;
         TtlDB.loadLibrary();
 
     }
@@ -119,20 +127,20 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public void deleteMetric( int metricId )
+    public void deleteMetric( long metricId )
     {
         deleteMetric( metricId, 0, Integer.MAX_VALUE );
     }
 
     @Override
-    public void deleteMetric( int metricId, int from, int until )
+    public void deleteMetric( long metricId, int from, int until )
     {
         RocksIterator iter = null;
         try
         {
             iter = db.newIterator( readOptions );
-            byte[] startKey = DataPointRecord.toKeyBytes( metricId, 0 );
-            byte[] endKey = DataPointRecord.toKeyBytes( metricId, Integer.MAX_VALUE );
+            byte[] startKey = DataPointRecord.toKeyBytes( metricId, 0 , longId);
+            byte[] endKey = DataPointRecord.toKeyBytes( metricId, Integer.MAX_VALUE, longId );
 
             for ( iter.seek( startKey ); iter.isValid(); iter.next() )
             {
@@ -169,7 +177,7 @@ class DataPointArchiveRocksDB
             for ( iter.seekToFirst(); iter.isValid(); iter.next(), i++ )
             {
                 byte[] key = iter.key();
-                if ( DataPointRecord.toTimestamp( key ) == ts )
+                if ( DataPointRecord.toTimestamp( key, longId ) == ts )
                 {
                     try
                     {
@@ -217,8 +225,8 @@ class DataPointArchiveRocksDB
 
             try
             {
-                int mId = DataPointRecord.toMetricId( key );
-                int ts = DataPointRecord.toTimestamp( key );
+                long mId = DataPointRecord.toMetricId( key, longId );
+                int ts = DataPointRecord.toTimestamp( key, longId );
                 msg = "Failed to remove record. db [" + dbName + "], key [" + mId + ":" + ts + "]";
             }
             catch ( Throwable t )
@@ -261,7 +269,7 @@ class DataPointArchiveRocksDB
                 // exclude points that have policy for different db
                 if (dbName.equals(pointPolicy.dbName)) {
                     int interval = policy.interval(p.ts);
-                    byte[] key = DataPointRecord.toKeyBytes(p.metricId, interval);
+                    byte[] key = DataPointRecord.toKeyBytes(p.metricId, interval, longId);
                     byte[] value = DataPointRecord.toValueBytes(p.val);
                     batch.put(key, value);
                 }
@@ -289,9 +297,9 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public void put( int metricId, int interval, double v )
+    public void put( long metricId, int interval, double v )
     {
-        byte[] key = DataPointRecord.toKeyBytes( metricId, interval );
+        byte[] key = DataPointRecord.toKeyBytes( metricId, interval, longId );
         byte[] value = DataPointRecord.toValueBytes( v );
         final Timer.Context timerContext = writeTimer.time();
         try
@@ -309,20 +317,20 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public List<DataPointValue> getDataPoints( int metricId, int startTime, int endTime )
+    public List<DataPointValue> getDataPoints( long metricId, int startTime, int endTime )
     {
         return getDataPointsWithLimit( metricId, startTime, endTime, Integer.MAX_VALUE );
     }
 
-    private List<DataPointValue> getDataPointsWithLimit( int metricId, int startTime, int endTime, int resultLimit )
+    private List<DataPointValue> getDataPointsWithLimit( long metricId, int startTime, int endTime, int resultLimit )
     {
         List<DataPointValue> points = new ArrayList<>();
         RocksIterator iter = null;
         try
         {
             iter = db.newIterator( readOptions );
-            byte[] startKey = DataPointRecord.toKeyBytes( metricId, startTime );
-            byte[] endKey = DataPointRecord.toKeyBytes( metricId, endTime );
+            byte[] startKey = DataPointRecord.toKeyBytes( metricId, startTime, longId );
+            byte[] endKey = DataPointRecord.toKeyBytes( metricId, endTime, longId );
 
             for ( iter.seek( startKey ); iter.isValid() && points.size() < resultLimit; iter.next() )
             {
@@ -334,7 +342,7 @@ class DataPointArchiveRocksDB
 
                 byte[] value = iter.value();
 
-                int ts = DataPointRecord.toTimestamp( key );
+                int ts = DataPointRecord.toTimestamp( key, longId );
                 double val = DataPointRecord.toValue( value );
                 DataPointValue dpv = new DataPointValue( ts, val );
                 points.add( dpv );
@@ -359,7 +367,7 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public List<Double> getDataPoints( int metricId, int startTime, int endTime, int step )
+    public List<Double> getDataPoints( long metricId, int startTime, int endTime, int step )
     {
         // TODO: SB code duplication!!! the method needs to be rewritten to utilize getDataPoints()
         // API and implementation needs to be consistent.
@@ -372,8 +380,8 @@ class DataPointArchiveRocksDB
         {
             // TODO: just to get started. Revisit as part of tuning.
             iter = db.newIterator( readOptions );
-            byte[] startKey = DataPointRecord.toKeyBytes( metricId, startTime );
-            byte[] endKey = DataPointRecord.toKeyBytes( metricId, endTime );
+            byte[] startKey = DataPointRecord.toKeyBytes( metricId, startTime, longId );
+            byte[] endKey = DataPointRecord.toKeyBytes( metricId, endTime, longId );
 
             int ts = startTime;
 
@@ -389,7 +397,7 @@ class DataPointArchiveRocksDB
 
                 byte[] value = iter.value();
 
-                int iterTime = DataPointRecord.toTimestamp( key );
+                int iterTime = DataPointRecord.toTimestamp( key, longId );
 
                 // fill missing intervals with null
                 while ( ts < iterTime )
@@ -559,7 +567,7 @@ class DataPointArchiveRocksDB
     }
 
     @Override
-    public DataPointValue getFirst( int metricId, int from, int to )
+    public DataPointValue getFirst( long metricId, int from, int to )
     {
         List<DataPointValue> r = getDataPointsWithLimit( metricId, from, to, 1 );
         return r.isEmpty() ? null : r.get( 0 );

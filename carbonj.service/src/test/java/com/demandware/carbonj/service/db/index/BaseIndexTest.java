@@ -26,7 +26,7 @@ public class BaseIndexTest
     {
         nameUtils = new NameUtils(InternalConfig.getRootEntryKey());
         dbDirFile = Files.createTempDir();
-        index = IndexUtils.metricIndex( dbDirFile );
+        index = IndexUtils.metricIndex( dbDirFile, false );
         index.open();
     }
 
