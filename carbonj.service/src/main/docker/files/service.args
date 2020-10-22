@@ -58,6 +58,6 @@ jdk.management/com.sun.management.internal=ALL-UNNAMED
 # -Xrunjdwp:transport=dt_socket,address=6666,server=y,suspend=n
 
 # profiling (64-bit)
-# -agentpath:${SERVICEDIR}/lib/libyjpagent.so=port=20001
-# -agentpath:${SERVICEDIR}/lib/libyjpagent.jnilib=port=20001
-# -agentpath:${SERVICEDIR}/lib/yjpagent.dll=port=20001
+# -agentpath:/usr/local/yjp/bin/linux-x86-64/libyjpagent.so=port=20001
+# -agentpath:/usr/local/yjp/bin/linux-x86-64/libyjpagent.jnilib=port=20001
+# -agentpath:/usr/local/yjp/bin/linux-x86-64/yjpagent.dll=port=20001
