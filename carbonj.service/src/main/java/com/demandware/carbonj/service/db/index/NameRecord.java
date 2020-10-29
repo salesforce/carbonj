@@ -23,7 +23,7 @@ class NameRecord
     //for leaf nodes provides unique metric id
     //in root node contains next available metric id.
     //to start using brute-force approach with counter stored in root record.
-    private long id;
+    private int id;
 
     private List<String> children;
 
@@ -39,7 +39,7 @@ class NameRecord
         return key;
     }
 
-    public NameRecord( String key, long id, boolean isLeaf)
+    public NameRecord( String key, int id, boolean isLeaf)
     {
         this.key = key;
         this.id = id;
@@ -133,12 +133,12 @@ class NameRecord
         return key;
     }
 
-    public long getId()
+    public int getId()
     {
         return id;
     }
 
-    public void setId( long id )
+    public void setId( int id )
     {
         this.id = id;
     }

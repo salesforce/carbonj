@@ -6,14 +6,15 @@
  */
 package com.demandware.carbonj.service.db.index;
 
+import java.io.File;
+
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.BaseTest;
 import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.MetricIndex;
 import com.demandware.carbonj.service.db.model.StorageAggregationPolicySource;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.engine.StorageAggregationRulesLoader;
-
-import java.io.File;
 
 /**
  * Test utils
@@ -21,29 +22,29 @@ import java.io.File;
 public class IndexUtils
 {
     static MetricRegistry metricRegistry = new MetricRegistry();
-    private static IndexStore<String, NameRecord> metricNameIndexStore( File dbDir, boolean longId )
+    private static IndexStore<String, NameRecord> metricNameIndexStore( File dbDir )
     {
-        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dir( dbDir, "index-name" ), new NameRecordSerializer(longId) );
+        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dir( dbDir, "index-name" ), new NameRecordSerializer() );
     }
 
-    private static IndexStore<Long, IdRecord> metricIdIndexStore( File dbDir, boolean longId )
+    private static IndexStore<Integer, IdRecord> metricIdIndexStore( File dbDir )
     {
-        return new IndexStoreRocksDB<>(metricRegistry, "index-id", dir( dbDir, "index-id" ), new IdRecordSerializer(longId) );
+        return new IndexStoreRocksDB<>(metricRegistry, "index-id", dir( dbDir, "index-id" ), new IdRecordSerializer() );
     }
 
-    public static MetricIndex metricIndex( File dbDir, boolean longId )
+    public static MetricIndex metricIndex( File dbDir )
     {
-        return metricIndex( metricNameIndexStore( dbDir, longId ), metricIdIndexStore( dbDir, longId ), databaseMetrics() );
+        return metricIndex( metricNameIndexStore( dbDir ), metricIdIndexStore( dbDir ), databaseMetrics() );
     }
 
     private static MetricIndex metricIndex( IndexStore<String, NameRecord> nameIndex,
-                                            IndexStore<Long, IdRecord> idIndex, DatabaseMetrics dbMetrics )
+                                            IndexStore<Integer, IdRecord> idIndex, DatabaseMetrics dbMetrics )
     {
         StorageAggregationRulesLoader rulesLoader = new StorageAggregationRulesLoader( new File("unknownFile") );
         StorageAggregationPolicySource policySource = new StorageAggregationPolicySource( rulesLoader );
 
         return new MetricIndexImpl( metricRegistry,"doesnt-exist.conf", nameIndex, idIndex, dbMetrics, 10000, 60,
-                new NameUtils(),  policySource, 2000,120, false, false);
+                new NameUtils(),  policySource, 2000,120, false);
     }
 
     private static DatabaseMetrics databaseMetrics()

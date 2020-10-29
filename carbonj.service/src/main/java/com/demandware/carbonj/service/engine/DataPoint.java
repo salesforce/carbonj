@@ -23,7 +23,7 @@ public class DataPoint
 
     public final int ts;
 
-    public long metricId = UNKNOWN_ID;
+    public int metricId = UNKNOWN_ID;
 
     public DataPoint( String name, double val, int ts )
     {
@@ -38,7 +38,7 @@ public class DataPoint
         return (int) ( dt.getMillis() / 1000 / 60 * 60 );
     }
 
-    public void setMetricId( long id )
+    public void setMetricId( int id )
     {
         this.metricId = id;
     }

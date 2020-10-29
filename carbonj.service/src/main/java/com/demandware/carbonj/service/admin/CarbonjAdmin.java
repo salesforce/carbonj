@@ -26,7 +26,6 @@ import org.apache.commons.io.LineIterator;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -59,10 +58,6 @@ public class CarbonjAdmin
     private final InputQueue inputQueue;
 
     private final NameUtils nameUtils;
-
-    @Value( "${metrics.store.longId:false}" )
-    private boolean longId;
-
 
     private Supplier<RuntimeException> notConfigured = ( ) -> new RuntimeException(
         "Time Series Store is not configured." );
@@ -125,7 +120,7 @@ public class CarbonjAdmin
     }
 
     @RequestMapping( value = "/dumpnames", method = RequestMethod.GET )
-    public void dumpNames( @RequestParam( value = "startId", required = false, defaultValue = "0" ) long startId,
+    public void dumpNames( @RequestParam( value = "startId", required = false, defaultValue = "0" ) int startId,
                            @RequestParam( value = "startName", required = false ) String startName,
                            @RequestParam( value = "count", required = false ) Integer count,
                            @RequestParam( value = "filter", required = false ) String wildcard, Writer response )
@@ -143,7 +138,7 @@ public class CarbonjAdmin
         }
         try
         {
-            tsStore().scanMetrics( startId, getMaxId(), m -> {
+            tsStore().scanMetrics( startId, Integer.MAX_VALUE, m -> {
                 if ( !filter.test( m ) )
                 {
                     return;
@@ -167,10 +162,6 @@ public class CarbonjAdmin
         {
 
         }
-    }
-
-    private long getMaxId() {
-        return longId ? Long.MAX_VALUE : Integer.MAX_VALUE;
     }
 
     private boolean loadLock = false;
@@ -537,7 +528,6 @@ public class CarbonjAdmin
 
     static boolean hasDataSince( TimeSeriesStore ts, String metric, int from )
     {
-
         for ( String dbName : Arrays.asList( "30m2y", "5m7d", "60s24h" ) )
         {
             if ( null != ts.getFirst( dbName, metric, from, Integer.MAX_VALUE ) )
@@ -564,7 +554,7 @@ public class CarbonjAdmin
 
         try
         {
-            ts.scanMetrics( 0, getMaxId(), m -> {
+            ts.scanMetrics( 0, Integer.MAX_VALUE, m -> {
                 if ( written.get() >= count )
                 {
                     // produced big enough result - interrupt execution through exception (signal "donness")
@@ -632,7 +622,7 @@ public class CarbonjAdmin
         try
         {
             ts.scanMetrics( cursor,
-                getMaxId(),
+                Integer.MAX_VALUE,
                 m -> {
                     try
                     {

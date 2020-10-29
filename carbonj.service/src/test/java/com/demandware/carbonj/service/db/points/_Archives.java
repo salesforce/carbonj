@@ -49,11 +49,11 @@ public class _Archives extends BaseTest
     public void setUp()
     {
         File dbDirFile = Files.createTempDir();
-        index = IndexUtils.metricIndex( dbDirFile, false );
+        index = IndexUtils.metricIndex( dbDirFile );
         index.open();
         StagingFiles sFiles = new StagingFiles(metricRegistry, new File( dbDirFile, "staging" ), new SystemSort(), index );
         DataPointStagingStore stagingStore = new DataPointStagingStore( metricRegistry, sFiles, 1000, 1, 1, 1, 100, 30, 3);
-        DataPointArchiveFactory pointArchiveFactory = new DataPointArchiveFactory( metricRegistry, dbDirFile, new RocksDBConfig(), false );
+        DataPointArchiveFactory pointArchiveFactory = new DataPointArchiveFactory( metricRegistry, dbDirFile, new RocksDBConfig() );
         QueryCachePolicy qcp = new QueryCachePolicy( true, true, true );
         archives = new DataPointStoreImpl( metricRegistry, pointArchiveFactory, new DatabaseMetrics(metricRegistry), stagingStore, true, 100, 10, qcp, name -> true );
         archives.open();

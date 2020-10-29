@@ -6,64 +6,47 @@
  */
 package com.demandware.carbonj.service.db.index;
 
-import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 class IdRecordSerializer
-                implements RecordSerializer<Long, IdRecord>
+                implements RecordSerializer<Integer, IdRecord>
 {
-    private boolean longId;
-
-    public IdRecordSerializer(boolean longId)
+    public IdRecordSerializer()
     {
-        this.longId = longId;
     }
 
     @Override
-    public Long key( byte[] keyBytes )
+    public Integer key( byte[] keyBytes )
     {
-        return longId ? Longs.fromByteArray( keyBytes ) : Integer.valueOf(Ints.fromByteArray(keyBytes)).longValue();
+        return Ints.fromByteArray( keyBytes );
     }
 
     @Override
     public IdRecord toIndexEntry( byte[] keyBytes, byte[] valueBytes)
     {
-        Long key = key(keyBytes);
+        Integer key = key(keyBytes);
         return toIndexEntry( key, valueBytes);
     }
 
     @Override
-    public IdRecord toIndexEntry( Long key, byte[] valueBytes)
+    public IdRecord toIndexEntry( Integer key, byte[] valueBytes)
     {
-        ByteArrayDataInput in = ByteStreams.newDataInput( valueBytes );
-        if(longId)
-        {
-            // a byte for versioning
-            byte entryType = in.readByte();
-        }
-        return new IdRecord( key, in.readUTF() );
+        String value = new String(valueBytes, UTF_8);
+        return new IdRecord( key, value );
     }
 
     @Override
-    public byte[] keyBytes(Long key)
+    public byte[] keyBytes(Integer key)
     {
-        return longId ? Longs.toByteArray(key) : Ints.toByteArray(key.intValue());
+        return Ints.toByteArray(key);
     }
 
     @Override
     public byte[] valueBytes(IdRecord e)
     {
-        ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        if(longId)
-        {
-            // leaving a byte for versioning
-            out.writeByte(0);
-        }
-        out.writeUTF(e.metricName());
-        return out.toByteArray();
+        return e.metricName().getBytes( UTF_8 );
     }
 
 }

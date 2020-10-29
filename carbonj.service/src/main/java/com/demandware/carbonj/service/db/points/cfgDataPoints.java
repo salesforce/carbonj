@@ -30,9 +30,6 @@ import java.util.function.Predicate;
 @Import({cfgMetricIndex.class, cfgNamespaces.class})
 public class cfgDataPoints
 {
-    @Value( "${metrics.store.longId:false}" )
-    private boolean longId = false;
-
     @Value( "${metrics.store.dataDir:data}")
     private String dataDir = "data";
 
@@ -106,7 +103,7 @@ public class cfgDataPoints
     @Bean
     DataPointArchiveFactory pointArchiveFactory(RocksDBConfig dbConfig)
     {
-        return new DataPointArchiveFactory(metricRegistry, dataDir(), dbConfig, longId);
+        return new DataPointArchiveFactory(metricRegistry, dataDir(), dbConfig);
     }
 
     private StagingFilesSort fileSort()

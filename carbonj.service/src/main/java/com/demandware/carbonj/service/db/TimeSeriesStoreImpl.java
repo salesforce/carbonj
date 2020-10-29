@@ -105,8 +105,6 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
 
     private volatile long logNoOfSeriesThreshold;
 
-    private boolean longId;
-
     public static ThreadPoolExecutor newSerialTaskQueue(int queueSize) {
         ThreadFactory tf =
                 new ThreadFactoryBuilder()
@@ -144,8 +142,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
                                ThreadPoolExecutor heavyQueryTaskQueue, ThreadPoolExecutor serialTaskQueue,
                                DataPointStore pointStore, DatabaseMetrics dbMetrics,
                                boolean batchedSeriesRetrieval, int batchedSeriesSize, boolean dumpIndex,
-                               File dumpIndexFile, int maxNonLeafPointsLoggedPerMin, String metricsStoreConfigFile,
-                               boolean longId) {
+                               File dumpIndexFile, int maxNonLeafPointsLoggedPerMin, String metricsStoreConfigFile) {
         this.nameIndex = Preconditions.checkNotNull(nameIndex);
         this.eventLogger = eventLogger;
         this.pointStore = Preconditions.checkNotNull(pointStore);
@@ -157,7 +154,6 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
         this.dumpIndex = dumpIndex;
         this.dumpIndexFile = dumpIndexFile;
         this.nonLeafPointsLogQuota = new Quota(maxNonLeafPointsLoggedPerMin, 60);
-        this.longId = longId;
 
 
         rejectedCounter = metricRegistry.counter(
@@ -362,11 +358,11 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
     }
 
     @Override
-    public DataPointExportResults exportPoints(String dbName, long metricId) {
+    public DataPointExportResults exportPoints(String dbName, int metricId) {
         return exportPoints(dbName, null, metricId);
     }
 
-    private DataPointExportResults exportPoints(String dbName, String metricName, Long metricId) {
+    private DataPointExportResults exportPoints(String dbName, String metricName, Integer metricId) {
         if (!RetentionPolicy.dbNameExists(dbName)) {
             throw new RuntimeException(String.format("Unknown dbName [%s]", dbName));
         }
@@ -645,13 +641,13 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
     }
 
     @Override
-    public Metric getMetric( long metricId )
+    public Metric getMetric( int metricId )
     {
         return nameIndex.getMetric( metricId );
     }
 
     @Override
-    public String getMetricName( long metricId )
+    public String getMetricName( int metricId )
     {
         return nameIndex.getMetricName( metricId );
     }
@@ -668,18 +664,11 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
     @Override
     public void scanMetrics( Consumer<Metric> m )
     {
-        if(longId)
-        {
-            scanMetrics( 0, Long.MAX_VALUE, m );
-        }
-        else
-        {
-            scanMetrics( 0, Integer.MAX_VALUE, m );
-        }
+        scanMetrics( 0, Integer.MAX_VALUE, m );
     }
 
     @Override
-    public long scanMetrics( long start, long end, Consumer<Metric> m )
+    public int scanMetrics( int start, int end, Consumer<Metric> m )
     {
         return nameIndex.scanNames( start, end, m );
     }

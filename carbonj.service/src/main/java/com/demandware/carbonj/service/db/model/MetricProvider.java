@@ -9,5 +9,5 @@ package com.demandware.carbonj.service.db.model;
 @FunctionalInterface
 public interface MetricProvider
 {
-    Metric forId(long metricId);
+    Metric forId(int metricId);
 }

@@ -31,7 +31,7 @@ public class _CreateNames
     {
         nameUtils = new NameUtils(InternalConfig.getRootEntryKey());
         dbDirFile = Files.createTempDir();
-        index = IndexUtils.metricIndex( dbDirFile, false );
+        index = IndexUtils.metricIndex( dbDirFile );
         index.open();
     }
 

@@ -9,19 +9,19 @@ package com.demandware.carbonj.service.db.index;
 import com.google.common.base.Preconditions;
 
 class IdRecord
-                implements Record<Long>
+                implements Record<Integer>
 {
-    private Long key;
+    private Integer key;
 
     private String metricName;
 
-    public IdRecord( Long key, String metricName)
+    public IdRecord( Integer key, String metricName)
     {
         this.key = Preconditions.checkNotNull(key);
         this.metricName = Preconditions.checkNotNull(metricName);
     }
 
-    public Long key()
+    public Integer key()
     {
         return key;
     }

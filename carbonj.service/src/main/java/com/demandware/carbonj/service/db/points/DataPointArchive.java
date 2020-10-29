@@ -16,13 +16,13 @@ interface DataPointArchive
 
     String getName();
 
-    void put( long metricId, int time, double val );
+    void put( int metricId, int time, double val );
 
     int put( DataPoints points );
 
-    List<Double> getDataPoints( long metricId, int startTime, int endTime, int step );
+    List<Double> getDataPoints( int metricId, int startTime, int endTime, int step );
 
-    List<DataPointValue> getDataPoints( long metricId, int startTime, int endTime );
+    List<DataPointValue> getDataPoints( int metricId, int startTime, int endTime );
 
     void close();
 
@@ -32,9 +32,9 @@ interface DataPointArchive
 
     long delete( int ts );
 
-    void deleteMetric( long metricId );
+    void deleteMetric( int metricId );
 
-    void deleteMetric( long metricId, int from, int until );
+    void deleteMetric( int metricId, int from, int until );
 
-    DataPointValue getFirst( long metricId, int from, int to );
+    DataPointValue getFirst( int metricId, int from, int to );
 }
