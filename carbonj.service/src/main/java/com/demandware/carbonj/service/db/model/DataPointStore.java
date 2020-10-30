@@ -27,11 +27,11 @@ public interface DataPointStore extends StatsAware
 
     Series getSeries( Metric metric, int from, int until, int now );
 
-    List<DataPointValue> getValues( RetentionPolicy archivePolicy, long metricId, int from, int to );
+    List<DataPointValue> getValues( RetentionPolicy archivePolicy, int metricId, int from, int to );
 
     void open();
 
     void close();
 
-    DataPointValue getFirst( RetentionPolicy instanceForDbName, long id, int from, int to );
+    DataPointValue getFirst( RetentionPolicy instanceForDbName, int id, int from, int to );
 }

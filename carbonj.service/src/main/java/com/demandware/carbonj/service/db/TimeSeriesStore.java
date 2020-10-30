@@ -38,7 +38,7 @@ public interface TimeSeriesStore
 
     DataPointExportResults exportPoints( String dbName, String metricName );
 
-    DataPointExportResults exportPoints( String dbName, long metricId );
+    DataPointExportResults exportPoints( String dbName, int metricId );
 
     // to support testing
     Metric selectRandomMetric();
@@ -47,13 +47,13 @@ public interface TimeSeriesStore
 
     Metric getMetric( String name, boolean createIfMissing );
 
-    Metric getMetric( long metricId );
+    Metric getMetric( int metricId );
 
-    String getMetricName( long metricId );
+    String getMetricName( int metricId );
 
     void scanMetrics( Consumer<Metric> m );
 
-    long scanMetrics( long start, long end, Consumer<Metric> m );
+    int scanMetrics( int start, int end, Consumer<Metric> m );
 
     List<Metric> findMetrics( String pattern );
 

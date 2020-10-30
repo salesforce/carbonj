@@ -204,7 +204,7 @@ public class _GraphiteSeriesDataServlet {
                     threadBlockingQueueSize), TimeSeriesStoreImpl.newMainTaskQueue(1,
                     2), TimeSeriesStoreImpl.newSerialTaskQueue(10), pointStore, dbMetrics,
                     batchedSeriesRetrieval,
-                    batchedSeriesSize, dumpIndex, new File(dumpIndexFile), 10, "doesntexist.conf", false);
+                    batchedSeriesSize, dumpIndex, new File(dumpIndexFile), 10, "doesntexist.conf");
         }
 
     }

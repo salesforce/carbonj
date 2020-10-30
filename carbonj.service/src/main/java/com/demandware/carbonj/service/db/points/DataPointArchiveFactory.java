@@ -24,14 +24,11 @@ class DataPointArchiveFactory
 
     private File dataDir;
 
-    private boolean longId;
-
-    DataPointArchiveFactory(MetricRegistry metricRegistry, File dataDir, RocksDBConfig rocksDBConfig, boolean longId)
+    DataPointArchiveFactory(MetricRegistry metricRegistry, File dataDir, RocksDBConfig rocksDBConfig)
     {
         this.metricRegistry = metricRegistry;
         this.dataDir = Preconditions.checkNotNull( dataDir );
         this.rocksDBConfig = Preconditions.checkNotNull( rocksDBConfig );
-        this.longId = longId;
     }
 
     DataPointArchive get( String dbName)
@@ -48,7 +45,7 @@ class DataPointArchiveFactory
     private DataPointArchive open(String dbName, RetentionPolicy policy)
     {
         File dbDir = dbDir( dbName );
-        DataPointArchive db = new DataPointArchiveRocksDB(metricRegistry, dbName, policy, dbDir, rocksDBConfig, longId );
+        DataPointArchive db = new DataPointArchiveRocksDB(metricRegistry, dbName, policy, dbDir, rocksDBConfig );
         db.open();
         return db;
     }

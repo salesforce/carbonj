@@ -29,5 +29,5 @@ public interface IndexStore<K, R extends Record<K>>
 
     K maxKey();
 
-    long scan( K startKey, K endKey, Consumer<R> c );
+    int scan( K startKey, K endKey, Consumer<R> c );
 }

@@ -21,8 +21,6 @@ public interface MetricIndex
 {
     void open();
 
-    void setMaxId(long maxId);
-
     void close();
 
     /**
@@ -80,9 +78,9 @@ public interface MetricIndex
 
     Metric getMetric( String name );
 
-    Metric getMetric( long metricId );
+    Metric getMetric( int metricId );
 
-    String getMetricName( long metricId );
+    String getMetricName( int metricId );
 
     boolean isValidName( String name );
 
@@ -90,5 +88,5 @@ public interface MetricIndex
 
     void dumpIndex( File dumpFile );
 
-    long scanNames( long start, long end, Consumer<Metric> m );
+    int scanNames( int start, int end, Consumer<Metric> m );
 }

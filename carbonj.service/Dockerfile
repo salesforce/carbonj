@@ -23,6 +23,8 @@ RUN yum update -y && \
   sysstat \
   epel-release
 
+RUN yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel
+
 RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
      curl -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
      yum update -y && \
