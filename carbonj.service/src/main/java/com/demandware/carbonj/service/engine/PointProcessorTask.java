@@ -31,7 +31,9 @@ public class PointProcessorTask implements Runnable
 
 
     private List<DataPoint> points;
-    private Blacklist blacklist;
+    private MetricList blacklist;
+
+    private MetricList allowOnly;
 
     final Accumulator accumulator;
 
@@ -45,11 +47,12 @@ public class PointProcessorTask implements Runnable
 
     private final NamespaceCounter nsCounter;
 
-    public PointProcessorTask(MetricRegistry metricRegistry, List<DataPoint> points, Blacklist blacklist, Accumulator accumulator, boolean aggregationEnabled,
+    public PointProcessorTask(MetricRegistry metricRegistry, List<DataPoint> points, MetricList blacklist, MetricList allowOnly, Accumulator accumulator, boolean aggregationEnabled,
                               PointFilter pointFilter, Consumer<DataPoints> out, Relay auditLog, NamespaceCounter nsCounter)
     {
         this.points = points;
         this.blacklist = blacklist;
+        this.allowOnly = allowOnly;
         this.accumulator = accumulator;
         this.aggregationEnabled = aggregationEnabled;
         this.filter = pointFilter;
@@ -113,8 +116,15 @@ public class PointProcessorTask implements Runnable
 
         auditLog.accept( t );
 
-        // point filter and blacklist are similar. But filter is cheaper so it goes first.
+        // filter is cheaper so it goes first.
         if ( filter != null && !filter.accept( t ) )
+        {
+            t.drop();
+            return;
+        }
+
+        // If we have a non-empty allow list, drop everything not on the list (before we handle blocking)
+        if ( allowOnly != null && !allowOnly.isEmpty() && !allowOnly.match( t.name ) )
         {
             t.drop();
             return;

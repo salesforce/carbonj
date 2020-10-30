@@ -40,7 +40,7 @@ public class GraphiteSeriesDataServlet
 
     @Autowired
     @Qualifier("queryBlacklist")
-    private Blacklist queryBlacklist;
+    private MetricList queryBlacklist;
 
     @Autowired(required = false)
     @Qualifier("CarbonjEventsLogger")

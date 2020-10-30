@@ -8,9 +8,7 @@ package com.demandware.carbonj.service.engine;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -42,7 +40,7 @@ public class GraphiteMetricSearchServlet
 
     @Autowired
     @Qualifier("queryBlacklist")
-    private Blacklist queryBlacklist;
+    private MetricList queryBlacklist;
 
     @Autowired(required = false)
     @Qualifier("CarbonjEventsLogger")

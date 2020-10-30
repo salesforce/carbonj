@@ -19,7 +19,8 @@ class PointProcessorTaskBuilder
 {
     private final MetricRegistry metricRegistry;
     private final Consumer<DataPoints> out;
-    private final Blacklist blacklist;
+    private final MetricList blacklist;
+    private final MetricList allowOnly;
     private final Relay auditLog;
     private final boolean aggregationEnabled;
     final PointFilter filter;
@@ -27,12 +28,13 @@ class PointProcessorTaskBuilder
     private final NamespaceCounter nsCounter;
 
     public PointProcessorTaskBuilder(MetricRegistry metricRegistry, Consumer<DataPoints> out,
-                                     Blacklist blacklist, Relay auditLog,
+                                     MetricList blacklist, MetricList allowOnly, Relay auditLog,
                                      boolean aggregationEnabled, PointFilter filter, Accumulator accumulator,
                                      NamespaceCounter nsCounter) {
         this.metricRegistry = metricRegistry;
         this.out = out;
         this.blacklist = blacklist;
+        this.allowOnly = allowOnly;
         this.auditLog = auditLog;
         this.aggregationEnabled = aggregationEnabled;
         this.filter = filter;
@@ -42,7 +44,7 @@ class PointProcessorTaskBuilder
 
     public Runnable task(List<DataPoint> points)
     {
-        return new PointProcessorTask(metricRegistry, points, blacklist, accumulator, aggregationEnabled, filter, out, auditLog, nsCounter);
+        return new PointProcessorTask(metricRegistry, points, blacklist, allowOnly, accumulator, aggregationEnabled, filter, out, auditLog, nsCounter);
     }
 
     public Accumulator getAccumulator() {
