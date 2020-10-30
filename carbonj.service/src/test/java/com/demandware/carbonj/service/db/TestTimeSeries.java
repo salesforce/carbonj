@@ -41,7 +41,7 @@ public class TestTimeSeries extends BaseTest {
                 threadPoolExecutor, threadPoolExecutor,
                 threadPoolExecutor, mock(DataPointStore.class), new DatabaseMetrics(metricRegistry), false,
                 100, false, null, 1,
-                "DoesNotExist");
+                "DoesNotExist", false);
 
         RetentionPolicy.getInstance("60s:24h");
         RetentionPolicy.getInstance("5m:7d");

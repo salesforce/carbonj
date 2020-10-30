@@ -6,24 +6,8 @@
  */
 package com.demandware.carbonj.service.db.points;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
-
 import com.codahale.metrics.MetricRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.demandware.carbonj.service.db.model.DataPointImportResults;
-import com.demandware.carbonj.service.db.model.DataPointStore;
-import com.demandware.carbonj.service.db.model.DataPointValue;
-import com.demandware.carbonj.service.db.model.Metric;
-import com.demandware.carbonj.service.db.model.QueryCachePolicy;
-import com.demandware.carbonj.service.db.model.RetentionPolicy;
-import com.demandware.carbonj.service.db.model.Series;
+import com.demandware.carbonj.service.db.model.*;
 import com.demandware.carbonj.service.db.util.CacheStatsReporter;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
@@ -33,6 +17,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 class DataPointStoreImpl
     implements DataPointStore
@@ -163,7 +156,7 @@ class DataPointStoreImpl
     }
 
     @Override
-    public List<DataPointValue> getValues( RetentionPolicy archivePolicy, int metricId, int from, int to )
+    public List<DataPointValue> getValues( RetentionPolicy archivePolicy, long metricId, int from, int to )
     {
         DataPointArchive db = dbFactory.get( archivePolicy );
         return db.getDataPoints( metricId, from, to );
@@ -394,7 +387,7 @@ class DataPointStoreImpl
     }
 
     @Override
-    public DataPointValue getFirst( RetentionPolicy archivePolicy, int metricId, int from, int to )
+    public DataPointValue getFirst( RetentionPolicy archivePolicy, long metricId, int from, int to )
     {
         DataPointArchive db = dbFactory.get( archivePolicy );
         return db.getFirst( metricId, from, to );
