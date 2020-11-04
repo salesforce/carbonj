@@ -31,8 +31,8 @@ grafPort=2003
 
 # gc log file
 # java 9+ has new GC logging...
-log=$( echo $( ls -t /app/log/gc.log ) | awk '{print $1}' )
-#log=$( echo $( ls -t /app/log/gc*current ) | awk '{print $1}' )
+#log=$( echo $( ls -t /app/log/gc.log ) | awk '{print $1}' )
+log=$( echo $( ls -t /app/log/gc*current ) | awk '{print $1}' )
 
 #
 # do work
