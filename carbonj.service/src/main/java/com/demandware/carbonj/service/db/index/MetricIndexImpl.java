@@ -347,7 +347,12 @@ public class MetricIndexImpl implements MetricIndex {
         try
         {
             Metric m = metricCache.get( key );
-            return m == Metric.METRIC_NULL ? null : m;
+            if ( m == Metric.METRIC_NULL)
+            {
+                log.warn(String.format("Metric is null for the id [%s]", key));
+                return null;
+            }
+            return m;
         }
         catch ( ExecutionException e )
         {
