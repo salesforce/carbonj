@@ -626,41 +626,46 @@ public class CarbonjAdmin
                 m -> {
                     try
                     {
+                        if (m == null)
+                        {
+                            log.error("Metric is null");
+                            return;
+                        }
                         if ( written.get() >= count )
                         {
                             // add artificial metric to transfer cursor state.
-                response.write( DumpFormat.writeSeries( "ignore.dumpseries.cursor", 1,
-                    Arrays.asList( new DataPointValue( 0, m.id ) ) ) );
-                response.write( "\n" );
-                // produced big enough result - interrupt execution through exception (signal "donness")
-                // make sure that we have produced at least one metric to ensure that response is not empty.
-                throw new StopException();
-            }
-            if ( !nameUtils.isValid( m.name, false ) )
-            {
-                // skip metrics with invalid names
-                return;
-            }
-            // test metric name based on the provided filter
-            if ( !filter.test( m ) || excludeFilter.test( m ) )
-            {
-                return;
-            }
-            List<DataPointValue> vals = ts.getValues( dbName, m.name, fromRange, toRange );
-            if ( vals.isEmpty() )
-            {
-                // skip
-                return;
-            }
-            response.write( DumpFormat.writeSeries( m.name, policy.precision, vals ) );
-            response.write( "\n" );
-            written.incrementAndGet();
-        }
-        catch ( Exception e )
-        {
-            throw Throwables.propagate( e );
-        }
-    }       );
+                            response.write( DumpFormat.writeSeries( "ignore.dumpseries.cursor", 1,
+                                Arrays.asList( new DataPointValue( 0, m.id ) ) ) );
+                            response.write( "\n" );
+                            // produced big enough result - interrupt execution through exception (signal "donness")
+                            // make sure that we have produced at least one metric to ensure that response is not empty.
+                            throw new StopException();
+                        }
+                        if ( !nameUtils.isValid( m.name, false ) )
+                        {
+                            // skip metrics with invalid names
+                            return;
+                        }
+                        // test metric name based on the provided filter
+                        if ( !filter.test( m ) || excludeFilter.test( m ) )
+                        {
+                            return;
+                        }
+                        List<DataPointValue> vals = ts.getValues( dbName, m.name, fromRange, toRange );
+                        if ( vals.isEmpty() )
+                        {
+                            // skip
+                            return;
+                        }
+                        response.write( DumpFormat.writeSeries( m.name, policy.precision, vals ) );
+                        response.write( "\n" );
+                        written.incrementAndGet();
+                    }
+                    catch ( Exception e )
+                    {
+                        throw Throwables.propagate( e );
+                    }
+                });
 
         }
         catch ( StopException e )
