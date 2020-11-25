@@ -170,6 +170,9 @@ public class cfgCarbonJ
 
     @Value( "${app.servicedir:}" ) private String serviceDir;
 
+    @Value( "${kinesis.consumer.region:us-east-1}" )
+    private String kinesisConsumerRegion = "us-east-1";
+
     @Autowired MetricRegistry metricRegistry;
 
     @Bean( name = "dataPointSinkRelay" ) Relay relay( ScheduledExecutorService s )
@@ -345,7 +348,7 @@ public class cfgCarbonJ
         {
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
             Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
-                            kinesisConfig, checkPointMgr );
+                            kinesisConfig, checkPointMgr, kinesisConsumerRegion );
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
             return consumer;
         }
