@@ -19,6 +19,9 @@ metrics:
       offset:
         default:
           mins: 5
+kinesis:
+  consumer:
+    region: us-east-1
 jetty:
   # to support import
   maxFormContentSize: 1000000

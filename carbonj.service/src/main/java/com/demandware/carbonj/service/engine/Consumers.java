@@ -31,16 +31,19 @@ public class Consumers {
 
     private final Map<String, KinesisConsumer> consumers;
 
+    private String kinesisConsumerRegion;
+
     private PointProcessor recoveryPointProcessor;
 
     Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor, File rulesFile,
-              KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr) {
+              KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion) {
 
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
         this.recoveryPointProcessor = recoveryPointProcessor;
         this.kinesisConfig = kinesisConfig;
         this.checkPointMgr = checkPointMgr;
+        this.kinesisConsumerRegion = kinesisConsumerRegion;
         consumers = new ConcurrentHashMap<>();
         consumerRules = new ConsumerRules(rulesFile);
         reload();
@@ -119,7 +122,7 @@ public class Consumers {
 
                 Counter initRetryCounter = metricRegistry.counter(MetricRegistry.name("kinesis.consumer." + kinesisStreamName + ".initRetryCounter"));
                 KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, recoveryPointProcessor, kinesisStreamName,
-                        kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter);
+                        kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter, kinesisConsumerRegion);
                 log.info(String.format("New Consumer created with name %s", kinesisStreamName));
                 newConsumers.add(consumerName);
                 consumers.put(consumerName, kinesisConsumer);
