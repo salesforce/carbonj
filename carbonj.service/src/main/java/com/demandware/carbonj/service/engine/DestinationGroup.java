@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import com.google.common.base.Throwables;
+import software.amazon.ion.impl.PrivateReaderWriter;
 
 /**
  * Partitions data point stream across destinations defined within group. In other words, each
@@ -45,8 +46,10 @@ class DestinationGroup
     private LineProtocolDestination[] destinations;
     private int noOfDestinations;
 
+    private String kinesisRelayRegion;
+
     DestinationGroup( MetricRegistry metricRegistry, String type, String dest, int queueSize, int batchSize, int refreshIntervalInMillis,
-                      String destConfigDir, int maxWaitTimeInSecs)
+                      String destConfigDir, int maxWaitTimeInSecs, String kinesisRelayRegion)
     {
         this.metricRegistry = metricRegistry;
         this.dest = dest;
@@ -95,7 +98,7 @@ class DestinationGroup
                         log.info(" Falling back to default values ");
                     }
 
-                    d = new KinesisDestination(metricRegistry, type, queueSize, kinesisStreamName, kinesisBatchSize, threadCount, maxWaitTimeInSecs);
+                    d = new KinesisDestination(metricRegistry, type, queueSize, kinesisStreamName, kinesisBatchSize, threadCount, maxWaitTimeInSecs, kinesisRelayRegion);
                 }
                 else if (s.startsWith("service:")) {
                     String nameAndPort =  s.substring(("service:".length()));
