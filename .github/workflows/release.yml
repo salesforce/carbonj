@@ -16,6 +16,8 @@ jobs:
     - name: Set git user
       run: /usr/bin/git config --global user.name release-build && /usr/bin/git config --global user.email release-build@salesforce.com
     - name: Configure git credentials
+      env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       uses: OleksiyRudenko/gha-git-credentials@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
