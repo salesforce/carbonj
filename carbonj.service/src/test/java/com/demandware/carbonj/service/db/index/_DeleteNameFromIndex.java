@@ -6,21 +6,18 @@
  */
 package com.demandware.carbonj.service.db.index;
 
+import com.demandware.carbonj.service.db.model.Metric;
+import org.junit.Test;
+
+import java.util.List;
+
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyCollectionOf;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.junit.Assert.assertTrue;
-
-import java.util.List;
-
-import org.junit.Test;
-
-import com.demandware.carbonj.service.db.model.Metric;
 
 /**
  * Unit tests for metric name delete operation from name index.
@@ -119,7 +116,7 @@ public class _DeleteNameFromIndex extends BaseIndexTest
     }
 
 
-    private void assertMetricsDoNotExist(List<String> names, List<Integer> ids)
+    private void assertMetricsDoNotExist(List<String> names, List<Long> ids)
     {
         ids.forEach( id -> assertThat( index.getMetric( id ), nullValue() ) );
 
@@ -134,7 +131,7 @@ public class _DeleteNameFromIndex extends BaseIndexTest
         } );
     }
 
-    private void assertMetricsExist(List<String> names, List<Integer> ids)
+    private void assertMetricsExist(List<String> names, List<Long> ids)
     {
         ids.forEach( id -> assertThat( index.getMetric( id ), not(nullValue()) ) );
 
@@ -149,7 +146,7 @@ public class _DeleteNameFromIndex extends BaseIndexTest
         } );
     }
 
-    private void assertCanCreateAgain(String name, int originalId)
+    private void assertCanCreateAgain(String name, long originalId)
     {
         Metric bMetric = findOrCreate( name );
         assertTrue(originalId < bMetric.id);

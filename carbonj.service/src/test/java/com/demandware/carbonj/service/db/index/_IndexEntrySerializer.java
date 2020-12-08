@@ -16,7 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class _IndexEntrySerializer
 {
-    private NameRecordSerializer serializer = new NameRecordSerializer();
+    private NameRecordSerializer serializer = new NameRecordSerializer(false);
 
     @Before
     public void setUp()

@@ -6,20 +6,19 @@
  */
 package com.demandware.carbonj.service.db.points;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.demandware.carbonj.service.db.model.IntervalValues;
 import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.MetricProvider;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Provides access to a sorted staging file - loads data points in sets by metric id.
@@ -117,7 +116,7 @@ class SortedStagingFile
             return Optional.empty();
         }
 
-        int metricId = r.metricId;
+        long metricId = r.metricId;
         List<Double> vals = new ArrayList<>();
 
         while ( true )
