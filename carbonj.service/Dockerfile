@@ -21,7 +21,8 @@ RUN yum update -y && \
   nc \
   lsof \
   sysstat \
-  epel-release
+  epel-release \
+  sudo
 
 RUN yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel
 
@@ -101,6 +102,13 @@ RUN wget https://www.yourkit.com/download/fix/yjp-2017.02-b99/yjp.jar -P /usr/lo
 RUN wget https://github.com/krallin/tini/releases/download/v0.18.0/tini
 RUN mv tini /sbin/tini
 RUN chmod +x /sbin/tini
+
+WORKDIR /app
+RUN groupadd --system --gid 7447 carbonj && \
+    adduser --system --gid 7447 --uid 7447 --shell /bin/bash --home /app carbonj && \
+    echo 'username  ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
+    chown -R carbonj:carbonj .
+
 ENTRYPOINT ["/sbin/tini", "--"]
 
 # Run your program under Tini
