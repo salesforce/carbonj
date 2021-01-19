@@ -35,6 +35,10 @@ public class Relay
 
     private final File rulesFile;
 
+    private final ConfigServerUtil configServerUtil;
+
+    private final String rulesSrc;
+
     private final int queueSize;
 
     private final int batchSize;
@@ -42,7 +46,7 @@ public class Relay
     volatile RelayRouter router;
 
     Relay(MetricRegistry metricRegistry, String type, File rulesFile, int queueSize, int batchSize, int refreshIntervalInMillis, String destConfigDir,
-          int maxWaitTimeInMillis )
+          int maxWaitTimeInMillis, String relayRulesSrc, ConfigServerUtil configServerUtil )
     {
         this.metricRegistry = metricRegistry;
         this.type = type;
@@ -50,6 +54,8 @@ public class Relay
         this.destConfigDir = destConfigDir;
         this.maxWaitTimeInMillis = maxWaitTimeInMillis;
         log.info( String.format("[%s] Starting relay", type) );
+        this.rulesSrc = Preconditions.checkNotNull(relayRulesSrc);
+        this.configServerUtil = configServerUtil;
         this.rulesFile = Preconditions.checkNotNull( rulesFile );
         this.queueSize = queueSize;
         this.batchSize = batchSize;
@@ -111,7 +117,7 @@ public class Relay
         }
         try
         {
-            RelayRules newRules = new RelayRules(type, rulesFile);
+            RelayRules newRules = new RelayRules(type, rulesFile, rulesSrc, configServerUtil);
             RelayRules currentRules = router.getRules();
 
             if ( log.isDebugEnabled() )

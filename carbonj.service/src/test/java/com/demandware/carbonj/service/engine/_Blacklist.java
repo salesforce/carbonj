@@ -34,7 +34,7 @@ public class _Blacklist
         throws Exception
     {
         configFile = TestFileUtils.setupTestFileFromResource("/blacklist-test.conf");
-        blacklist = new Blacklist( metricRegistry, "test", configFile );
+        blacklist = new Blacklist( metricRegistry, "test", configFile, "file", null );
     }
 
     @Test

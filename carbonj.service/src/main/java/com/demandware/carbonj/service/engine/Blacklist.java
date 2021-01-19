@@ -40,12 +40,19 @@ public class Blacklist implements StatsAware
 
     volatile private boolean empty = patterns.isEmpty();
 
-    public Blacklist(MetricRegistry metricRegistry,  String name, File confFile )
+    private final String confSrc;
+
+    private final ConfigServerUtil configServerUtil;
+
+    public Blacklist(MetricRegistry metricRegistry,  String name, File confFile, String confSrc,
+                     ConfigServerUtil configServerUtil )
     {
         this.name = Preconditions.checkNotNull(name);
         this.confFile = Preconditions.checkNotNull( confFile );
         log.info( String.format("Creating blacklist [%s] with config file [%s]", name, confFile) );
         this.blacklistDrop = metricRegistry.counter( MetricRegistry.name( name, "drop" ) );
+        this.confSrc = confSrc;
+        this.configServerUtil = configServerUtil;
         reload();
         log.info(String.format("Blacklist [%s] created.", name) );
     }
@@ -84,14 +91,27 @@ public class Blacklist implements StatsAware
 
         try
         {
-            if( !confFile.exists() )
-            {
-                log.warn( String.format("Blacklist [%s] configuration file doesn't exist. File: [%s]", name, confFile) );
-                return;
+            List<String> lines;
+            if (confSrc.equalsIgnoreCase("file")) {
+                if (!confFile.exists()) {
+                    log.warn(String.format("Blacklist [%s] configuration file doesn't exist. File: [%s]", name, confFile));
+                    return;
+                }
+                lines = FileUtils.readLines(confFile, Charsets.UTF_8);
+            } else if (confSrc.equalsIgnoreCase("server")) {
+                if (configServerUtil == null || !configServerUtil.getConfigLines("blacklist").isPresent()) {
+                    log.warn("Unable to read black list configuration from config server. Falling back to file.");
+                    if (!confFile.exists()) {
+                        log.warn(String.format("Blacklist [%s] configuration file doesn't exist. File: [%s]", name, confFile));
+                        return;
+                    }
+                    lines = FileUtils.readLines(confFile, Charsets.UTF_8);
+                } else {
+                    lines = configServerUtil.getConfigLines("blacklist").get();
+                }
+            } else {
+                throw new RuntimeException("Unknown black list config src: " + confSrc);
             }
-
-
-            List<String> lines = FileUtils.readLines( confFile, Charsets.UTF_8 );
 
             if( configLines.equals( lines ) )
             {

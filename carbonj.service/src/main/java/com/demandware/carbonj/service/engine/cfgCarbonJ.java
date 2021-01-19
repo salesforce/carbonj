@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.embedded.jetty.JettyServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
@@ -48,9 +49,11 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Optional;
@@ -70,6 +73,8 @@ public class cfgCarbonJ
     @Autowired( required = false ) TimeSeriesStore db;
 
     @Autowired StringsCache stringsCache;
+
+    @Autowired MetricRegistry metricRegistry;
 
     @Value( "${server.port:56788}" ) private int jettyPort;
 
@@ -113,12 +118,19 @@ public class cfgCarbonJ
 
     @Value( "${blacklist:config/blacklist.conf}" ) private String blacklistConfigFile = "config/blacklist.conf";
 
+    @Value( "${blacklistConfigSrc:file}" ) private String blacklistConfigSrc;
+
     @Value( "${blacklist:config/query-blacklist.conf}" ) private String queryBlacklistConfigFile =
                     "config/query-blacklist.conf";
 
     @Value( "${relay.rules:config/relay-rules.conf}" ) private String relayRulesFile = "config/relay-rules.conf";
 
+    // Relay rules can be pulled from file or server
+    @Value( "${relay.rules.configSrc:file}" ) private String relayRulesSrc;
+
     @Value( "${audit.rules:config/audit-rules.conf}" ) private String auditRulesFile = "config/audit-rules.conf";
+
+    @Value( "${audit.rules.configSrc:file}" ) private String auditRulesSrc;
 
     @Value( "${consumerRules:config/consumer-rules.conf}" ) private String consumerRulesFile =
                     "config/consumer-rules.conf";
@@ -168,22 +180,60 @@ public class cfgCarbonJ
 
     @Value( "${app.servicedir:}" ) private String serviceDir;
 
-    @Autowired MetricRegistry metricRegistry;
+    /**
+     * Config server properties
+     */
+    @Value( "${configServer.enabled:false}" ) private boolean configServerEnabled;
 
-    @Bean( name = "dataPointSinkRelay" ) Relay relay( ScheduledExecutorService s )
+    @Value( "${configServer.registrationSeconds:30}" ) private int configServerRegistrationSeconds;
+
+    @Value( "${configServer.baseUrl:http://localhost:8081}" ) private String configServerBaseUrl;
+
+    @Value( "${configServer.infrastructure:unknownInfra}" ) private String configServerInfrastructure;
+
+    @Value( "${configServer.processName:unknownProcessName}" ) private String configServerProcessName;
+
+    @Value( "${configServer.processInstance:unknownProcessInstance}" ) private String configServerProcessInstance;
+
+    @Value( "${configServer.backupFilePath:config/config-server-state.json}" ) private String backupFilePath;
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+
+    @Bean
+    @ConditionalOnProperty( name = "configServer.enabled", havingValue = "true" )
+    public ConfigServerUtil configServerUtil(ScheduledExecutorService s, RestTemplate restTemplate) throws IOException {
+        ConfigServerUtil configServerUtil = new ConfigServerUtil(restTemplate, configServerBaseUrl, metricRegistry,
+                String.format("%s.%s.%s", configServerInfrastructure, configServerProcessName,
+                        configServerProcessInstance), backupFilePath);
+        s.scheduleWithFixedDelay(() -> {
+            try {
+                configServerUtil.register();
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+            }
+        }, 15, configServerRegistrationSeconds, TimeUnit.SECONDS);
+        return configServerUtil;
+    }
+
+    @Bean( name = "dataPointSinkRelay" ) Relay relay( ScheduledExecutorService s,
+                                                      @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         File rulesFile = locateConfigFile( serviceDir, relayRulesFile );
         Relay r = new Relay( metricRegistry, "relay", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs );
+                        destConfigDir, maxWaitTimeInSecs, relayRulesSrc, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
 
-    @Bean( name = "auditLogRelay" ) Relay auditLog( ScheduledExecutorService s )
+    @Bean( name = "auditLogRelay" ) Relay auditLog( ScheduledExecutorService s,
+                                                    @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         File rulesFile = locateConfigFile( serviceDir, auditRulesFile );
         Relay r = new Relay( metricRegistry, "audit", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs );
+                        destConfigDir, maxWaitTimeInSecs, auditRulesSrc, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
@@ -200,18 +250,20 @@ public class cfgCarbonJ
                         new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
     }
 
-    @Bean( name = "pointBlacklist" ) Blacklist pointBlacklist( ScheduledExecutorService s )
+    @Bean( name = "pointBlacklist" ) Blacklist pointBlacklist( ScheduledExecutorService s,
+                                                               @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         Blacklist bs = new Blacklist( metricRegistry, "blacklist",
-                        locateConfigFile( serviceDir, blacklistConfigFile ) );
+                        locateConfigFile( serviceDir, blacklistConfigFile ), blacklistConfigSrc, configServerUtil );
         s.scheduleWithFixedDelay( bs::reload, 10, 30, TimeUnit.SECONDS );
         return bs;
     }
 
-    @Bean( name = "queryBlacklist" ) Blacklist queryBlacklist( ScheduledExecutorService s )
+    @Bean( name = "queryBlacklist" ) Blacklist queryBlacklist( ScheduledExecutorService s,
+                                                               @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         Blacklist bs = new Blacklist( metricRegistry, "queryBlacklist",
-                        locateConfigFile( serviceDir, queryBlacklistConfigFile ) );
+                        locateConfigFile( serviceDir, queryBlacklistConfigFile ), blacklistConfigSrc, configServerUtil );
         s.scheduleWithFixedDelay( bs::reload, 10, 30, TimeUnit.SECONDS );
         return bs;
     }
