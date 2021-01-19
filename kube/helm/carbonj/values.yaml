@@ -1,0 +1,27 @@
+carbonj:
+  shard:
+    id: 1
+  env: dev
+  namespace: carbonj
+  version: 1.1.17
+  nodes: 2
+  instanceType: r5.2xlarge
+  registry: chrbayer84
+  memory:
+    xms: 2G
+    xmx: 18G
+  spring:
+    profiles:
+      active: dev
+  groupId: dev
+  requests:
+    memory: 3G
+    cpu: 6
+  limits:
+    memory: 20G
+    cpu: 8
+  diskSize: 3Ti
+  storageClass: gp2
+  region: us-east-1
+  availabilityZone1: a
+  availabilityZone2: b
