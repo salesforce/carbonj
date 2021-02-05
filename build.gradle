@@ -57,7 +57,7 @@ subprojects {
         compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.10.1'
         compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.12.1'
         compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: '2.10.1'
-        compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: '2.10.1'
+        compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: '2.12.1'
         compile group: 'com.google.re2j', name: 're2j', version: '1.4'
         testCompile group: 'org.powermock', name: 'powermock-module-javaagent', version: '1.5.6'
         testCompile group: 'org.jacoco', name: 'org.jacoco.agent', version: '0.7.9', classifier: 'runtime'
