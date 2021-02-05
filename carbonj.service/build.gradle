@@ -163,7 +163,7 @@ dependencies {
     compile group: 'com.google.guava', name: 'guava', version: '30.1-jre'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.5'
     compile group: 'commons-io', name: 'commons-io', version: '2.5'
-    compile group: 'joda-time', name: 'joda-time', version: '2.7'
+    compile group: 'joda-time', name: 'joda-time', version: '2.10.10'
     compile group: 'io.netty', name: 'netty-all', version: '4.1.58.Final'
     compile group: 'net.razorvine', name: 'pyrolite', version: '4.13'
     compile group: 'org.python', name: 'jython-standalone', version: '2.5.2'
