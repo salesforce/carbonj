@@ -1,0 +1,10 @@
+apiVersion: v1
+name: carbonj
+home: https://github.com/salesforce/carbonj
+version: 1.1.16
+description: Salesforce CommerceCloud CarbonJ
+sources:
+  - https://github.com/salesforce/carbonj
+maintainers:
+  - name: Christian Bayer
+    email: christian.bayer@salesforce.com
