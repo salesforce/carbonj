@@ -13,3 +13,7 @@ updates:
     directory: "/carbonj.service" # Location of package manifests
     schedule:
       interval: "daily"
+  - package-ecosystem: "docker" # See documentation for possible values
+    directory: "/carbonj.service" # Location of package manifests
+    schedule:
+      interval: "daily"
