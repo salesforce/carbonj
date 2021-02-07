@@ -13,6 +13,10 @@ updates:
     directory: "/carbonj.service" # Location of package manifests
     schedule:
       interval: "daily"
+  - package-ecosystem: "gradle" # See documentation for possible values
+    directory: "/cc-metrics-reporter" # Location of package manifests
+    schedule:
+      interval: "daily"
   - package-ecosystem: "docker" # See documentation for possible values
     directory: "/carbonj.service" # Location of package manifests
     schedule:
