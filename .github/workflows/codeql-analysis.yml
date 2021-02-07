@@ -59,9 +59,8 @@ jobs:
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
 
-    #- run: |
-    #   make bootstrap
-    #   make release
+    - run: |
+       ./gradlew -PdockerRepo=chrbayer84/ -x test build  --info
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
