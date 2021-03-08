@@ -103,7 +103,7 @@ docker {
     files tasks.unpack.outputs, "src/main/docker/files"
     copySpec.into("dependency")
     buildArgs(['DEPENDENCY': "dependency", 'VERSION': "${project.version}"])
-    noCache true
+    noCache false
 }
 
 configurations {
