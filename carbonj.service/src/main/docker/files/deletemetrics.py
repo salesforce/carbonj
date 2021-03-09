@@ -15,7 +15,7 @@ from pathlib import Path
 
 prd_base_delete_url = 'http://carbonj-{shard}-{replica}.carbonj-{shard}.carbonj.svc.cluster.local:2001/_dw/rest/carbonj/metrics/deleteAPI/{metric_id}?'
 local_base_delete_url = 'http://localhost:56687/_dw/rest/carbonj/metrics/deleteAPI/{}?'
-shard_count = 5
+shard_count = 15
 is_prd = True
 file_name = ''.join(["delete-", str(datetime.datetime.now().date()), str(datetime.datetime.now().time()), ".txt"])
 
