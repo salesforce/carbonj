@@ -20,11 +20,7 @@ fi
 
 LOG_FILE=$LOG_DIR/carbonj.log
 
-if [ -d /build/carbonj/carbonj/ ]; then
-  CLASSPATH=/build/carbonj/carbonj
-else
-  CLASSPATH=$DIR
-fi
+CLASSPATH=$DIR
 
 if [ -z ${CONFIG_LOCATION+x} ]; then
   CONFIG_LOCATION=classpath:/application.yml,classpath:/,/etc/carbonj/application.yml,classpath:/config/,classpath:/config/application.properties,classpath:/config/overrides.properties
