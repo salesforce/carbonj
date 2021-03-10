@@ -10,6 +10,7 @@ buildscript {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:2.4.3")
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
         classpath 'net.researchgate:gradle-release:2.8.1'
+        classpath 'com.netflix.nebula:gradle-ospackage-plugin:8.4.1'
     }
 }
 
@@ -18,7 +19,6 @@ plugins {
     id 'maven-publish'
     id 'net.researchgate.release'
     id 'org.springframework.boot'
-//    id 'jacoco'
 }
 
 license {
@@ -44,23 +44,12 @@ apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 apply plugin: 'com.palantir.docker'
 apply plugin: 'org.sonarqube'
-//apply plugin: "jacoco"
 apply plugin: 'maven-publish'
 apply plugin: 'maven-publish-auth'
 apply plugin: 'net.researchgate.release'
-//apply plugin: "com.github.hierynomus.license"
 apply plugin: 'distribution'
+apply plugin: 'nebula.rpm'
 
-// TODO it looks like jacoco messes with the jni interface to rocksdb. when enabled, there is a high likelyhood of the
-// build failing although it does not fail always. this happens with rocksdb 4 and 6. for now disable jacoco.
-
-//jacocoTestReport {
-//    reports {
-//        xml.enabled false
-//        csv.enabled false
-//        html.destination "${buildDir}/jacocoHtml"
-//    }
-//}
 
 ext {
     if (project.hasProperty('dockerRepo')) {
@@ -76,6 +65,8 @@ ext {
     }
     println("dockerRepo:" + dockerRepo)
     isSnapshot = version.endsWith('-SNAPSHOT')
+    carbonj_logs_dir = "/log"
+    carbonj_group="carbonj"
 }
 
 
@@ -86,8 +77,6 @@ repositories {
 }
 
 bootJar {
-//    classifier = 'boot'
-//    launchScript()
 }
 
 task unpack(type: Copy) {
@@ -110,75 +99,70 @@ configurations {
 //    compile.exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
 }
 
+
+
+task rpm(type: Rpm) {
+	packageName project.name
+	version version
+	release '15'
+	os LINUX
+	permissionGroup 'aws'
+	user 'carbonj'
+
+	into '/opt/carbonj'
+
+	from(bootJar.outputs.files) {
+		into 'lib'
+	}
+	from('lib') {
+		into 'lib'
+	}
+	from('src/main/scripts/bin/carbonj.sh') {
+		into 'bin'
+		fileMode 0554
+	}
+	from('src/main/scripts/service') {
+		into '/etc/init.d'
+		fileMode 0755
+	}
+	from('src/main/resources') {
+		fileType CONFIG | NOREPLACE
+		into 'config'
+	}
+
+	preInstall("""
+		getent passwd carbonj > /dev/null 2>&1 || useradd -g ${carbonj_group} -m carbonj
+	""")
+
+	directory("${carbonj_logs_dir}/carbonj", 0755)
+
+	postInstall("chown -R carbonj:${carbonj_group} ${carbonj_logs_dir}/carbonj")
+}
+
 distributions {
     custom {
         baseName = project.name
         contents {
             from { 'build/libs' }
-            from { 'carbonj.sh' }
+            from { 'scripts/carbonj.sh' }
             from { 'README.md' }
         }
     }
 }
-//springBoot {
-//    backupSource = false
-//}
-//bootRepackage {
-//}
-//
-//task standaloneJar(type: Jar) {
-//    appendix = 'client'
-//    from sourceSets.main.output
-//    exclude('**/*Something*')
-//}
-//
-//task standaloneBoot(type: BootRepackage, dependsOn: standaloneJar) {
-//    withJarTask = standaloneJar
-//    customConfiguration = "mycustomconfiguration"
-//}
-//configurations {
-//    mycustomconfiguration.files('carbonj.sh')
-//}
 
 // for release automatically push released docker and mvn image to repo
 afterReleaseBuild.dependsOn publish
-//publish.dependsOn dockerPush
+publish.dependsOn dockerPush
 publish.dependsOn build
+rpm.dependsOn bootJar
+publish.dependsOn rpm
 
 publishing {
-//    publications {
-//        myDistribution(MavenPublication) {
-//            artifact customDistTar
-//        }
-//    }
     publications {
-		bootJava(MavenPublication) {
-			artifact bootJar
-//			artifact standaloneBoot
-
-		}
 	}
 
     repositories {
         mavenLocal()
-//        maven {
-//            if (isSnapshot) {
-//                name 'snapshots'
-//                url "https://nexusmaster.productivity.cc.sfdcsb.net/nexus/content/repositories/cc-snapshots"
-//                credentials {
-//                    username nexus_user_token
-//                    password nexus_password_token
-//                }
-//            }
-////            else {
-////                name 'releases'
-////                url "https://nexusmaster.productivity.cc.sfdcsb.net/nexus/content/repositories/cc-releases"
-////                credentials {
-////                    username nexus_release_user_token
-////                    password nexus_release_password_token
-////                }
-////            }
-//        }
     }
 }
 

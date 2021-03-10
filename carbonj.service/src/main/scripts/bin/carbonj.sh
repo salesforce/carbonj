@@ -6,16 +6,12 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-DIR=$( pwd )
-echo $DIR
-
-if [ -f $DIR/config/service.env ]
-then
-       source $DIR/config/service.env
-fi
+HOME_DIR=$( pwd )
+echo $HOME_DIR
 
 if [ -z ${JAVA+x} ]; then
-    JAVA=`type -p java`
+#    JAVA=`type -p java`
+    JAVA=/build/OpenJDK/1.8.0.172_1/jdk64/bin/java
 fi
 
 if [ -z ${LOG_DIR+x} ]; then
@@ -43,9 +39,9 @@ if [ -z ${AWS_CONFIG_FILE+x} ]; then
 fi
 
 # Build the command
-COMMAND="${JAVA} -Xms512m -Xmx2g -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${LOG_DIR} -cp ${CLASSPATH}:${CLASSPATH}/* com.demandware.carbonj.service.engine.CarbonJServiceMain --logging.file=${LOG_FILE} --spring.config.location=${CONFIG_LOCATION}"
+COMMAND="${JAVA} -Xms512m -Xmx2g -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${LOG_DIR} -jar ${HOME_DIR}/lib/carbonj*.jar --logging.file.name=${LOG_FILE} --spring.config.location=${CONFIG_FILE}"
 
-echo -e "Invoking carbonj\n" | tee -a $LOG_FILE
+echo -e "Invoking CarbonJ\n" | tee -a $LOG_FILE
 echo -e $COMMAND | tee -a $LOG_FILE
 echo -e "\n" | tee -a $LOG_FILE
 $COMMAND &
