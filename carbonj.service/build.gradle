@@ -168,7 +168,7 @@ dependencies {
     compile group: 'net.razorvine', name: 'pickle', version: '1.1'
     compile group: 'org.python', name: 'jython-standalone', version: '2.7.2'
     compile group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.14.1'
-    compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.1.17'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.1.18'
     compile group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.1.17'
     compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.1.18'
 
