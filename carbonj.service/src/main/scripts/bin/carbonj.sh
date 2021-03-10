@@ -6,12 +6,17 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-HOME_DIR=$( pwd )
+if [ -d /opt/carbonj ]; then
+  HOME_DIR=/opt/carbonj
+else
+  HOME_DIR=$( pwd )
+fi
 echo $HOME_DIR
 
-if [ -z ${JAVA+x} ]; then
-#    JAVA=`type -p java`
+if [ -z ${JAVA+x} ] && [ -d /build/OpenJDK/1.8.0.172_1/ ]; then
     JAVA=/build/OpenJDK/1.8.0.172_1/jdk64/bin/java
+else
+    JAVA=`type -p java`
 fi
 
 if [ -z ${LOG_DIR+x} ]; then
