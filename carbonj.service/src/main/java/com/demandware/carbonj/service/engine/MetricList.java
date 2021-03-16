@@ -11,6 +11,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.util.StatsAware;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.re2j.Pattern;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,17 +19,16 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Blacklist using list of RegEx expressions to define blacklisted names.
+ * List of metrics that should receive special treatment (used for blocking or allowing metric names).
  */
-public class Blacklist implements StatsAware
+public class MetricList implements StatsAware
 {
-    private static final Logger log = LoggerFactory.getLogger( Blacklist.class );
+    private static final Logger log = LoggerFactory.getLogger( MetricList.class );
 
-    final private Counter blacklistDrop;
+    final private Counter droppedMetrics;
 
     final private File confFile;
 
@@ -44,38 +44,38 @@ public class Blacklist implements StatsAware
 
     private final ConfigServerUtil configServerUtil;
 
-    public Blacklist(MetricRegistry metricRegistry,  String name, File confFile, String confSrc,
+    public MetricList(MetricRegistry metricRegistry,  String name, File confFile, String confSrc,
                      ConfigServerUtil configServerUtil )
     {
         this.name = Preconditions.checkNotNull(name);
         this.confFile = Preconditions.checkNotNull( confFile );
-        log.info( String.format("Creating blacklist [%s] with config file [%s]", name, confFile) );
-        this.blacklistDrop = metricRegistry.counter( MetricRegistry.name( name, "drop" ) );
+        log.info( String.format("Creating metric list [%s] with config file [%s]", name, confFile) );
+        this.droppedMetrics = metricRegistry.counter( MetricRegistry.name( name, "drop" ) );
         this.confSrc = confSrc;
         this.configServerUtil = configServerUtil;
         reload();
-        log.info(String.format("Blacklist [%s] created.", name) );
+        log.info(String.format("Metric list [%s] created.", name) );
     }
 
     public boolean match(String name)
     {
-        if( empty )
+        if ( patterns.isEmpty() )
         {
             return false;
         }
 
-        List<Pattern> currentPatterns = patterns;
+        List<Pattern> currentPatterns = patterns; // copy so we don't keep hitting the volatile barrier
         for ( Pattern p : currentPatterns )
         {
             if( ".*".equals( p.pattern() ) )
             {
-                blacklistDrop.inc();
+                droppedMetrics.inc();
                 return true;
             }
 
             if ( p.matcher( name ).find() )
             {
-                blacklistDrop.inc();
+                droppedMetrics.inc();
                 return true;
             }
         }
@@ -94,23 +94,23 @@ public class Blacklist implements StatsAware
             List<String> lines;
             if (confSrc.equalsIgnoreCase("file")) {
                 if (!confFile.exists()) {
-                    log.warn(String.format("Blacklist [%s] configuration file doesn't exist. File: [%s]", name, confFile));
+                    log.warn(String.format("Metric list [%s] configuration file doesn't exist. File: [%s]", name, confFile));
                     return;
                 }
                 lines = FileUtils.readLines(confFile, Charsets.UTF_8);
             } else if (confSrc.equalsIgnoreCase("server")) {
-                if (configServerUtil == null || !configServerUtil.getConfigLines("blacklist").isPresent()) {
-                    log.warn("Unable to read black list configuration from config server. Falling back to file.");
+                if (configServerUtil == null || !configServerUtil.getConfigLines(name).isPresent()) {
+                    log.warn("Unable to read metric list configuration from config server. Falling back to file.");
                     if (!confFile.exists()) {
-                        log.warn(String.format("Blacklist [%s] configuration file doesn't exist. File: [%s]", name, confFile));
+                        log.warn(String.format("Metric list [%s] configuration file doesn't exist. File: [%s]", name, confFile));
                         return;
                     }
                     lines = FileUtils.readLines(confFile, Charsets.UTF_8);
                 } else {
-                    lines = configServerUtil.getConfigLines("blacklist").get();
+                    lines = configServerUtil.getConfigLines(name).get();
                 }
             } else {
-                throw new RuntimeException("Unknown black list config src: " + confSrc);
+                throw new RuntimeException("Unknown metric list config src: " + confSrc);
             }
 
             if( configLines.equals( lines ) )
@@ -119,38 +119,41 @@ public class Blacklist implements StatsAware
                 return;
             }
 
-            log.info(String.format("Blacklist [%s] configuration file has changed. File: [%s]", name, confFile));
+            log.info(String.format("Metric list [%s] configuration file has changed. File: [%s]", name, confFile));
 
             List<String> oldLines = this.configLines;
             List<Pattern> newPatterns = parseConfig( lines );
 
             this.patterns = newPatterns;
-            this.empty = patterns.isEmpty();
             this.configLines = lines;
-            log.info(String.format("Blacklist [%s] updated.", name));
+            log.info(String.format("Metric list [%s] updated.", name));
             if( log.isDebugEnabled() )
             {
-                log.debug( String.format( "Blacklist [%s] previous: %s, new %s", name, oldLines, lines ) );
+                log.debug( String.format( "Metric list [%s] previous: %s, new %s", name, oldLines, lines ) );
             }
         }
         catch ( Exception e )
         {
-            log.error(String.format("Failed to reload blacklist [%s] config. Suppress. ", name), e );
+            log.error(String.format("Failed to reload metric list [%s] config. Suppress. ", name), e );
         }
     }
 
     private List<Pattern> parseConfig(List<String> lines)
     {
         return lines.stream()
-                    .map( line -> line.trim() )
+                    .map( String::trim )
                     .filter( line -> line.length() > 0 && !line.startsWith( "#" ) )
-                    .map(regex -> Pattern.compile( regex ) ).collect( Collectors.toList());
+                    .map( Pattern::compile ).collect( Collectors.toList() );
     }
 
     @Override
     public void dumpStats()
     {
-        log.info( String.format( "blacklist [%s] counter=%s", name, blacklistDrop.getCount()) );
+        log.info( String.format( "metric list [%s] counter=%s", name, droppedMetrics.getCount()) );
     }
 
+    public boolean isEmpty()
+    {
+        return patterns.isEmpty();
+    }
 }

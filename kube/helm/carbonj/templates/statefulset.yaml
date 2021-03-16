@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: carbonj-p{{ .Values.carbonj.shard.id }}
+  labels:
+    app: carbonj-p{{ .Values.carbonj.shard.id }}
+    stack: {{ .Values.carbonj.env }}
+    sub-stack: {{ .Values.carbonj.namespace }}
+    version: {{ .Values.carbonj.version }}
+  namespace: {{ .Values.carbonj.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: carbonj-p{{ .Values.carbonj.shard.id }}
+  serviceName: carbonj-p{{ .Values.carbonj.shard.id }}
+  replicas: {{ .Values.carbonj.nodes }}
+  template:
+    metadata:
+      labels:
+        app: carbonj-p{{ .Values.carbonj.shard.id }}
+    spec:
+      containers:
+      - name: carbonj-p{{ .Values.carbonj.shard.id }}
+        image: {{ .Values.carbonj.registry }}/carbonj:{{ .Values.carbonj.version }}
+        imagePullPolicy: Always
+        env:
+          - name: XMS_SIZE
+            value: {{ .Values.carbonj.memory.xms }}
+          - name: XMX_SIZE
+            value: {{ .Values.carbonj.memory.xmx }}
+          - name: ENVIRONMENT
+            value: {{ .Values.carbonj.namespace }}
+          - name: JAVA_OPTS
+            value: ""
+          - name: JAVA_OPTS_OVERRIDE
+            value: "-XX:+UseParallelGC"
+          - name: spring_profiles_active
+            value: {{ .Values.carbonj.spring.profiles.active }}
+          - name: DW_GROUP_ID
+            value: {{ .Values.carbonj.groupId }}
+          - name: DW_GRAPHITE_HOST
+            value: relay-udp.{{ .Values.carbonj.namespace }}
+          - name: ROCKSDB_REPORTING_ENABLED
+            value: "1"
+          - name: consumerRules
+            value: config/shard{{ .Values.carbonj.shard.id }}-consumer-rules.conf
+        ports:
+        - name: cj-p{{ .Values.carbonj.shard.id }}-http
+          containerPort: 2001
+          protocol: TCP
+        - name: cj-p{{ .Values.carbonj.shard.id }}-line
+          containerPort: 2003
+          protocol: TCP
+        - name: cj-p{{ .Values.carbonj.shard.id }}-pick
+          containerPort: 2004
+          protocol: TCP
+        - name: cj-p{{ .Values.carbonj.shard.id }}-prof
+          containerPort: 20001
+          protocol: TCP
+        resources:
+          requests:
+            memory: {{ .Values.carbonj.requests.memory }}
+            cpu: {{ .Values.carbonj.requests.cpu }}
+          limits:
+            memory: {{ .Values.carbonj.limits.memory }}
+            cpu: {{ .Values.carbonj.limits.cpu }}
+        livenessProbe:
+          tcpSocket:
+            port: 2003
+          initialDelaySeconds: 30
+          timeoutSeconds: 2
+        volumeMounts:
+        - name: {{ .Values.carbonj.namespace }}-p{{ .Values.carbonj.shard.id }}-data
+          mountPath: /data
+        - name: conf
+          mountPath: /conf
+          readOnly: false # to allow overrides through ENV and service startup script
+      volumes:
+      - name: conf
+        configMap:
+           name: carbonj-conf
+      tolerations:
+        - key: "load-type"
+          value: {{ .Values.carbonj.namespace }}
+          effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: beta.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      -  {{ .Values.carbonj.instanceType }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ .Values.carbonj.namespace }}-p{{ .Values.carbonj.shard.id }}-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      selector:
+        matchLabels:
+          volumename:  {{ .Values.carbonj.namespace }}-p{{ .Values.carbonj.shard.id }}-data
+
+      resources:
+        requests:
+          storage: {{ .Values.carbonj.diskSize }} # note that here we use carbonjDiskSize which is 3T at this time.

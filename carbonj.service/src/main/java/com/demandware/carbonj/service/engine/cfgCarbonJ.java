@@ -118,10 +118,12 @@ public class cfgCarbonJ
 
     @Value( "${blacklist:config/blacklist.conf}" ) private String blacklistConfigFile = "config/blacklist.conf";
 
-    @Value( "${blacklistConfigSrc:file}" ) private String blacklistConfigSrc;
+    @Value( "${metriclistConfigSrc:file}" ) private String metricListConfigSrc;
 
     @Value( "${blacklist:config/query-blacklist.conf}" ) private String queryBlacklistConfigFile =
                     "config/query-blacklist.conf";
+
+    @Value( "${allowlist:config/allowlist.conf}") private String allowOnlyMetricsConfigFile = "config/allowlist.conf";
 
     @Value( "${relay.rules:config/relay-rules.conf}" ) private String relayRulesFile = "config/relay-rules.conf";
 
@@ -180,6 +182,12 @@ public class cfgCarbonJ
 
     @Value( "${app.servicedir:}" ) private String serviceDir;
 
+    @Value( "${kinesis.consumer.region:us-east-1}" )
+    private String kinesisConsumerRegion = "us-east-1";
+
+    @Value( "${kinesis.relay.region:us-east-1}" )
+    private String kinesisRelayRegion = "us-east-1";
+
     /**
      * Config server properties
      */
@@ -223,7 +231,7 @@ public class cfgCarbonJ
     {
         File rulesFile = locateConfigFile( serviceDir, relayRulesFile );
         Relay r = new Relay( metricRegistry, "relay", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs, relayRulesSrc, configServerUtil);
+                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, relayRulesSrc, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
@@ -233,7 +241,7 @@ public class cfgCarbonJ
     {
         File rulesFile = locateConfigFile( serviceDir, auditRulesFile );
         Relay r = new Relay( metricRegistry, "audit", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs, auditRulesSrc, configServerUtil);
+                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, auditRulesSrc, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
@@ -250,27 +258,39 @@ public class cfgCarbonJ
                         new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
     }
 
-    @Bean( name = "pointBlacklist" ) Blacklist pointBlacklist( ScheduledExecutorService s,
-                                                               @Autowired(required = false) ConfigServerUtil configServerUtil )
+    @Bean( name = "pointBlacklist" ) MetricList pointBlacklist( ScheduledExecutorService s,
+            @Autowired(required = false) ConfigServerUtil configServerUtil)
     {
-        Blacklist bs = new Blacklist( metricRegistry, "blacklist",
-                        locateConfigFile( serviceDir, blacklistConfigFile ), blacklistConfigSrc, configServerUtil );
+        MetricList bs = new MetricList( metricRegistry, "blacklist", locateConfigFile( serviceDir, blacklistConfigFile ),
+                metricListConfigSrc, configServerUtil );
         s.scheduleWithFixedDelay( bs::reload, 10, 30, TimeUnit.SECONDS );
         return bs;
     }
 
-    @Bean( name = "queryBlacklist" ) Blacklist queryBlacklist( ScheduledExecutorService s,
-                                                               @Autowired(required = false) ConfigServerUtil configServerUtil )
+    @Bean( name = "queryBlacklist" ) MetricList queryBlacklist( ScheduledExecutorService s,
+            @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
-        Blacklist bs = new Blacklist( metricRegistry, "queryBlacklist",
-                        locateConfigFile( serviceDir, queryBlacklistConfigFile ), blacklistConfigSrc, configServerUtil );
+        MetricList bs = new MetricList( metricRegistry, "queryBlacklist",
+                        locateConfigFile( serviceDir, queryBlacklistConfigFile ), metricListConfigSrc, configServerUtil );
         s.scheduleWithFixedDelay( bs::reload, 10, 30, TimeUnit.SECONDS );
         return bs;
     }
+
+    @Bean( name = "pointAllowOnlyList" ) MetricList pointAllowOnlyList( ScheduledExecutorService s,
+            @Autowired(required = false) ConfigServerUtil configServerUtil )
+    {
+        MetricList metricList = new MetricList( metricRegistry, "allowOnly",
+                locateConfigFile( serviceDir, allowOnlyMetricsConfigFile ), metricListConfigSrc, configServerUtil );
+        s.scheduleWithFixedDelay( metricList::reload, 10, 30, TimeUnit.SECONDS );
+        return metricList;
+    }
+
 
     @Bean @DependsOn( "stringsCache" ) PointProcessor pointProcessor(
                     @Qualifier( "datapoint_sink" ) Consumer<DataPoints> sink, ScheduledExecutorService s,
-                    @Qualifier( "pointBlacklist" ) Blacklist blacklist, @Qualifier( "auditLogRelay" ) Relay auditLog,
+                    @Qualifier( "pointBlacklist" ) MetricList blacklist,
+                    @Qualifier( "pointAllowOnlyList" ) MetricList allowOnly,
+                    @Qualifier( "auditLogRelay" ) Relay auditLog,
                     PointFilter pointFilter, @Qualifier( "accumulator" ) Accumulator accumulator,
                     NamespaceCounter nsCounter )
     {
@@ -286,8 +306,8 @@ public class cfgCarbonJ
         }
 
         PointProcessorTaskBuilder taskBuilder =
-                        new PointProcessorTaskBuilder( metricRegistry, sink, blacklist, auditLog, aggregationEnabled,
-                                        pointFilter, accumulator, nsCounter );
+                        new PointProcessorTaskBuilder( metricRegistry, sink, blacklist, allowOnly, auditLog,
+                                aggregationEnabled, pointFilter, accumulator, nsCounter );
 
         PointProcessor pointProcessor =
                         new PointProcessorImpl( metricRegistry, "pointProcessor", aggregatorThreads, taskBuilder );
@@ -307,7 +327,9 @@ public class cfgCarbonJ
 
     @Bean( name = "recoveryPointProcessor" ) @DependsOn( "stringsCache" ) PointProcessor recoveryPointProcessor(
                     @Qualifier( "datapoint_sink" ) Consumer<DataPoints> sink, ScheduledExecutorService s,
-                    @Qualifier( "pointBlacklist" ) Blacklist blacklist, @Qualifier( "auditLogRelay" ) Relay auditLog,
+                    @Qualifier( "pointBlacklist" ) MetricList blacklist,
+                    @Qualifier( "pointAllowOnlyList" ) MetricList allowOnly,
+                    @Qualifier( "auditLogRelay" ) Relay auditLog,
                     @Qualifier( "recoveryAccumulator" ) Accumulator accumulator, NamespaceCounter nsCounter,
                     KinesisConfig kinesisConfig, NameUtils nameUtils )
     {
@@ -336,8 +358,8 @@ public class cfgCarbonJ
         }
 
         PointProcessorTaskBuilder taskBuilder =
-                        new PointProcessorTaskBuilder( metricRegistry, sink, blacklist, auditLog, aggregationEnabled,
-                                        pointFilter, accumulator, nsCounter );
+                        new PointProcessorTaskBuilder( metricRegistry, sink, blacklist, allowOnly, auditLog,
+                                aggregationEnabled, pointFilter, accumulator, nsCounter );
 
         PointProcessor pointProcessor = new PointProcessorImpl( metricRegistry, "pointProcessorRecovery",
                         kinesisConfig.recoveryThreads(), taskBuilder );
@@ -383,7 +405,7 @@ public class cfgCarbonJ
         {
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
             Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
-                            kinesisConfig, checkPointMgr );
+                            kinesisConfig, checkPointMgr, kinesisConsumerRegion );
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
             return consumer;
         }
@@ -392,7 +414,8 @@ public class cfgCarbonJ
     }
 
     @Bean Void stats( ScheduledExecutorService s, @Qualifier( "dataPointSinkRelay" ) Relay r, InputQueue a,
-                      @Qualifier( "pointBlacklist" ) Blacklist pbl, @Qualifier( "queryBlacklist" ) Blacklist qbl,
+                      @Qualifier( "pointBlacklist" ) MetricList pbl, @Qualifier( "queryBlacklist" ) MetricList qbl,
+                      @Qualifier( "pointAllowOnlyList" ) MetricList pal,
                       NettyServer nettyServer, @Qualifier( "auditLogRelay" ) Relay auditLog, StringsCache strCache,
                       @Qualifier( "accumulator" ) Accumulator accu )
     {
@@ -401,6 +424,7 @@ public class cfgCarbonJ
             a.dumpStats();
             pbl.dumpStats();
             qbl.dumpStats();
+            pal.dumpStats();
             r.dumpStats();
             auditLog.dumpStats();
             if ( db != null )

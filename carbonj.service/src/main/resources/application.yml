@@ -12,6 +12,7 @@ spring:
 metrics:
   store:
     enabled: false
+    longId: false
     dataDir: work/carbonj-data
     stagingDir: work/carbonj-staging
     checkPoint:
@@ -19,6 +20,11 @@ metrics:
       offset:
         default:
           mins: 5
+kinesis:
+  consumer:
+    region: us-east-1
+  relay:
+    region: us-east-1
 jetty:
   # to support import
   maxFormContentSize: 1000000

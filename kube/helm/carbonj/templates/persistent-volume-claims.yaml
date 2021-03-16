@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.carbonj.namespace }}-p{{ .Values.carbonj.shard.id }}-data-carbonj-p{{ .Values.carbonj.shard.id }}-0
+  namespace: {{ .Values.carbonj.namespace }}
+  labels:
+    app: carbonj
+  annotations:
+    volume.beta.kubernetes.io/storage-class: {{ .Values.carbonj.storageClass }}-{{ .Values.carbonj.region }}{{ .Values.carbonj.availabilityZone1 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.carbonj.diskSize }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.carbonj.namespace }}-p{{ .Values.carbonj.shard.id }}-data-carbonj-p{{ .Values.carbonj.shard.id }}-1
+  namespace: {{ .Values.carbonj.namespace }}
+  labels:
+    app: carbonj
+  annotations:
+    volume.beta.kubernetes.io/storage-class: {{ .Values.carbonj.storageClass }}-{{ .Values.carbonj.region }}{{ .Values.carbonj.availabilityZone2 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.carbonj.diskSize }}

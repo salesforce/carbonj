@@ -82,7 +82,7 @@ then
   JAVA_OPTS="${JAVA_OPTS} -Xms${XMS_SIZE} "
 fi
 JAVA_OPTS=`eval echo "${JAVA_OPTS}"`
-echo $JAVA_OPTS
+echo $JAVA_OPTS $JAVA_OPTS_OVERRIDE
 
 env >> /etc/environment
 
@@ -102,4 +102,4 @@ echo "Running cron"
 /usr/sbin/crond
 echo "Running service"
 cd /app
-exec java $JAVA_OPTS -Dlogback.debug=true -cp /app:/app/lib/* com.demandware.carbonj.service.engine.CarbonJServiceMain --spring.config.location=classpath:/application.yml,classpath:/,classpath:/config/,classpath:/config/application.properties,classpath:/config/overrides.properties
+exec java $JAVA_OPTS $JAVA_OPTS_OVERRIDE -Dlogback.debug=true -cp /app:/app/lib/* com.demandware.carbonj.service.engine.CarbonJServiceMain --spring.config.location=classpath:/application.yml,classpath:/,classpath:/config/,classpath:/config/application.properties,classpath:/config/overrides.properties

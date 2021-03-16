@@ -167,7 +167,7 @@ public class DataPointStagingStore
                         received.getCount(), drop.getCount(), saved.getCount()));
     }
 
-    public void add( String dbName, int from, int metricId, double val )
+    public void add( String dbName, int from, long metricId, double val )
     {
         received.mark();
 

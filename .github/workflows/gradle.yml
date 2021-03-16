@@ -27,6 +27,8 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         report_paths: '**/build/test-results/test/TEST-*.xml'
     - name: Extract project version
+      env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       run: echo "::set-env name=GRADLE_PROJECT_VERSION::`./gradlew properties|grep version |cut -c 10-`"
     - name: Show project version
       run: echo "$GRADLE_PROJECT_VERSION"

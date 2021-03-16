@@ -7,10 +7,10 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.3.1.RELEASE")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.4.3")
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
-        classpath 'net.researchgate:gradle-release:2.6.0'
-
+        classpath 'net.researchgate:gradle-release:2.8.1'
+        classpath 'com.netflix.nebula:gradle-ospackage-plugin:8.5.6'
     }
 }
 
@@ -19,7 +19,6 @@ plugins {
     id 'maven-publish'
     id 'net.researchgate.release'
     id 'org.springframework.boot'
-//    id 'jacoco'
 }
 
 license {
@@ -45,23 +44,12 @@ apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 apply plugin: 'com.palantir.docker'
 apply plugin: 'org.sonarqube'
-//apply plugin: "jacoco"
 apply plugin: 'maven-publish'
 apply plugin: 'maven-publish-auth'
 apply plugin: 'net.researchgate.release'
-//apply plugin: "com.github.hierynomus.license"
 apply plugin: 'distribution'
+apply plugin: 'nebula.rpm'
 
-// TODO it looks like jacoco messes with the jni interface to rocksdb. when enabled, there is a high likelyhood of the
-// build failing although it does not fail always. this happens with rocksdb 4 and 6. for now disable jacoco.
-
-//jacocoTestReport {
-//    reports {
-//        xml.enabled false
-//        csv.enabled false
-//        html.destination "${buildDir}/jacocoHtml"
-//    }
-//}
 
 ext {
     if (project.hasProperty('dockerRepo')) {
@@ -77,6 +65,8 @@ ext {
     }
     println("dockerRepo:" + dockerRepo)
     isSnapshot = version.endsWith('-SNAPSHOT')
+    carbonj_logs_dir = "/log"
+    carbonj_group="carbonj"
 }
 
 
@@ -87,8 +77,6 @@ repositories {
 }
 
 bootJar {
-//    classifier = 'boot'
-//    launchScript()
 }
 
 task unpack(type: Copy) {
@@ -111,33 +99,72 @@ configurations {
 //    compile.exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
 }
 
+
+
+task rpm(type: Rpm) {
+	packageName project.name
+	version version
+	release '15'
+	os LINUX
+	permissionGroup 'aws'
+	user 'carbonj'
+
+	into '/opt/carbonj'
+
+	from(bootJar.outputs.files) {
+		into 'lib'
+	}
+	from('lib') {
+		into 'lib'
+	}
+	from('src/main/scripts/bin/carbonj.sh') {
+		into 'bin'
+		fileMode 0554
+	}
+	from('src/main/scripts/service') {
+		into '/etc/init.d'
+		fileMode 0755
+	}
+	from('src/main/resources') {
+		fileType CONFIG | NOREPLACE
+		into 'config'
+	}
+
+	preInstall("""
+		getent passwd carbonj > /dev/null 2>&1 || useradd -g ${carbonj_group} -m carbonj
+	""")
+
+	directory("${carbonj_logs_dir}/carbonj", 0755)
+
+	postInstall("chown -R carbonj:${carbonj_group} ${carbonj_logs_dir}/carbonj")
+}
+
 distributions {
     custom {
         baseName = project.name
         contents {
             from { 'build/libs' }
-            from { 'carbonj.sh' }
+            from { 'scripts/carbonj.sh' }
             from { 'README.md' }
         }
     }
 }
+
 // for release automatically push released docker and mvn image to repo
 afterReleaseBuild.dependsOn publish
 publish.dependsOn dockerPush
 publish.dependsOn build
+rpm.dependsOn bootJar
+publish.dependsOn rpm
 
 publishing {
     publications {
-        myDistribution(MavenPublication) {
-            artifact customDistTar
-        }
-    }
+	}
 
     repositories {
         mavenLocal()
     }
 }
-
 
 
 task sourceJar(type: Jar) {
@@ -157,30 +184,30 @@ dependencies {
 //    compile group: 'com.sfcc.um', name: 'metrics_reporter', version:'0.0.2'
     compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api'
     compile group: 'org.slf4j', name: 'slf4j-api'
-    compile group: 'org.rocksdb', name: 'rocksdbjni', version: '6.11.4'
-    compile group: 'com.google.code.gson', name: 'gson', version: '2.6.2'
-    compile group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: '0.1.9'
-    compile group: 'com.google.guava', name: 'guava', version: '24.0-jre'
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.5'
-    compile group: 'commons-io', name: 'commons-io', version: '2.5'
-    compile group: 'joda-time', name: 'joda-time', version: '2.7'
-    compile group: 'io.netty', name: 'netty-all', version: '4.0.33.Final'
-    compile group: 'net.razorvine', name: 'pyrolite', version: '4.13'
-    compile group: 'org.python', name: 'jython-standalone', version: '2.5.2'
-    compile group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.9.1'
-    compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.0.0'
-    compile group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.0.0'
-    compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.0.0'
+    compile group: 'org.rocksdb', name: 'rocksdbjni', version: '6.15.2'
+    compile group: 'com.google.code.gson', name: 'gson', version: '2.8.6'
+    compile group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: '0.6.0'
+    compile group: 'com.google.guava', name: 'guava', version: '30.1-jre'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+    compile group: 'commons-io', name: 'commons-io', version: '2.8.0'
+    compile group: 'joda-time', name: 'joda-time', version: '2.10.10'
+    compile group: 'io.netty', name: 'netty-all', version: '4.1.60.Final'
+    compile group: 'net.razorvine', name: 'pickle', version: '1.1'
+    compile group: 'org.python', name: 'jython-standalone', version: '2.7.2'
+    compile group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.14.2'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.1.18'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.1.18'
+    compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.1.18'
 
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile group: 'junit', name: 'junit', version: '4.13.2'
     testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
 
-    compile group:"org.springframework.boot", name:"spring-boot-starter-logging", version:"2.2.2.RELEASE"
-    compile group:"org.springframework.boot", name:"spring-boot-starter-web", version:"2.2.2.RELEASE"
-    compile group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"2.2.2.RELEASE"
+    compile group:"org.springframework.boot", name:"spring-boot-starter-logging", version:"2.4.3"
+    compile group:"org.springframework.boot", name:"spring-boot-starter-web", version:"2.4.3"
+    compile group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"2.4.3"
 
-    compile group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"2.2.2.RELEASE"
-    testCompile (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"2.2.2.RELEASE")
+    compile group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"2.4.3"
+    testCompile (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"2.4.3")
 
 }
 

@@ -62,7 +62,7 @@ public class TestIntervalProcessors extends BaseTest {
     private static class SimpleMetricProvider implements MetricProvider {
 
         @Override
-        public Metric forId(int metricId) {
+        public Metric forId(long metricId) {
             return new Metric("name", 1,
                     new AggregationPolicy(AggregationMethod.AVG, 1, null),
                     Collections.emptyList(),

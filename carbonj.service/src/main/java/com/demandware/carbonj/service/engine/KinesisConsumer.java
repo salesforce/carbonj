@@ -49,10 +49,12 @@ public class KinesisConsumer extends Thread {
 
     private volatile boolean closed;
 
+    private String kinesisConsumerRegion;
+
     public KinesisConsumer(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor,
                            String kinesisStreamName, String kinesisApplicationName,
                            KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr,
-                           Counter noOfRestarts) {
+                           Counter noOfRestarts, String kinesisConsumerRegion) {
         this.metricRegistry = metricRegistry;
         this.pointProcessor = Preconditions.checkNotNull(pointProcessor);
         this.recoveryPointProcessor = recoveryPointProcessor;
@@ -61,6 +63,7 @@ public class KinesisConsumer extends Thread {
         this.kinesisConfig = kinesisConfig;
         this.checkPointMgr =  Preconditions.checkNotNull(checkPointMgr);
         this.noOfRestarts = noOfRestarts;
+        this.kinesisConsumerRegion = kinesisConsumerRegion;
         log.info("Kinesis consumer started");
         this.start();
     }
@@ -80,7 +83,8 @@ public class KinesisConsumer extends Thread {
                         new KinesisClientLibConfiguration(kinesisApplicationName, kinesisStreamName, credentialsProvider,
                                 workerId)
                                 .withInitialPositionInStream(InitialPositionInStream.LATEST)
-                                .withFailoverTimeMillis(kinesisConfig.getLeaseExpirationTimeInSecs() * 1000);
+                                .withFailoverTimeMillis(kinesisConfig.getLeaseExpirationTimeInSecs() * 1000)
+                                .withRegionName(kinesisConsumerRegion);
 
                 int maxRecords = kinesisConfig.getMaxRecords();
                 if (maxRecords > 0) {

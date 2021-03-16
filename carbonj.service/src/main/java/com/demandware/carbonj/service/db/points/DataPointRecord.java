@@ -13,10 +13,18 @@ import com.google.common.primitives.Longs;
 
 class DataPointRecord
 {
-    public static byte[] toKeyBytes(int metricId, int ts)
+    public static byte[] toKeyBytes(long metricId, int ts, boolean longId)
     {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeInt( metricId );
+        if(longId)
+        {
+            out.writeLong( metricId );
+        }
+        else
+        {
+            out.writeInt((int)metricId);
+        }
+
         out.writeInt( ts );
         return out.toByteArray();
     }
@@ -31,13 +39,25 @@ class DataPointRecord
         return Double.longBitsToDouble( Longs.fromByteArray( valueBytes ) );
     }
 
-    public static int toMetricId(byte[] keyBytes)
+    public static Long toMetricId(byte[] keyBytes, boolean longId)
     {
-        return Ints.fromBytes( keyBytes[0], keyBytes[1], keyBytes[2], keyBytes[3] );
+        if(longId)
+        {
+            return Longs.fromBytes( keyBytes[0], keyBytes[1], keyBytes[2], keyBytes[3], keyBytes[4],
+                    keyBytes[5], keyBytes[6], keyBytes[7]);
+        }
+
+        Integer metricId = Ints.fromBytes(keyBytes[0], keyBytes[1], keyBytes[2], keyBytes[3]);
+        return metricId.longValue();
     }
 
-    public static int toTimestamp(byte[] keyBytes)
+    public static int toTimestamp(byte[] keyBytes, boolean longId)
     {
+        if(longId)
+        {
+            return Ints.fromBytes( keyBytes[8], keyBytes[9], keyBytes[10], keyBytes[11]);
+        }
+
         return Ints.fromBytes( keyBytes[4], keyBytes[5], keyBytes[6], keyBytes[7]);
     }
 }

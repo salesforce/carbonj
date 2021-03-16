@@ -45,8 +45,10 @@ public class Relay
 
     volatile RelayRouter router;
 
+    private final String kinesisRelayRegion;
+
     Relay(MetricRegistry metricRegistry, String type, File rulesFile, int queueSize, int batchSize, int refreshIntervalInMillis, String destConfigDir,
-          int maxWaitTimeInMillis, String relayRulesSrc, ConfigServerUtil configServerUtil )
+          int maxWaitTimeInMillis, String kinesisRelayRegion, String relayRulesSrc, ConfigServerUtil configServerUtil )
     {
         this.metricRegistry = metricRegistry;
         this.type = type;
@@ -59,6 +61,7 @@ public class Relay
         this.rulesFile = Preconditions.checkNotNull( rulesFile );
         this.queueSize = queueSize;
         this.batchSize = batchSize;
+        this.kinesisRelayRegion = kinesisRelayRegion;
         // empty relay router.
         this.router = new RelayRouter(metricRegistry, type);
         // load initial configuration if available.
@@ -170,7 +173,7 @@ public class Relay
         for(String destAsTxt : newIDs)
         {
             log.info( String.format("[%s] Creating new destination group: %s", type, destAsTxt) );
-            DestinationGroup dg = new DestinationGroup(metricRegistry, type, destAsTxt, queueSize, batchSize, refreshIntervalInMillis, destConfigDir, maxWaitTimeInMillis);
+            DestinationGroup dg = new DestinationGroup(metricRegistry, type, destAsTxt, queueSize, batchSize, refreshIntervalInMillis, destConfigDir, maxWaitTimeInMillis, kinesisRelayRegion);
             newDGs.add( dg );
         }
 

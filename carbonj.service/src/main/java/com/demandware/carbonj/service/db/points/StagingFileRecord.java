@@ -9,10 +9,10 @@ package com.demandware.carbonj.service.db.points;
 class StagingFileRecord
 {
     public final StagingFileSet fileName;
-    public final int metricId;
+    public final long metricId;
     public final String strValue;
 
-    StagingFileRecord( StagingFileSet fileName, int metricId, String strValue)
+    StagingFileRecord( StagingFileSet fileName, long metricId, String strValue)
     {
         this.fileName = fileName;
         this.metricId = metricId;
@@ -29,7 +29,7 @@ class StagingFileRecord
 
         int valueStart = idEnd + 1;
 
-        metricId = Integer.parseInt( line.substring( idStart, idEnd ) );
+        metricId = Long.parseLong( line.substring( idStart, idEnd ) );
         strValue = line.substring( valueStart );
     }
 

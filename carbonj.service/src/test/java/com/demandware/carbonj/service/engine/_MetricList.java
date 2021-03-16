@@ -21,11 +21,11 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class _Blacklist
+public class _MetricList
 {
     File configFile;
 
-    Blacklist blacklist;
+    MetricList metricList;
 
     private final MetricRegistry metricRegistry = new MetricRegistry();
 
@@ -33,19 +33,19 @@ public class _Blacklist
     public void setUp()
         throws Exception
     {
-        configFile = TestFileUtils.setupTestFileFromResource("/blacklist-test.conf");
-        blacklist = new Blacklist( metricRegistry, "test", configFile, "file", null );
+        configFile = TestFileUtils.setupTestFileFromResource("/metriclist-test.conf");
+        metricList = new MetricList( metricRegistry, "test", configFile, "file", null );
     }
 
     @Test
     public void testMatch()
     {
-        assertTrue( blacklist.match( "pod11.ecom.a.b.c.min" ) );
+        assertTrue( metricList.match( "pod11.ecom.a.b.c.min" ) );
     }
 
     @Test
     public void testNoMatch()
     {
-        assertFalse( blacklist.match( "pod11.ecom.a.b.c.count" ) );
+        assertFalse( metricList.match( "pod11.ecom.a.b.c.count" ) );
     }
 }

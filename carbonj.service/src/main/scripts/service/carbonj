@@ -1,0 +1,60 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:       carbonj
+# Required-Start: network diskmounts
+# Default-Start:  20
+# Default-Stop:   80
+# Description:    carbonj startup
+### END INIT INFO
+
+DAEMON_PATH="/opt/carbonj/bin/carbonj.sh"
+DAEMON_NAME="carbonj"
+RUN_AS_USER="carbonj"
+
+start() {
+    echo "Starting $DAEMON_NAME"
+    RESULT=$(pgrep -u  $RUN_AS_USER)
+    if [ "${RESULT}" !=  "" ]; then
+            echo "$RESULT"
+            ps -ef | grep $RUN_AS_USER
+            echo
+            echo  "$DAEMON_NAME already running."
+            exit
+    fi
+
+    sudo -u ${RUN_AS_USER} ${DAEMON_PATH}  start
+    return $?
+}
+
+stop() {
+    echo  "Shutting down $DAEMON_NAME"
+    pkill -u $RUN_AS_USER > /dev/null
+
+    # wait for the process to stop
+	  echo "Waiting for the process to stop..."
+	  RESULT=$(pgrep -u  $RUN_AS_USER)
+    while [ "${RESULT}" !=  "" ];
+	    do sleep 1;
+            RESULT=$(pgrep -u  $RUN_AS_USER)
+      done;
+    return $?
+}
+
+case "$1" in
+    start)
+        start
+        exit $?
+	;;
+    stop)
+        stop
+        exit $?
+	;;
+    restart)
+        stop
+        start
+        exit $?
+	;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac

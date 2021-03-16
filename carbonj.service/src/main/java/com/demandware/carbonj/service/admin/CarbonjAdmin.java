@@ -26,6 +26,7 @@ import org.apache.commons.io.LineIterator;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -58,6 +59,10 @@ public class CarbonjAdmin
     private final InputQueue inputQueue;
 
     private final NameUtils nameUtils;
+
+    @Value( "${metrics.store.longId:false}" )
+    private boolean longId;
+
 
     private Supplier<RuntimeException> notConfigured = ( ) -> new RuntimeException(
         "Time Series Store is not configured." );
@@ -120,7 +125,7 @@ public class CarbonjAdmin
     }
 
     @RequestMapping( value = "/dumpnames", method = RequestMethod.GET )
-    public void dumpNames( @RequestParam( value = "startId", required = false, defaultValue = "0" ) int startId,
+    public void dumpNames( @RequestParam( value = "startId", required = false, defaultValue = "0" ) long startId,
                            @RequestParam( value = "startName", required = false ) String startName,
                            @RequestParam( value = "count", required = false ) Integer count,
                            @RequestParam( value = "filter", required = false ) String wildcard, Writer response )
@@ -138,7 +143,7 @@ public class CarbonjAdmin
         }
         try
         {
-            tsStore().scanMetrics( startId, Integer.MAX_VALUE, m -> {
+            tsStore().scanMetrics( startId, getMaxId(), m -> {
                 if ( !filter.test( m ) )
                 {
                     return;
@@ -162,6 +167,10 @@ public class CarbonjAdmin
         {
 
         }
+    }
+
+    private long getMaxId() {
+        return longId ? Long.MAX_VALUE : Integer.MAX_VALUE;
     }
 
     private boolean loadLock = false;
@@ -528,6 +537,7 @@ public class CarbonjAdmin
 
     static boolean hasDataSince( TimeSeriesStore ts, String metric, int from )
     {
+
         for ( String dbName : Arrays.asList( "30m2y", "5m7d", "60s24h" ) )
         {
             if ( null != ts.getFirst( dbName, metric, from, Integer.MAX_VALUE ) )
@@ -554,7 +564,7 @@ public class CarbonjAdmin
 
         try
         {
-            ts.scanMetrics( 0, Integer.MAX_VALUE, m -> {
+            ts.scanMetrics( 0, getMaxId(), m -> {
                 if ( written.get() >= count )
                 {
                     // produced big enough result - interrupt execution through exception (signal "donness")
@@ -622,45 +632,50 @@ public class CarbonjAdmin
         try
         {
             ts.scanMetrics( cursor,
-                Integer.MAX_VALUE,
+                getMaxId(),
                 m -> {
                     try
                     {
+                        if (m == null)
+                        {
+                            log.error("Metric is null");
+                            return;
+                        }
                         if ( written.get() >= count )
                         {
                             // add artificial metric to transfer cursor state.
-                response.write( DumpFormat.writeSeries( "ignore.dumpseries.cursor", 1,
-                    Arrays.asList( new DataPointValue( 0, m.id ) ) ) );
-                response.write( "\n" );
-                // produced big enough result - interrupt execution through exception (signal "donness")
-                // make sure that we have produced at least one metric to ensure that response is not empty.
-                throw new StopException();
-            }
-            if ( !nameUtils.isValid( m.name, false ) )
-            {
-                // skip metrics with invalid names
-                return;
-            }
-            // test metric name based on the provided filter
-            if ( !filter.test( m ) || excludeFilter.test( m ) )
-            {
-                return;
-            }
-            List<DataPointValue> vals = ts.getValues( dbName, m.name, fromRange, toRange );
-            if ( vals.isEmpty() )
-            {
-                // skip
-                return;
-            }
-            response.write( DumpFormat.writeSeries( m.name, policy.precision, vals ) );
-            response.write( "\n" );
-            written.incrementAndGet();
-        }
-        catch ( Exception e )
-        {
-            throw Throwables.propagate( e );
-        }
-    }       );
+                            response.write( DumpFormat.writeSeries( "ignore.dumpseries.cursor", 1,
+                                Arrays.asList( new DataPointValue( 0, m.id ) ) ) );
+                            response.write( "\n" );
+                            // produced big enough result - interrupt execution through exception (signal "donness")
+                            // make sure that we have produced at least one metric to ensure that response is not empty.
+                            throw new StopException();
+                        }
+                        if ( !nameUtils.isValid( m.name, false ) )
+                        {
+                            // skip metrics with invalid names
+                            return;
+                        }
+                        // test metric name based on the provided filter
+                        if ( !filter.test( m ) || excludeFilter.test( m ) )
+                        {
+                            return;
+                        }
+                        List<DataPointValue> vals = ts.getValues( dbName, m.name, fromRange, toRange );
+                        if ( vals.isEmpty() )
+                        {
+                            // skip
+                            return;
+                        }
+                        response.write( DumpFormat.writeSeries( m.name, policy.precision, vals ) );
+                        response.write( "\n" );
+                        written.incrementAndGet();
+                    }
+                    catch ( Exception e )
+                    {
+                        throw Throwables.propagate( e );
+                    }
+                });
 
         }
         catch ( StopException e )

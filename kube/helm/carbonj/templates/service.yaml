@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: carbonj-p{{ .Values.carbonj.shard.id }}
+  labels:
+    app: carbonj-p{{ .Values.carbonj.shard.id }}
+    stack: {{ .Values.carbonj.env }}
+  namespace: {{ .Values.carbonj.namespace }}
+spec:
+  clusterIP: None
+  selector:
+    app: carbonj-p{{ .Values.carbonj.shard.id }}
+  ports:
+  - port: 2001
+    targetPort: 2001
+    name: cj-p{{ .Values.carbonj.shard.id }}-http
+  - port: 2003
+    targetPort: 2003
+    name: cj-p{{ .Values.carbonj.shard.id }}-line
+  - port: 2004
+    targetPort: 2004
+    name: cj-p{{ .Values.carbonj.shard.id }}-pick
+  - port: 20001
+    targetPort: 20001
+    name: cj-p{{ .Values.carbonj.shard.id }}-prof

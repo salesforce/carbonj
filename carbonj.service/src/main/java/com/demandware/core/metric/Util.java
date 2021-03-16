@@ -11,7 +11,7 @@ import com.sfcc.um.metrics_reporter.reporter.GraphiteReporter;
 import com.sfcc.um.metrics_reporter.transport.GraphiteTransport;
 import com.sfcc.um.metrics_reporter.transport.GraphiteTransportBuilder;
 import com.sfcc.um.metrics_reporter.transport.GraphiteTransportType;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

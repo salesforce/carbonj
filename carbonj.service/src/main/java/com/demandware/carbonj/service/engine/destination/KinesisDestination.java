@@ -6,6 +6,7 @@
  */
 package com.demandware.carbonj.service.engine.destination;
 
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import java.util.ArrayList;
@@ -55,7 +56,10 @@ public class KinesisDestination
 
     private final Timer producerTimer;
 
-    public KinesisDestination(MetricRegistry metricRegistry, String type, int queueSize, String streamName, int batchSize, int threadCount, int maxWaitTimeInSecs)
+    private final String kinesisRelayRegion;
+
+    public KinesisDestination(MetricRegistry metricRegistry, String type, int queueSize,
+                              String streamName, int batchSize, int threadCount, int maxWaitTimeInSecs, String kinesisRelayRegion)
     {
         super(metricRegistry,"dest." + type + "." + streamName);
 
@@ -79,10 +83,12 @@ public class KinesisDestination
 
         this.producerTimer = metricRegistry.timer(
                 MetricRegistry.name( "kinesis", "producerTimer" ) );
+        this.kinesisRelayRegion = kinesisRelayRegion;
 
 
         this.maxWaitTimeInSecs = maxWaitTimeInSecs;
-        kinesisClient = AmazonKinesisClientBuilder.defaultClient();
+        kinesisClient = AmazonKinesisClientBuilder.standard().withRegion(kinesisRelayRegion).build();
+
         this.streamName = streamName;
         this.batchSize = batchSize;
         q = new ArrayBlockingQueue<>( queueSize );
