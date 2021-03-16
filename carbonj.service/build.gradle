@@ -99,12 +99,10 @@ configurations {
 //    compile.exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
 }
 
-
-
 task rpm(type: Rpm) {
 	packageName project.name
 	version version
-	release '15'
+    release "${project.getProperties().get('release')}"
 	os LINUX
 	permissionGroup 'aws'
 	user 'carbonj'
