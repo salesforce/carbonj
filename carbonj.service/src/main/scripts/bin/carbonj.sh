@@ -40,7 +40,7 @@ if [ -z ${AWS_CONFIG_FILE+x} ]; then
 fi
 
 # Build the command
-COMMAND="${JAVA} -Xms512m -Xmx2g -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${LOG_DIR} -Duser.dir=/build/carbonj/carbonj  -jar ${HOME_DIR}/lib/carbonj*.jar --logging.file.name=${LOG_FILE} --spring.config.location=${CONFIG_FILE}"
+COMMAND="${JAVA} -Xms4g -Xmx4g -XX:NewSize=600m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=75 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${LOG_DIR} -XX:OnOutOfMemoryError=/build/carbonj/carbonj/bin/onOutOfMemoryError -Dfile.encoding=UTF-8 -Duser.timezone=GMT -Duser.language=en -Duser.country=US -Duser.dir=/build/carbonj/carbonj -Dio.netty.noUnsafe=true -jar ${HOME_DIR}/lib/carbonj*.jar --logging.path=${LOG_DIR} --spring.config.location=${CONFIG_FILE}"
 
 echo -e "Invoking CarbonJ\n" | tee -a $LOG_FILE
 echo -e $COMMAND | tee -a $LOG_FILE
