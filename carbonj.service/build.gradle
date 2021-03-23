@@ -101,8 +101,8 @@ configurations {
 
 task rpm(type: Rpm) {
 	packageName project.name
-	version version
-    release "${project.getProperties().get('release')}"
+	version "${project.hasProperty('versionSuffix') ? version + '_' + project.versionSuffix : version}"
+    release "15"
 	os LINUX
 	permissionGroup 'aws'
 	user 'carbonj'
