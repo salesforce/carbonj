@@ -115,15 +115,7 @@ task rpm(type: Rpm) {
 	from('lib') {
 		into 'lib'
 	}
-	from('src/main/scripts/bin/carbonj.sh') {
-		into 'bin'
-		fileMode 0554
-	}
-	from('src/main/scripts/service') {
-		into '/etc/init.d'
-		fileMode 0755
-	}
-	from('src/main/resources') {
+    from('src/main/resources') {
 		fileType CONFIG | NOREPLACE
 		into 'config'
 	}
