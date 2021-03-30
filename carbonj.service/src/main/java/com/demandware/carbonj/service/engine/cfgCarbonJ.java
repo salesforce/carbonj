@@ -9,6 +9,7 @@ package com.demandware.carbonj.service.engine;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.events.cfgEventBus;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.cfgAccumulator;
 import com.demandware.carbonj.service.admin.CarbonjAdmin;
@@ -65,7 +66,7 @@ import static com.demandware.carbonj.service.config.ConfigUtils.locateConfigFile
 
 @Configuration
 @Import( { cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgMetric.class, cfgCentralThreadPools.class,
-                cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class } )
+                cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class } )
 public class cfgCarbonJ
 {
     private static final Logger log = LoggerFactory.getLogger( cfgCarbonJ.class );

@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 @Configuration
-@Import( { cfgCarbonJ.class, CfgKinesisEventsLogger.class } )
+@Import( { CfgKinesisEventsLogger.class } )
 public class cfgEventBus {
 
     @Value("${events.port:2015}" )
