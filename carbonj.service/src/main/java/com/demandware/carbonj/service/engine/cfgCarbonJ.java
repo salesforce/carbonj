@@ -129,7 +129,7 @@ public class cfgCarbonJ
     @Value( "${relay.rules:config/relay-rules.conf}" ) private String relayRulesFile = "config/relay-rules.conf";
 
     // Relay rules can be pulled from file or server
-    @Value( "${relay.rules.configSrc:file}" ) private String relayRulesSrc;
+    @Value( "${relay.configSrc:file}" ) private String relayRulesSrc;
 
     @Value( "${audit.rules:config/audit-rules.conf}" ) private String auditRulesFile = "config/audit-rules.conf";
 
