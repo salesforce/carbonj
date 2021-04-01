@@ -13,14 +13,12 @@ else
 fi
 echo $HOME_DIR
 
-if [ -z ${JAVA+x} ] && [ -d /build/OpenJDK/1.8.0.172_1/ ]; then
-    JAVA=/build/OpenJDK/1.8.0.172_1/jdk64/bin/java
-else
+if [ -z ${JAVA+x} ]; then
     JAVA=`type -p java`
 fi
 
 if [ -z ${LOG_DIR+x} ]; then
-    LOG_DIR=/app_logs/carbonj
+    LOG_DIR=/var/log/carbonj
 fi
 
 LOG_FILE=$LOG_DIR/carbonj.log
@@ -39,12 +37,8 @@ if [ -z ${AWS_CONFIG_FILE+x} ]; then
   export AWS_CONFIG_FILE=/etc/aws/config
 fi
 
-if [ -z ${CONF_DIR+x} ]; then
-    CONF_DIR=/etc/carbonj
-fi
-
 # Build the command
-COMMAND="${JAVA} -Xms4g -Xmx4g -XX:NewSize=600m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=75 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${LOG_DIR} -XX:OnOutOfMemoryError=/build/carbonj/carbonj/bin/onOutOfMemoryError -Dfile.encoding=UTF-8 -Duser.timezone=GMT -Duser.language=en -Duser.country=US -Dio.netty.noUnsafe=true -jar ${HOME_DIR}/lib/carbonj*.jar --logging.path=${LOG_DIR} --spring.config.location=${CONF_DIR}/application.yml"
+COMMAND="${JAVA} -Xms512m -Xmx2g -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${LOG_DIR} -jar ${HOME_DIR}/lib/carbonj*.jar --logging.file.name=${LOG_FILE} --spring.config.location=${CONFIG_FILE}"
 
 echo -e "Invoking CarbonJ\n" | tee -a $LOG_FILE
 echo -e $COMMAND | tee -a $LOG_FILE

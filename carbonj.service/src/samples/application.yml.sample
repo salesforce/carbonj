@@ -87,7 +87,7 @@ aggregation:
 #  processName: cjrelay
 #  processInstance: pod1
 #  backupFilePath: config/config-server-state.json
-#blacklistConfigSrc: server
+#metriclistConfigSrc: server
 #relay:
 #  rules:
 #    configSrc: server
