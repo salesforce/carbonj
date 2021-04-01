@@ -13,14 +13,12 @@ else
 fi
 echo $HOME_DIR
 
-if [ -z ${JAVA+x} ] && [ -d /build/OpenJDK/1.8.0.172_1/ ]; then
-    JAVA=/build/OpenJDK/1.8.0.172_1/jdk64/bin/java
-else
+if [ -z ${JAVA+x} ]; then
     JAVA=`type -p java`
 fi
 
 if [ -z ${LOG_DIR+x} ]; then
-    LOG_DIR=/app_logs/carbonj
+    LOG_DIR=/var/log/carbonj
 fi
 
 LOG_FILE=$LOG_DIR/carbonj.log

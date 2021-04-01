@@ -9,6 +9,7 @@ package com.demandware.carbonj.service.engine;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.events.cfgEventBus;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.cfgAccumulator;
 import com.demandware.carbonj.service.admin.CarbonjAdmin;
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.embedded.jetty.JettyServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
@@ -48,9 +50,11 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Optional;
@@ -62,7 +66,7 @@ import static com.demandware.carbonj.service.config.ConfigUtils.locateConfigFile
 
 @Configuration
 @Import( { cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgMetric.class, cfgCentralThreadPools.class,
-                cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class } )
+                cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class } )
 public class cfgCarbonJ
 {
     private static final Logger log = LoggerFactory.getLogger( cfgCarbonJ.class );
@@ -70,6 +74,8 @@ public class cfgCarbonJ
     @Autowired( required = false ) TimeSeriesStore db;
 
     @Autowired StringsCache stringsCache;
+
+    @Autowired MetricRegistry metricRegistry;
 
     @Value( "${server.port:56788}" ) private int jettyPort;
 
@@ -113,6 +119,8 @@ public class cfgCarbonJ
 
     @Value( "${blacklist:config/blacklist.conf}" ) private String blacklistConfigFile = "config/blacklist.conf";
 
+    @Value( "${metriclistConfigSrc:file}" ) private String metricListConfigSrc;
+
     @Value( "${blacklist:config/query-blacklist.conf}" ) private String queryBlacklistConfigFile =
                     "config/query-blacklist.conf";
 
@@ -120,7 +128,12 @@ public class cfgCarbonJ
 
     @Value( "${relay.rules:config/relay-rules.conf}" ) private String relayRulesFile = "config/relay-rules.conf";
 
+    // Relay rules can be pulled from file or server
+    @Value( "${relay.configSrc:file}" ) private String relayRulesSrc;
+
     @Value( "${audit.rules:config/audit-rules.conf}" ) private String auditRulesFile = "config/audit-rules.conf";
+
+    @Value( "${audit.rules.configSrc:file}" ) private String auditRulesSrc;
 
     @Value( "${consumerRules:config/consumer-rules.conf}" ) private String consumerRulesFile =
                     "config/consumer-rules.conf";
@@ -176,22 +189,60 @@ public class cfgCarbonJ
     @Value( "${kinesis.relay.region:us-east-1}" )
     private String kinesisRelayRegion = "us-east-1";
 
-    @Autowired MetricRegistry metricRegistry;
+    /**
+     * Config server properties
+     */
+    @Value( "${configServer.enabled:false}" ) private boolean configServerEnabled;
 
-    @Bean( name = "dataPointSinkRelay" ) Relay relay( ScheduledExecutorService s )
+    @Value( "${configServer.registrationSeconds:30}" ) private int configServerRegistrationSeconds;
+
+    @Value( "${configServer.baseUrl:http://localhost:8081}" ) private String configServerBaseUrl;
+
+    @Value( "${configServer.infrastructure:unknownInfra}" ) private String configServerInfrastructure;
+
+    @Value( "${configServer.processName:unknownProcessName}" ) private String configServerProcessName;
+
+    @Value( "${configServer.processInstance:unknownProcessInstance}" ) private String configServerProcessInstance;
+
+    @Value( "${configServer.backupFilePath:config/config-server-state.json}" ) private String backupFilePath;
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+
+    @Bean
+    @ConditionalOnProperty( name = "configServer.enabled", havingValue = "true" )
+    public ConfigServerUtil configServerUtil(ScheduledExecutorService s, RestTemplate restTemplate) throws IOException {
+        ConfigServerUtil configServerUtil = new ConfigServerUtil(restTemplate, configServerBaseUrl, metricRegistry,
+                String.format("%s.%s.%s", configServerInfrastructure, configServerProcessName,
+                        configServerProcessInstance), backupFilePath);
+        s.scheduleWithFixedDelay(() -> {
+            try {
+                configServerUtil.register();
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+            }
+        }, 15, configServerRegistrationSeconds, TimeUnit.SECONDS);
+        return configServerUtil;
+    }
+
+    @Bean( name = "dataPointSinkRelay" ) Relay relay( ScheduledExecutorService s,
+                                                      @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         File rulesFile = locateConfigFile( serviceDir, relayRulesFile );
         Relay r = new Relay( metricRegistry, "relay", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion );
+                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, relayRulesSrc, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
 
-    @Bean( name = "auditLogRelay" ) Relay auditLog( ScheduledExecutorService s )
+    @Bean( name = "auditLogRelay" ) Relay auditLog( ScheduledExecutorService s,
+                                                    @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         File rulesFile = locateConfigFile( serviceDir, auditRulesFile );
         Relay r = new Relay( metricRegistry, "audit", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion);
+                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, auditRulesSrc, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
@@ -208,25 +259,29 @@ public class cfgCarbonJ
                         new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
     }
 
-    @Bean( name = "pointBlacklist" ) MetricList pointBlacklist( ScheduledExecutorService s )
+    @Bean( name = "pointBlacklist" ) MetricList pointBlacklist( ScheduledExecutorService s,
+            @Autowired(required = false) ConfigServerUtil configServerUtil)
     {
-        MetricList bs = new MetricList( metricRegistry, "blacklist",
-                        locateConfigFile( serviceDir, blacklistConfigFile ) );
+        MetricList bs = new MetricList( metricRegistry, "blacklist", locateConfigFile( serviceDir, blacklistConfigFile ),
+                metricListConfigSrc, configServerUtil );
         s.scheduleWithFixedDelay( bs::reload, 10, 30, TimeUnit.SECONDS );
         return bs;
     }
 
-    @Bean( name = "queryBlacklist" ) MetricList queryBlacklist( ScheduledExecutorService s )
+    @Bean( name = "queryBlacklist" ) MetricList queryBlacklist( ScheduledExecutorService s,
+            @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         MetricList bs = new MetricList( metricRegistry, "queryBlacklist",
-                        locateConfigFile( serviceDir, queryBlacklistConfigFile ) );
+                        locateConfigFile( serviceDir, queryBlacklistConfigFile ), metricListConfigSrc, configServerUtil );
         s.scheduleWithFixedDelay( bs::reload, 10, 30, TimeUnit.SECONDS );
         return bs;
     }
 
-    @Bean( name = "pointAllowOnlyList" ) MetricList pointAllowOnlyList( ScheduledExecutorService s )
+    @Bean( name = "pointAllowOnlyList" ) MetricList pointAllowOnlyList( ScheduledExecutorService s,
+            @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
-        MetricList metricList = new MetricList( metricRegistry, "allowOnly", locateConfigFile( serviceDir, allowOnlyMetricsConfigFile ) );
+        MetricList metricList = new MetricList( metricRegistry, "allowOnly",
+                locateConfigFile( serviceDir, allowOnlyMetricsConfigFile ), metricListConfigSrc, configServerUtil );
         s.scheduleWithFixedDelay( metricList::reload, 10, 30, TimeUnit.SECONDS );
         return metricList;
     }

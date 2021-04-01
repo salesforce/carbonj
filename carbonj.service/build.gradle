@@ -99,12 +99,10 @@ configurations {
 //    compile.exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
 }
 
-
-
 task rpm(type: Rpm) {
 	packageName project.name
-	version version
-	release '15'
+	version "${project.hasProperty('versionSuffix') ? version + '_' + project.versionSuffix : version}"
+    release "15"
 	os LINUX
 	permissionGroup 'aws'
 	user 'carbonj'
@@ -117,13 +115,9 @@ task rpm(type: Rpm) {
 	from('lib') {
 		into 'lib'
 	}
-	from('src/main/scripts/bin/carbonj.sh') {
+    from('src/main/scripts/bin/carbonj.sh') {
 		into 'bin'
 		fileMode 0554
-	}
-	from('src/main/scripts/service') {
-		into '/etc/init.d'
-		fileMode 0755
 	}
 	from('src/main/resources') {
 		fileType CONFIG | NOREPLACE

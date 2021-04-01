@@ -38,12 +38,21 @@ public class MetricList implements StatsAware
 
     volatile private List<Pattern> patterns = new ArrayList<>(  );
 
-    public MetricList( MetricRegistry metricRegistry,  String name, File confFile )
+    volatile private boolean empty = patterns.isEmpty();
+
+    private final String confSrc;
+
+    private final ConfigServerUtil configServerUtil;
+
+    public MetricList(MetricRegistry metricRegistry,  String name, File confFile, String confSrc,
+                     ConfigServerUtil configServerUtil )
     {
         this.name = Preconditions.checkNotNull(name);
         this.confFile = Preconditions.checkNotNull( confFile );
         log.info( String.format("Creating metric list [%s] with config file [%s]", name, confFile) );
         this.droppedMetrics = metricRegistry.counter( MetricRegistry.name( name, "drop" ) );
+        this.confSrc = confSrc;
+        this.configServerUtil = configServerUtil;
         reload();
         log.info(String.format("Metric list [%s] created.", name) );
     }
@@ -82,14 +91,27 @@ public class MetricList implements StatsAware
 
         try
         {
-            if( !confFile.exists() )
-            {
-                log.warn( String.format("Metric list [%s] configuration file doesn't exist. File: [%s]", name, confFile) );
-                return;
+            List<String> lines;
+            if (confSrc.equalsIgnoreCase("file")) {
+                if (!confFile.exists()) {
+                    log.warn(String.format("Metric list [%s] configuration file doesn't exist. File: [%s]", name, confFile));
+                    return;
+                }
+                lines = FileUtils.readLines(confFile, Charsets.UTF_8);
+            } else if (confSrc.equalsIgnoreCase("server")) {
+                if (configServerUtil == null || !configServerUtil.getConfigLines(name).isPresent()) {
+                    log.warn("Unable to read metric list configuration from config server. Falling back to file.");
+                    if (!confFile.exists()) {
+                        log.warn(String.format("Metric list [%s] configuration file doesn't exist. File: [%s]", name, confFile));
+                        return;
+                    }
+                    lines = FileUtils.readLines(confFile, Charsets.UTF_8);
+                } else {
+                    lines = configServerUtil.getConfigLines(name).get();
+                }
+            } else {
+                throw new RuntimeException("Unknown metric list config src: " + confSrc);
             }
-
-
-            List<String> lines = FileUtils.readLines( confFile, Charsets.UTF_8 );
 
             if( configLines.equals( lines ) )
             {

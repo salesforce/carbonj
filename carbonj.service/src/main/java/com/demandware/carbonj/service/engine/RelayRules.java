@@ -10,6 +10,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +28,12 @@ public class RelayRules
 
     final private File confFile;
 
+    final private String confSrc;
+
+    final private ConfigServerUtil configServerUtil;
+
+    final private RestTemplate restTemplate;
+
     private List<String> configLines = new ArrayList<>();
 
     // rule order is important
@@ -34,16 +41,19 @@ public class RelayRules
 
     private boolean empty;
 
-    private String type;
+    private final String type;
 
-    private String[] emptyResult = new String[0];
+    private final String[] emptyResult = new String[0];
     /**
      * Creates instance with no rules and no destinations.
      */
     public RelayRules(String type)
     {
         this.type = type;
+        this.confSrc = "file";
+        this.configServerUtil = null;
         this.confFile = null;
+        this.restTemplate = new RestTemplate();
         this.configLines = new ArrayList<>( );
         this.rules = new LinkedHashMap<>();
         this.empty = rules.isEmpty();
@@ -54,10 +64,13 @@ public class RelayRules
      *
      * @param confFile
      */
-    public RelayRules( String type, File confFile )
+    public RelayRules( String type, File confFile, String confSrc, ConfigServerUtil configServerUtil )
     {
         this.type = type;
         this.confFile = Preconditions.checkNotNull( confFile );
+        this.confSrc = Preconditions.checkNotNull(confSrc);
+        this.configServerUtil = configServerUtil;
+        this.restTemplate = new RestTemplate();
         log.debug( String.format( "Creating relay rules with config file [%s]", confFile ) );
         load();
         log.debug( "Relay rules created" );
@@ -138,7 +151,43 @@ public class RelayRules
         return emptyResult;
     }
 
-    private void load()
+    private void  load() {
+        if (confSrc.equalsIgnoreCase("file")) {
+            loadFromFile();
+        } else if (confSrc.equalsIgnoreCase("server")) {
+            if (!loadFromServer()) {
+                log.error("Configuration couldn't be loaded from config server. Falling back to loading from file.");
+                loadFromFile();
+            }
+        } else {
+            throw new IllegalStateException("Unexpected configuration src: " + confSrc);
+        }
+    }
+
+    private boolean loadFromServer() {
+        if (configServerUtil == null) {
+            log.debug("Relay rules config server undefined. Remove all destinations.");
+            // removing relay config file results in disabling relay functionality.
+            this.configLines = new ArrayList<>();
+            this.rules = new LinkedHashMap<>();
+            return false;
+        }
+        Optional<List<String>> configLines = configServerUtil.getConfigLines(type + "-rules");
+        if (configLines.isPresent()) {
+            this.configLines = configLines.get();
+        } else {
+            log.error("Failed to load configuration from config server for type: {}.", type);
+            return false;
+        }
+        this.rules = parseConfig(this.configLines);
+        this.empty = this.rules.isEmpty();
+        if (log.isDebugEnabled()) {
+            log.debug("Loaded rules from config server type {}, rules {}", type, rules);
+        }
+        return true;
+    }
+
+    private void loadFromFile()
     {
         if ( !confFile.exists() )
         {
