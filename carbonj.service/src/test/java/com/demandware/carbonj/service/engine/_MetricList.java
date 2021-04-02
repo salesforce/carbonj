@@ -34,7 +34,7 @@ public class _MetricList
         throws Exception
     {
         configFile = TestFileUtils.setupTestFileFromResource("/metriclist-test.conf");
-        metricList = new MetricList( metricRegistry, "test", configFile );
+        metricList = new MetricList( metricRegistry, "test", configFile, "file", null );
     }
 
     @Test

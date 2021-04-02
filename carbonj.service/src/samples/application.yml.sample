@@ -77,6 +77,23 @@ server:
 
 aggregation:
   enabled: false
+
+# Sample config to enable config server for relay rules, audit rules, metric block list and query block list
+#configServer:
+#  enabled: true
+#  registrationSeconds: 30
+#  baseUrl: http://localhost:8081/uconsole
+#  infrastructure: cc1p
+#  processName: cjrelay
+#  processInstance: pod1
+#  backupFilePath: config/config-server-state.json
+#metriclistConfigSrc: server
+#relay:
+#  rules:
+#    configSrc: server
+#audit:
+#  rules:
+#    configSrc: server
 ---
 spring:
   profiles: prod
