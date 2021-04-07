@@ -80,6 +80,7 @@ public class ConfigServerUtil {
         this.objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         log.info("Config server registry initialised. Registration URL {}", registrationUrl);
         register();
+        log.info("Dummy log line for testing");
     }
 
     public Optional<List<String>> getConfigLines(String name) {
