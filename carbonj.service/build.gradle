@@ -65,8 +65,16 @@ ext {
     }
     println("dockerRepo:" + dockerRepo)
     isSnapshot = version.endsWith('-SNAPSHOT')
-    carbonj_logs_dir = "/log"
-    carbonj_group="carbonj"
+    if (project.hasProperty('carbonjLogsDir')) {
+        carbonj_logs_dir = project.carbonjLogsDir
+    } else {
+        carbonj_logs_dir = "/log"
+    }
+    if (project.hasProperty('carbonjGroup')) {
+        carbonj_group = project.carbonjGroup
+    } else {
+        carbonj_group="carbonj"
+    }
 }
 
 
@@ -124,13 +132,16 @@ task rpm(type: Rpm) {
 		into 'config'
 	}
 
-	preInstall("""
-		getent passwd carbonj > /dev/null 2>&1 || useradd -g ${carbonj_group} -m carbonj
-	""")
+    if (carbonj_group) {
+        preInstall("""
+            getent passwd carbonj > /dev/null 2>&1 || useradd -g ${carbonj_group} -m carbonj
+        """)
+    }
 
-	directory("${carbonj_logs_dir}/carbonj", 0755)
-
-	postInstall("chown -R carbonj:${carbonj_group} ${carbonj_logs_dir}/carbonj")
+    if (carbonj_logs_dir) {
+        directory("${carbonj_logs_dir}/carbonj", 0755)
+        postInstall("chown -R carbonj:${carbonj_group} ${carbonj_logs_dir}/carbonj")
+    }
 }
 
 distributions {
