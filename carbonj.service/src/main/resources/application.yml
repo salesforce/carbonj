@@ -39,10 +39,9 @@ aggregation:
   enabled: false
 ---
 spring:
-  profiles: prod
----
-spring:
-  profiles: dev
+  config:
+    activate:
+      on-profile: dev
 
 # Logging configuration
 #logging:
@@ -56,4 +55,11 @@ spring:
 #    com.demandware: DEBUG
 ---
 spring:
-  profiles: test
+  config:
+    activate:
+      on-profile: test
+---
+spring:
+  config:
+    activate:
+      on-profile: prod

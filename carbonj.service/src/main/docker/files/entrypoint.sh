@@ -101,5 +101,12 @@ crontab -l
 echo "Running cron"
 /usr/sbin/crond
 echo "Running service"
+
+if [[ -z "${SPRING_CONFIG_LOCATION}" ]]; then
+  CONFIG_LOCATIONS="optional:classpath:/application.yml,optional:classpath:/,optional:classpath:/config/,optional:classpath:/config/application.properties,optional:classpath:/config/overrides.properties"
+else
+  CONFIG_LOCATIONS="${SPRING_CONFIG_LOCATION}"
+fi
+
 cd /app
-exec java $JAVA_OPTS $JAVA_OPTS_OVERRIDE -Dlogback.debug=true -cp /app:/app/lib/* com.demandware.carbonj.service.engine.CarbonJServiceMain --spring.config.location=classpath:/application.yml,classpath:/,classpath:/config/,classpath:/config/application.properties,classpath:/config/overrides.properties
+exec java $JAVA_OPTS $JAVA_OPTS_OVERRIDE -Dlogback.debug=true -cp /app:/app/lib/* com.demandware.carbonj.service.engine.CarbonJServiceMain --spring.config.location=$CONFIG_LOCATIONS

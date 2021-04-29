@@ -366,7 +366,9 @@ public class MetricIndexImpl implements MetricIndex {
             Metric m = metricCache.get( key );
             if ( m == Metric.METRIC_NULL)
             {
-                log.warn(String.format("Metric is null for the id [%s]", key));
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Metric is null for the id [%s]", key));
+                }
                 return null;
             }
             return m;
