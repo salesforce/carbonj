@@ -115,16 +115,18 @@ public class PickleProtocolHandler
 
     void handle(InputStream is) throws IOException {
         List data = (List) new Unpickler().load( is );
-        received.inc(data.size());
-        for ( Object o : data )
-        {
-            DataPoint dp = decodePickle( o );
-            if ( null == dp )
+        if (data != null) {
+            received.inc(data.size());
+            for ( Object o : data )
             {
-                invalids.inc();
-                continue;
+                DataPoint dp = decodePickle( o );
+                if ( null == dp )
+                {
+                    invalids.inc();
+                    continue;
+                }
+                consumer.accept( dp );
             }
-            consumer.accept( dp );
         }
     }
 
