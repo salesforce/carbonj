@@ -656,7 +656,7 @@ public class cfgCarbonJ
                 ncsaLog.setExtended( true );
                 ncsaLog.setAppend( true );
                 ncsaLog.setLogTimeZone( "GMT" );
-                ncsaLog.setRetainDays( 90 );
+                ncsaLog.setRetainDays( 5 );
 
                 RequestLogHandler requestLogHandler = new RequestLogHandler();
                 requestLogHandler.setRequestLog( ncsaLog );
