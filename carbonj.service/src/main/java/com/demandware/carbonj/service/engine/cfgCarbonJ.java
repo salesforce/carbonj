@@ -81,6 +81,8 @@ public class cfgCarbonJ
 
     @Value( "${jetty.logfilepath:log/request-yyyy_mm_dd.log}" ) private String jettyLogfilePath;
 
+    @Value( "${jetty.requestLogRetentionDays:5}" ) private int jettyRequestLogRetentionDays;
+
     @Value( "${line.protocol.udp.port:-1}" ) private int lineProtocolUdpPort;
 
     @Value( "${line.protocol.udp.host:0.0.0.0}" ) private String lineProtocolUdpHost;
@@ -656,7 +658,7 @@ public class cfgCarbonJ
                 ncsaLog.setExtended( true );
                 ncsaLog.setAppend( true );
                 ncsaLog.setLogTimeZone( "GMT" );
-                ncsaLog.setRetainDays( 5 );
+                ncsaLog.setRetainDays( jettyRequestLogRetentionDays );
 
                 RequestLogHandler requestLogHandler = new RequestLogHandler();
                 requestLogHandler.setRequestLog( ncsaLog );
