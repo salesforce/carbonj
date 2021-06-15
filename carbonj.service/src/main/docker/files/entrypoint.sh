@@ -84,6 +84,19 @@ fi
 JAVA_OPTS=`eval echo "${JAVA_OPTS}"`
 echo $JAVA_OPTS $JAVA_OPTS_OVERRIDE
 
+LONG_ID_SUPPORT_ENABLED=false
+
+hostname=$(hostname)
+echo "Host name is $hostname"
+echo "Long id support enabled : $LONG_ID_SUPPORT_ENABLED"
+echo "Checking host name.."
+if [[ $hostname == *-1 ]]
+then
+  LONG_ID_SUPPORT_ENABLED=true
+fi
+
+echo "Long id support enabled : $LONG_ID_SUPPORT_ENABLED"
+
 env >> /etc/environment
 
 # no logs on disk
@@ -109,4 +122,4 @@ else
 fi
 
 cd /app
-exec java $JAVA_OPTS $JAVA_OPTS_OVERRIDE -Dlogback.debug=true -cp /app:/app/lib/* com.demandware.carbonj.service.engine.CarbonJServiceMain --spring.config.location=$CONFIG_LOCATIONS
+exec java $JAVA_OPTS $JAVA_OPTS_OVERRIDE -Dlogback.debug=true -Dmetrics.store.longId=$LONG_ID_SUPPORT_ENABLED -cp /app:/app/lib/* com.demandware.carbonj.service.engine.CarbonJServiceMain --spring.config.location=$CONFIG_LOCATIONS
