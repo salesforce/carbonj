@@ -16,7 +16,7 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Log into registry
-      #  run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+      if: ${{ !contains(github.ref, 'dependabot' }}
       run: echo "${{ secrets.DOCKER_HUB_SECRET }}" | docker login --username chrbayer84 --password-stdin
     - name: Build with Gradle
       run: ./gradlew build --info --stacktrace
@@ -33,30 +33,14 @@ jobs:
     - name: Show project version
       run: echo "$GRADLE_PROJECT_VERSION"
     - name: Publish Docker container
+      if: ${{ !contains(github.ref, 'dependabot' }}
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
       run: ./gradlew -PdockerRepo=chrbayer84/ -x test publish  --info
     - name: scan docker image
+      if: ${{ !contains(github.ref, 'dependabot' }}
       uses: azure/container-scan@v0
       with:
         image-name: chrbayer84/carbonj:${{ env.GRADLE_PROJECT_VERSION }}
         severity-threshold: CRITICAL
-#    - name: Push image
-        # severity-threshold: CRITICAL
         # run-quality-checks: false
-#      run: |
-#        IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
-#
-#        # Strip git ref prefix from version
-#        VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-#
-#        # Strip "v" prefix from tag name
-#        [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-#
-#        # Use Docker `latest` tag convention
-#        [ "$VERSION" == "master" ] && VERSION=latest
-#
-#        echo IMAGE_ID=$IMAGE_ID
-#        echo VERSION=$VERSION
-#
-#        docker tag image $IMAGE_ID:$VERSION
-#        docker push $IMAGE_ID:$VERSION
+
