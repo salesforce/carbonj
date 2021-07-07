@@ -1,0 +1,4 @@
+general:
+  vulnerabilities:
+    - CVE-2019-1010022
+    

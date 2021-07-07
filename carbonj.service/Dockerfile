@@ -5,7 +5,7 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-FROM centos:8
+FROM quay.io/centos/centos:stream8
 ARG DEPENDENCY=target/dependency
 ARG VERSION=latest
 
