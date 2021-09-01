@@ -11,6 +11,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.engine.RejectionHandler;
 import com.demandware.carbonj.service.queue.InputQueue;
 import com.demandware.carbonj.service.queue.QueueProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Entry point to the events shipping functionality.   It holds the queue where all the events received from other
@@ -18,6 +20,8 @@ import com.demandware.carbonj.service.queue.QueueProcessor;
  * sent to a kinesis queue in metrics cloud.
  */
 public class KinesisEventsLogger implements EventsLogger<byte[]> {
+
+    private static final Logger log = LoggerFactory.getLogger( KinesisEventsLogger.class );
 
     private final InputQueue<byte[]> queue;
 
@@ -39,5 +43,10 @@ public class KinesisEventsLogger implements EventsLogger<byte[]> {
     public void log(byte[] event)
     {
         queue.accept(event);
+    }
+
+    public void close() {
+        log.info("Stopping kinesis events logger.");
+        queue.close();
     }
 }
