@@ -12,10 +12,14 @@ import com.demandware.carbonj.service.queue.InputQueue;
 import com.demandware.carbonj.service.queue.QueueProcessor;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 
 public class CarbonJEventsLogger implements EventsLogger<CarbonjEvent> {
+
+    private static final Logger log = LoggerFactory.getLogger( CarbonJEventsLogger.class );
 
     private final Gson gson;
     private final InputQueue<JsonObject> queue;
@@ -55,5 +59,10 @@ public class CarbonJEventsLogger implements EventsLogger<CarbonjEvent> {
         json.addProperty("pod", podName);
         json.addProperty("namespace", namespace);
         queue.accept(json);
+    }
+
+    public void close() {
+        log.info("Stopping carbonj events logger.");
+        queue.close();
     }
 }
