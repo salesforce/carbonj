@@ -93,10 +93,6 @@ ENV DW_PREFIX=jetty
 ENV SERVICEDIR=/app/
 ENV app_servicedir=/app/
 
-RUN wget https://download.yourkit.com/yjp/2017.02/YourKit-JavaProfiler-2017.02-b75.zip -P /tmp/ && \
-  unzip /tmp/YourKit-JavaProfiler-2017.02-b75.zip && mv YourKit-JavaProfiler-2017.02 /usr/local/yjp/ && \
-  rm /tmp/YourKit-JavaProfiler-2017.02-b75.zip
-RUN wget https://download.yourkit.com/yjp/2017.02/yjp.jar -P /usr/local/yjp/lib/
 # Add Tini for proper sigkill handling https://github.com/krallin/tini
 RUN wget https://github.com/krallin/tini/releases/download/v0.18.0/tini
 RUN mv tini /sbin/tini

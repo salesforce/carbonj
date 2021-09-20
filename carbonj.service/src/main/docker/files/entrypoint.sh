@@ -54,6 +54,15 @@ for SVC_PROP in `compgen -A variable | grep "^SVC_PROP_"` ; do
 	printf '%s=%s\n' "$var_lowercase" "${!SVC_PROP}" >> $SERVICEDIR/config/overrides.properties
 done
 
+# download optional yourkit profiler at runtime
+if [ "$ENABLE_YOURKIT_PROFILER" == "true" ]
+then
+  wget https://download.yourkit.com/yjp/2017.02/YourKit-JavaProfiler-2017.02-b75.zip -P /tmp/ && \
+    unzip /tmp/YourKit-JavaProfiler-2017.02-b75.zip && mv YourKit-JavaProfiler-2017.02 /usr/local/yjp/ && \
+    rm /tmp/YourKit-JavaProfiler-2017.02-b75.zip
+  wget https://download.yourkit.com/yjp/2017.02/yjp.jar -P /usr/local/yjp/lib/
+fi
+
 #########################
 #########################
 #########################
