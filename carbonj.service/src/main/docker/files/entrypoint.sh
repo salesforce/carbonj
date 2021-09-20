@@ -109,4 +109,6 @@ else
 fi
 
 cd /app
-exec java $JAVA_OPTS $JAVA_OPTS_OVERRIDE -Dlogback.debug=true -cp /app:/app/lib/* com.demandware.carbonj.service.engine.CarbonJServiceMain --spring.config.location=$CONFIG_LOCATIONS
+exec java $JAVA_OPTS $JAVA_OPTS_OVERRIDE --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED \
+-Dlogback.debug=true -cp /app:/app/lib/* com.demandware.carbonj.service.engine.CarbonJServiceMain \
+--spring.config.location=$CONFIG_LOCATIONS
