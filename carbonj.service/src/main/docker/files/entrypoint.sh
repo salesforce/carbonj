@@ -60,7 +60,8 @@ then
   wget https://download.yourkit.com/yjp/2017.02/YourKit-JavaProfiler-2017.02-b75.zip -P /tmp/ && \
     unzip /tmp/YourKit-JavaProfiler-2017.02-b75.zip && mv YourKit-JavaProfiler-2017.02 /usr/local/yjp/ && \
     rm /tmp/YourKit-JavaProfiler-2017.02-b75.zip
-  wget https://download.yourkit.com/yjp/2017.02/yjp.jar -P /usr/local/yjp/lib/
+  wget https://download.yourkit.com/yjp/2017.02/yjp.jar -P /tmp
+  mv /tmp/yjp.jar /usr/local/yjp/lib/yjp.jar
 fi
 
 #########################
