@@ -22,19 +22,8 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
     - name: Log into registry
-      #  run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
-      run: echo "${{ secrets.DOCKER_HUB_SECRET }}" | docker login --username chrbayer84 --password-stdin
-#    - name: Extract project version
-#      run: echo "::set-env name=gradle_project_version::`./gradlew properties|grep version |cut -c 10-`"
-#    - name: show project version
-#      run: echo "$gradle_PROJECT_VERSION"
+      run: echo "${{ secrets.CC_VIS_DOCKER_HUB_SECRET }}" | docker login --username ccvisibility --password-stdin
     - name: Release with Gradle
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          #./gradlew clean build -Prelease.useAutomaticVersion=true -x test :cc-metrics-reporter:release --info --stacktrace &&
-      run: ./gradlew  -PdockerRepo=chrbayer84/ clean build -Prelease.useAutomaticVersion=true -x test :carbonj.service:release --info --stacktrace
-#    - name: scan docker image
-#      uses: azure/container-scan@v0
-#      with:
-#        image-name: chrbayer84/carbonj:${{ env.GRADLE_PROJECT_VERSION }}
-#        severity-threshold: CRITICAL
+      run: ./gradlew  -PdockerRepo=ccvisibility/ clean build -Prelease.useAutomaticVersion=true -x test :carbonj.service:release --info --stacktrace
