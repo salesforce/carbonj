@@ -69,9 +69,15 @@ public class _ConfigServerUtil {
     private MetricRegistry metricRegistry;
 
     @Before
-    public void setup() throws IOException {
-        if (Files.exists(backupFilePath)) {
-            Files.delete(backupFilePath);
+    public void setup() throws IOException
+    {
+        if ( Files.exists( backupFilePath ) )
+        {
+            Files.delete( backupFilePath );
+        }
+        if ( !Files.exists( backupFilePath.getParent() ) )
+        {
+            Files.createDirectory( backupFilePath.getParent() );
         }
         // Mock metric registry
         successCounter = mock(Counter.class);
@@ -102,7 +108,7 @@ public class _ConfigServerUtil {
                 processUniqueId, backupFile);
         assertEquals("Merge failed. Invalid config.", Arrays.asList("^pod1\\..*=kinesisS1", "^pi\\..*=kinesisS1"),
                 configServerUtil.getConfigLines("relay-rules").get());
-        assertTrue("Backup file does not exist", Files.exists(backupFilePath));
+        assertTrue("Backup file does not exist: " + backupFilePath, Files.exists(backupFilePath));
         assertEquals("Invalid backup file content", process.getProcessConfigs().get(0).getValue(),
                 objectMapper.readValue(Files.readAllBytes(backupFilePath),
                         ConfigServerUtil.Process.class).getProcessConfigs().get(0).getValue());
