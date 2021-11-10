@@ -5,7 +5,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.5.5")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.5.6")
     }
 }
 
@@ -53,7 +53,7 @@ subprojects {
     }
 
     dependencies {
-        compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.12.5'
+        compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.13.0'
         compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.12.5'
         compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.12.5'
         compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: '2.12.5'
