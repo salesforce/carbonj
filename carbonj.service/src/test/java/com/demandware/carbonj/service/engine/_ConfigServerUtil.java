@@ -69,11 +69,16 @@ public class _ConfigServerUtil {
     private MetricRegistry metricRegistry;
 
     @Before
-    public void setup() throws IOException {
-        if (Files.exists(backupFilePath)) {
-            Files.delete(backupFilePath);
+    public void setup() throws IOException
+    {
+        if ( Files.exists( backupFilePath ) )
+        {
+            Files.delete( backupFilePath );
         }
-        Files.createDirectory( backupFilePath.getParent() );
+        if ( !Files.exists( backupFilePath.getParent() ) )
+        {
+            Files.createDirectory( backupFilePath.getParent() );
+        }
         // Mock metric registry
         successCounter = mock(Counter.class);
         failureCounter = mock(Counter.class);
