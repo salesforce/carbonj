@@ -213,6 +213,7 @@ dependencies {
 
     compile group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"2.6.1"
     testCompile (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"2.6.1")
+    testCompile (group:"org.springframework.boot", name:"spring-boot-test", version:"2.6.1")
 
 }
 

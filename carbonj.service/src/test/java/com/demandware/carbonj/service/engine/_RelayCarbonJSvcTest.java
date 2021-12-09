@@ -20,7 +20,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 @RunWith( SpringRunner.class )
 @DirtiesContext( classMode = DirtiesContext.ClassMode.AFTER_CLASS )
-@TestPropertySource( "classpath:application-relay.yml" )
+@TestPropertySource( value = "classpath:application-relay.yml", inheritLocations = false, inheritProperties = false)
 @SpringBootTest( classes = CarbonJServiceMain.class, webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT )
 public class _RelayCarbonJSvcTest extends AbstractCarbonJBaseTest
 {

@@ -19,9 +19,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.ConfigFileApplicationContextInitializer;
+import org.springframework.boot.context.config.ConfigFileApplicationListener;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
@@ -35,15 +37,40 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-@RunWith(SpringRunner.class)
-@SpringBootTest
-        (webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
-@ContextConfiguration(
-    initializers = ConfigFileApplicationContextInitializer.class)
-@TestPropertySource(properties = { "spring.config.location=classpath:application-relay.yml" })
+//@RunWith(SpringRunner.class)
+//@SpringBootTest
+//        (webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+////@ContextConfiguration(
+////    initializers = ConfigFileApplicationContextInitializer.class)
+//@TestPropertySource(properties = { "spring.config.location=classpath:application-relay.yml" })
+//
+//@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@RunWith( SpringRunner.class )
+@DirtiesContext( classMode = DirtiesContext.ClassMode.AFTER_CLASS )
+@TestPropertySource( "classpath:application-relay.yml" )
+@SpringBootTest( classes = CarbonJServiceMain.class, webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT )
+@ContextConfiguration(
+    initializers = _SiteSpecificAccumulatorTest.ConfigFileApplicationContextInitializer.class)
 public class _SiteSpecificAccumulatorTest {
+
+    public static class ConfigFileApplicationContextInitializer
+		implements ApplicationContextInitializer<ConfigurableApplicationContext>
+    {
+
+	@Override
+	public void initialize(ConfigurableApplicationContext applicationContext) {
+		new ConfigFileApplicationListener() {
+			public void apply() {
+				addPropertySources(applicationContext.getEnvironment(),
+						applicationContext);
+				addPostProcessors(applicationContext);
+			}
+		}.apply();
+	}
+
+}
+
 
     final private static Logger log = LoggerFactory.getLogger(_SiteSpecificAccumulatorTest.class);
 
