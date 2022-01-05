@@ -10,7 +10,7 @@ buildscript {
 }
 
 plugins {
-    id 'com.palantir.docker' version "0.31.0"
+    id 'com.palantir.docker' version "0.32.0"
     id "com.github.jk1.dependency-license-report" version "1.17"
     id "com.github.hierynomus.license" version "0.15.0"
     id "org.sonarqube" version "3.3"
