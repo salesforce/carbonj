@@ -96,6 +96,7 @@ task unpack(type: Copy) {
 docker {
     print "name of the docker image is ${dockerRepo}${project.dockerGroup}:${project.version}"
     name "${dockerRepo}${project.dockerGroup}:${project.version}"
+    tag 'docker', "${dockerRepo}${project.dockerGroup}:${project.version}"
     files tasks.unpack.outputs, "src/main/docker/files"
     copySpec.into("dependency")
     buildArgs(['DEPENDENCY': "dependency", 'VERSION': "${project.version}"])
