@@ -29,7 +29,7 @@ repositories {
 dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.2'
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
-    compile group: 'com.google.guava', name: 'guava', version: '31.0.1-jre'
+    compile group: 'com.google.guava', name: 'guava', version: '31.1-jre'
     compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.8'
     compile group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.8'
     compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.2.8'
