@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.6.3")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.6.4")
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
         classpath 'net.researchgate:gradle-release:2.8.1'
         classpath 'com.netflix.nebula:gradle-ospackage-plugin:8.6.3'
@@ -190,9 +190,9 @@ dependencies {
 //    compile group: 'com.sfcc.um', name: 'metrics_reporter', version:'0.0.2'
     compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.17.1'
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.1'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-to-slf4j', version: '2.17.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-to-slf4j', version: '2.17.2'
     compile group: 'org.slf4j', name: 'slf4j-api'
-    compile group: 'org.rocksdb', name: 'rocksdbjni', version: '6.27.3'
+    compile group: 'org.rocksdb', name: 'rocksdbjni', version: '6.28.2'
     compile group: 'com.google.code.gson', name: 'gson', version: '2.9.0'
     compile group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: '0.6.1'
     compile group: 'com.google.guava', name: 'guava', version: '31.0.1-jre'
@@ -217,7 +217,7 @@ dependencies {
     compile group:"org.springframework.boot", name:"spring-boot-starter-web", version:"2.6.3"
     compile group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"2.6.4"
 
-    compile group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"2.6.3"
+    compile group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"2.6.4"
     testCompile (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"2.6.4")
 
 }
