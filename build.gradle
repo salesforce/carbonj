@@ -60,7 +60,7 @@ subprojects {
         compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: '2.13.2'
         compile group: 'com.google.re2j', name: 're2j', version: '1.6'
         testCompile group: 'org.powermock', name: 'powermock-module-javaagent', version: '2.0.9'
-        testCompile group: 'org.jacoco', name: 'org.jacoco.agent', version: '0.8.7', classifier: 'runtime'
+        testCompile group: 'org.jacoco', name: 'org.jacoco.agent', version: '0.8.8', classifier: 'runtime'
         testCompile group: 'org.powermock', name: 'powermock-core', version: '2.0.9'
 
         testCompile("junit:junit")
