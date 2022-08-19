@@ -215,7 +215,7 @@ dependencies {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
     }
     compile group:"org.springframework.boot", name:"spring-boot-starter-web", version:"2.7.2"
-    compile group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"2.7.2"
+    compile group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"2.7.3"
 
     compile group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"2.7.2"
     testCompile (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"2.7.2")
