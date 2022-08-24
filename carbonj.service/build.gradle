@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.7.2")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.7.3")
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
         classpath 'net.researchgate:gradle-release:2.8.1'
         classpath 'com.netflix.nebula:gradle-ospackage-plugin:8.6.3'
@@ -215,10 +215,10 @@ dependencies {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
     }
     compile group:"org.springframework.boot", name:"spring-boot-starter-web", version:"2.7.2"
-    compile group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"2.7.2"
+    compile group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"2.7.3"
 
     compile group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"2.7.2"
-    testCompile (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"2.7.2")
+    testCompile (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"2.7.3")
 
 }
 
