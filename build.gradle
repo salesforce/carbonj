@@ -14,7 +14,7 @@ plugins {
     id "com.github.jk1.dependency-license-report" version "1.17"
     id "com.github.hierynomus.license" version "0.15.0"
     id "org.sonarqube" version "3.4.0.2513"
-    id 'net.researchgate.release' version '3.0.0'
+    id 'net.researchgate.release' version '3.0.1'
 }
 
 release {
@@ -53,7 +53,7 @@ subprojects {
     }
 
     dependencies {
-        compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.13.3'
+        compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.13.4'
         compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.13.3'
         compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.13.3'
         compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: '2.13.4'
