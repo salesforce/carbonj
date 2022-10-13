@@ -22,7 +22,7 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
     - name: Log into registry
-      run: echo "${{ secrets.CC_VIS_DOCKER_HUB_SECRET }}" | docker login --username ccvisibility --password-stdin
+      run: echo "${{ secrets.SALESFORCE_DOCKER_HUB_SECRET }}" | docker login --username sholavanalli508 --password-stdin
     - name: Release with Gradle
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

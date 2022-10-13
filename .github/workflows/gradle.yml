@@ -17,7 +17,7 @@ jobs:
       run: chmod +x gradlew
     - name: Log into registry
       if: ${{ !contains(github.ref, 'dependabot') }}
-      run: echo "${{ secrets.CC_VIS_DOCKER_HUB_SECRET }}" | docker login --username ccvisibility --password-stdin
+      run: echo "${{ secrets.SALESFORCE_DOCKER_HUB_SECRET }}" | docker login --username sholavanalli508 --password-stdin
     - name: Build with Gradle
       run: ./gradlew build --info --stacktrace
     - name: Publish Failure Test Report

@@ -64,7 +64,7 @@ jobs:
     #    uses a compiled language
 
     - run: |
-       ./gradlew -PdockerRepo=chrbayer84/ -x test build  --info
+       ./gradlew -PdockerRepo=ccvisibility/ -x test build  --info
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
