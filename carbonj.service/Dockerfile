@@ -34,6 +34,8 @@ RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
      perl-Data-Dumper && \
      yum clean all
 
+RUN pip3 install --upgrade pip
+
 # Install aiohttp required by the script
 RUN pip3 install aiohttp
 
