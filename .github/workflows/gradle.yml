@@ -17,7 +17,7 @@ jobs:
       run: chmod +x gradlew
     - name: Log into registry
       if: ${{ !contains(github.ref, 'dependabot') }}
-      run: echo "${{ secrets.CC_VIS_DOCKER_HUB_SECRET }}" | docker login --username ccvisibility --password-stdin
+      run: echo "${{ secrets.SALESFORCE_DOCKER_HUB_SECRET }}" | docker login --username sholavanalli508 --password-stdin
     - name: Build with Gradle
       run: ./gradlew build --info --stacktrace
     - name: Publish Failure Test Report
@@ -35,12 +35,12 @@ jobs:
     - name: Publish Docker container
       if: ${{ !contains(github.ref, 'dependabot') }}
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
-      run: ./gradlew -PdockerRepo=ccvisibility/ -x test publish  --info
+      run: ./gradlew -PdockerRepo=salesforce/ -x test publish  --info
 #    - name: scan docker image
 #      if: ${{ !contains(github.ref, 'dependabot') }}
 #      uses: azure/container-scan@v0
 #      with:
-#        image-name: ccvisibility/carbonj:${{ env.GRADLE_PROJECT_VERSION }}
+#        image-name: salesforce/carbonj:${{ env.GRADLE_PROJECT_VERSION }}
 #        severity-threshold: CRITICAL
         # run-quality-checks: false
 
