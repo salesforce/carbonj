@@ -26,4 +26,4 @@ jobs:
     - name: Release with Gradle
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: ./gradlew  -PdockerRepo=ccvisibility/ clean build -Prelease.useAutomaticVersion=true -x test :carbonj.service:release --info --stacktrace
+      run: ./gradlew  -PdockerRepo=salesforce/ clean build -Prelease.useAutomaticVersion=true -x test :carbonj.service:release --info --stacktrace
