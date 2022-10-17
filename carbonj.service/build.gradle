@@ -182,6 +182,10 @@ release {
     failOnUpdateNeeded = false
     versionPropertyFile = "${rootProject.projectDir}/gradle.properties"
     failOnSnapshotDependencies = false
+
+    git {
+        requireBranch.set('master')
+    }
 }
 
 description = 'CarbonJ Service Implementation'
