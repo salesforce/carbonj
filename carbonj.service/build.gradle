@@ -196,7 +196,7 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.19.0'
     compile group: 'org.apache.logging.log4j', name: 'log4j-to-slf4j', version: '2.19.0'
     compile group: 'org.slf4j', name: 'slf4j-api'
-    compile group: 'org.rocksdb', name: 'rocksdbjni', version: '6.28.2'
+    compile group: 'org.rocksdb', name: 'rocksdbjni', version: '7.8.3'
     compile group: 'com.google.code.gson', name: 'gson', version: '2.10'
     compile group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: '0.6.1'
     compile group: 'com.google.guava', name: 'guava', version: '31.1-jre'
