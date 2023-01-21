@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.7.5")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:3.0.2")
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
         classpath 'net.researchgate:gradle-release:2.8.1'
         classpath 'com.netflix.nebula:gradle-ospackage-plugin:8.6.3'
@@ -147,7 +147,7 @@ task rpm(type: Rpm) {
 
 distributions {
     custom {
-        baseName = project.name
+//        baseName = project.name
         contents {
             from { 'build/libs' }
             from { 'scripts/carbonj.sh' }
@@ -190,39 +190,41 @@ release {
 
 description = 'CarbonJ Service Implementation'
 dependencies {
-    compile project(':cc-metrics-reporter')
+    implementation project(':cc-metrics-reporter')
 //    compile group: 'com.sfcc.um', name: 'metrics_reporter', version:'0.0.2'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.19.0'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.19.0'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-to-slf4j', version: '2.19.0'
-    compile group: 'org.slf4j', name: 'slf4j-api'
-    compile group: 'org.rocksdb', name: 'rocksdbjni', version: '6.28.2'
-    compile group: 'com.google.code.gson', name: 'gson', version: '2.10'
-    compile group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: '0.6.1'
-    compile group: 'com.google.guava', name: 'guava', version: '31.1-jre'
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
-    compile group: 'commons-io', name: 'commons-io', version: '2.11.0'
-    compile group: 'joda-time', name: 'joda-time', version: '2.12.1'
-    compile group: 'io.netty', name: 'netty-all', version: '4.1.85.Final'
-    compile group: 'net.razorvine', name: 'pickle', version: '1.3'
-    compile group: 'org.python', name: 'jython-standalone', version: '2.7.3'
-    compile group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.14.8'
-    compile group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.13'
-    compile group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.13'
-    compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.2.13'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.19.0'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.19.0'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-to-slf4j', version: '2.19.0'
+    implementation group: 'org.slf4j', name: 'slf4j-api'
+    implementation group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
+    implementation group: 'org.rocksdb', name: 'rocksdbjni', version: '6.28.2'
+    implementation group: 'com.google.code.gson', name: 'gson', version: '2.10'
+    implementation group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: '0.6.1'
+    implementation group: 'com.google.guava', name: 'guava', version: '31.1-jre'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+    implementation group: 'commons-io', name: 'commons-io', version: '2.11.0'
+    implementation group: 'joda-time', name: 'joda-time', version: '2.12.1'
+    implementation group: 'io.netty', name: 'netty-all', version: '4.1.85.Final'
+    implementation group: 'net.razorvine', name: 'pickle', version: '1.3'
+    implementation group: 'org.python', name: 'jython-standalone', version: '2.7.3'
+    implementation group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.14.8'
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.13'
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.13'
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.2.13'
+    implementation 'javax.servlet:javax.servlet-api:4.0.1'
 
-    testCompile group: 'junit', name: 'junit', version: '4.13.2'
-    testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
+    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
+    testImplementation group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
 
-    compile (group:"org.springframework.boot", name:"spring-boot-starter-logging", version:"2.7.5") {
+    implementation (group:"org.springframework.boot", name:"spring-boot-starter-logging", version:"3.0.2") {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
         exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
     }
-    compile group:"org.springframework.boot", name:"spring-boot-starter-web", version:"2.7.5"
-    compile group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"2.7.5"
+    implementation group:"org.springframework.boot", name:"spring-boot-starter-web", version:"3.0.2"
+    implementation group:"org.springframework.boot", name:"spring-boot-starter-jetty", version:"3.0.2"
 
-    compile group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"2.7.5"
-    testCompile (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"2.7.5")
+    implementation group:"org.springframework.boot", name:"spring-boot-starter-actuator", version:"3.0.2"
+    testImplementation (group:"org.springframework.boot", name:"spring-boot-starter-test", version:"3.0.2")
 
 }
 
