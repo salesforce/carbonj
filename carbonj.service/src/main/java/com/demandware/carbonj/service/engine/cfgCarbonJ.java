@@ -33,7 +33,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import org.eclipse.jetty.server.NCSARequestLog;
+//import org.eclipse.jetty.server.NCSARequestLog;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -654,14 +654,14 @@ public class cfgCarbonJ
                 server.setAttribute( "org.eclipse.jetty.server.Request.maxFormContentSize", jettyMaxFormContentSize );
 
                 // TODO change to use logback ch.qos.logback.access.jetty.RequestLogImpl?
-                NCSARequestLog ncsaLog = new NCSARequestLog( jettyLogfilePath );
-                ncsaLog.setExtended( true );
-                ncsaLog.setAppend( true );
-                ncsaLog.setLogTimeZone( "GMT" );
-                ncsaLog.setRetainDays( jettyRequestLogRetentionDays );
+//                NCSARequestLog ncsaLog = new NCSARequestLog( jettyLogfilePath );
+//                ncsaLog.setExtended( true );
+//                ncsaLog.setAppend( true );
+//                ncsaLog.setLogTimeZone( "GMT" );
+//                ncsaLog.setRetainDays( jettyRequestLogRetentionDays );
 
                 RequestLogHandler requestLogHandler = new RequestLogHandler();
-                requestLogHandler.setRequestLog( ncsaLog );
+//                requestLogHandler.setRequestLog( ncsaLog );
                 requestLogHandler.setHandler( server.getHandler() );
                 server.setHandler( requestLogHandler );
             } );
