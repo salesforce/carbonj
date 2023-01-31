@@ -54,7 +54,7 @@ subprojects {
 
     dependencies {
         compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.14.1'
-        compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.1'
+        compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.2'
         compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.14.2'
         compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: '2.14.1'
         compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: '2.14.2'
