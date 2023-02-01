@@ -9,6 +9,7 @@ package com.demandware.carbonj.service.engine;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.db.index.cfgMetricIndex;
 import com.demandware.carbonj.service.events.cfgEventBus;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.cfgAccumulator;
@@ -65,8 +66,8 @@ import java.util.function.Consumer;
 import static com.demandware.carbonj.service.config.ConfigUtils.locateConfigFile;
 
 @Configuration
-@Import( { cfgMetric.class, cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgCentralThreadPools.class,
-                cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class } )
+@Import( { cfgMetricIndex.class, cfgMetric.class, cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgCentralThreadPools.class,
+                cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class, cfgCheckPointMgr.class } )
 public class cfgCarbonJ
 {
     private static final Logger log = LoggerFactory.getLogger( cfgCarbonJ.class );
@@ -76,6 +77,8 @@ public class cfgCarbonJ
     @Autowired StringsCache stringsCache;
 
     @Autowired MetricRegistry metricRegistry;
+
+    @Autowired NameUtils nameUtils;
 
     @Value( "${server.port:56788}" ) private int jettyPort;
 
@@ -170,16 +173,6 @@ public class cfgCarbonJ
     @Value( "${namespaces.runInactiveNamespaceCheckEverySeconds:300}" ) private int
                     runInactiveNamespaceCheckEverySeconds = 300;
 
-    @Value( "${metrics.store.checkPoint.dir:work/carbonj-checkpoint}" ) private String checkPointDir;
-
-    @Value( "${metrics.store.checkPoint.offset.default.mins:5}" ) private int defaultCheckPointOffset;
-
-    @Value( "${metrics.store.checkPoint.provider:filesystem}" ) private String checkPointProvider;
-
-    @Value( "${metrics.store.checkPoint.applicationName:cjajna}" ) private String checkPointApplicationName;
-
-    @Value( "${metrics.store.checkPoint.table.provisioned.throughput:2}" ) private int
-                    checkPointTableProvisionedThroughput;
 
     @Value( "${dest.config.dir:config}" ) private String destConfigDir;
 
@@ -535,52 +528,11 @@ public class cfgCarbonJ
         } );
     }
 
-    @Bean CarbonjAdmin cjAdmin( InputQueue agg, NameUtils nu )
+    @Bean CarbonjAdmin cjAdmin( InputQueue agg, NameUtils nameUtils )
     {
-        return new CarbonjAdmin( agg, nu, Optional.ofNullable( db ) );
+        return new CarbonjAdmin( agg, nameUtils, Optional.ofNullable( db ) );
     }
 
-    @Bean CheckPointMgr<Date> checkPointMgr( ScheduledExecutorService s, KinesisConfig kinesisConfig,
-                                             @Autowired( required = false ) @Qualifier( "accumulator" ) Accumulator accu )
-                    throws Exception
-    {
-        if ( !kinesisConfig.isKinesisConsumerEnabled() || accu == null )
-        {
-            log.debug( "CheckPointMgr is disabled because kinesis consumer is disabled or accumulator is null: Kinesis"
-                            + " consumer: {}, Accumulator: {}", kinesisConfig.isKinesisConsumerEnabled(), accu );
-            return null;
-        }
-
-        CheckPointMgr<Date> checkPointMgr;
-        if ( checkPointProvider.equalsIgnoreCase( "dynamodb" ) )
-        {
-            log.info( "Creating Dynamo DB Checkpoint Mgr" );
-            AmazonDynamoDB dynamoDbClient = AmazonDynamoDBClientBuilder.standard().build();
-            checkPointMgr = new DynamoDbCheckPointMgr( dynamoDbClient, checkPointApplicationName,
-                            defaultCheckPointOffset, checkPointTableProvisionedThroughput );
-        }
-        else
-        {
-            log.info( "Creating File Checkpoint Mgr" );
-            checkPointMgr = new FileCheckPointMgr( Paths.get( checkPointDir ), defaultCheckPointOffset );
-        }
-
-        s.scheduleWithFixedDelay( () -> {
-            try
-            {
-                long slotTs = accu.getMaxClosedSlotTs() * 1000L;
-                if ( slotTs > 0 )
-                {
-                    checkPointMgr.checkPoint( new Date( slotTs ) );
-                }
-            }
-            catch ( Exception e )
-            {
-                log.error( "Error while checkpointing", e );
-            }
-        }, 120, 60, TimeUnit.SECONDS );
-        return checkPointMgr;
-    }
 
     /*
     Graphite re-configuration summary:
