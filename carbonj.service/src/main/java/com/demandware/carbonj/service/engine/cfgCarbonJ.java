@@ -65,7 +65,7 @@ import java.util.function.Consumer;
 import static com.demandware.carbonj.service.config.ConfigUtils.locateConfigFile;
 
 @Configuration
-@Import( { cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgMetric.class, cfgCentralThreadPools.class,
+@Import( { cfgMetric.class, cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgCentralThreadPools.class,
                 cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class } )
 public class cfgCarbonJ
 {
@@ -247,11 +247,6 @@ public class cfgCarbonJ
                         destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, auditRulesSrc, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
-    }
-
-    @Bean NameUtils nameUtils()
-    {
-        return new NameUtils( new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
     }
 
     @Bean PointFilter pointFilter( NameUtils nameUtils )
@@ -666,10 +661,5 @@ public class cfgCarbonJ
                 server.setHandler( requestLogHandler );
             } );
         }
-    }
-
-    @Bean public DatabaseMetrics databaseMetrics( MetricRegistry metricRegistry )
-    {
-        return new DatabaseMetrics( metricRegistry );
     }
 }

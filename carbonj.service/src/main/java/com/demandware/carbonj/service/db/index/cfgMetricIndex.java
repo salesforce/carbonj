@@ -11,7 +11,9 @@ import com.demandware.carbonj.service.db.model.MetricIndex;
 import com.demandware.carbonj.service.db.model.StorageAggregationPolicySource;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.FileUtils;
+import com.demandware.carbonj.service.db.util.Quota;
 import com.demandware.carbonj.service.engine.StorageAggregationRulesLoader;
+import com.demandware.core.config.cfgMetric;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 import java.io.File;
 import java.util.concurrent.ScheduledExecutorService;
@@ -27,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import static com.demandware.carbonj.service.config.ConfigUtils.locateConfigFile;
 
 @Configuration
+@Import( cfgMetric.class )
 public class cfgMetricIndex
 {
     @Value( "${metrics.store.longId:false}" )
@@ -65,6 +69,10 @@ public class cfgMetricIndex
     @Value( "${metrics.store:config/application.properties}" )
     private String metricStoreConfigFile = "config/application.properties";
 
+    @Value( "${pointFilter.errLogQuota.max:1000}" ) private int errLogQuotaMax = 1000;
+
+    @Value( "${pointFilter.errLogQuota.resetAfter:3600}" ) private int errLogQuotaResetAfter = 3600;
+
     // TODO duplicated in different cfg beans
     @Value( "${app.servicedir:}" )
     private String serviceDir;
@@ -98,6 +106,12 @@ public class cfgMetricIndex
         s.scheduleWithFixedDelay( () -> policySource.cleanup(), 10, 120, TimeUnit.MINUTES );
         return policySource;
     }
+
+    @Bean NameUtils nameUtils()
+    {
+        return new NameUtils( new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
+    }
+
 
     @Bean
     MetricIndex metricIndex( @Qualifier( "metricNameIndexStore" ) IndexStore<String, NameRecord> nameIndex,

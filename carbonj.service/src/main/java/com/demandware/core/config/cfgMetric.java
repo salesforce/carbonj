@@ -8,6 +8,7 @@ package com.demandware.core.config;
 
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.core.metric.Util;
 import com.sfcc.um.metrics_reporter.reporter.GraphiteReporter;
 import org.slf4j.Logger;
@@ -56,6 +57,11 @@ import java.util.concurrent.TimeUnit;
         // expose the singleton, static CodaHale metric registry
         this.metricRegistry = new MetricRegistry();
         return metricRegistry;
+    }
+
+    @Bean public DatabaseMetrics databaseMetrics(MetricRegistry metricRegistry )
+    {
+        return new DatabaseMetrics( metricRegistry );
     }
 
     @Bean public GraphiteReporter graphiteReporter( MetricRegistry metricRegistry )
