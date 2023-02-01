@@ -232,6 +232,9 @@ dependencies {
 
 test {
     maxHeapSize = "2g"
+    jvmArgs = [
+            '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+    ]
     environment "AWS_REGION", "us-east-1"
 }
 
