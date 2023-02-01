@@ -45,7 +45,7 @@ subprojects {
 
     sourceCompatibility = 17
     targetCompatibility = 17
-    tasks.withType(JavaCompile) {
+    tasks.withType(Javaimplementation) {
         options.encoding = 'UTF-8'
     }
 
@@ -53,15 +53,15 @@ subprojects {
     }
 
     dependencies {
-        compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.14.1'
-        compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.2'
-        compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.14.2'
-        compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: '2.14.2'
-        compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: '2.14.2'
-        compile group: 'com.google.re2j', name: 're2j', version: '1.7'
-        testCompile group: 'org.powermock', name: 'powermock-module-javaagent', version: '2.0.9'
-        testCompile group: 'org.jacoco', name: 'org.jacoco.agent', version: '0.8.8', classifier: 'runtime'
-        testCompile group: 'org.powermock', name: 'powermock-core', version: '2.0.9'
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.14.1'
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.2'
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.14.2'
+        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: '2.14.2'
+        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: '2.14.2'
+        implementation group: 'com.google.re2j', name: 're2j', version: '1.7'
+        testImplementation group: 'org.powermock', name: 'powermock-module-javaagent', version: '2.0.9'
+        testImplementation group: 'org.jacoco', name: 'org.jacoco.agent', version: '0.8.8', classifier: 'runtime'
+        testImplementation group: 'org.powermock', name: 'powermock-core', version: '2.0.9'
 
         testImplementation("junit:junit")
 //        testImplementation("org.springframework.boot:spring-boot-starter-test")
