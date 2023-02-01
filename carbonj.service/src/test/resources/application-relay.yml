@@ -27,6 +27,7 @@ metric:
 metrics:
     store:
       enabled: false
+      dataDir: work/carbonj-data
       checkPoint:
         dir: work/carbonj-checkpoint
 server:

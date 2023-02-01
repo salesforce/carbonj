@@ -50,6 +50,9 @@ public class _SiteSpecificAccumulatorTest {
     @Value("${server.port}")
     int jettyHttpPort;
 
+    @Value("${metrics.store.dataDir}")
+    String dataDir;
+
     @Value("${server.dataport}")
     int jettyDataPort;
 
@@ -78,6 +81,7 @@ public class _SiteSpecificAccumulatorTest {
 
     @Before
     public void start() throws IOException {
+        new File(dataDir).mkdirs();
 
         // start carbonj in relay mode only
         Path aggregationRulesFilePath = Paths.get(aggregationRuleFilePath);
