@@ -45,7 +45,7 @@ subprojects {
 
     sourceCompatibility = 17
     targetCompatibility = 17
-    tasks.withType(Javaimplementation) {
+    tasks.withType(JavaCompile) {
         options.encoding = 'UTF-8'
     }
 
