@@ -6,10 +6,9 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.index.cfgMetricIndex;
+import com.demandware.carbonj.service.engine.kinesis.cfgCheckPointMgr;
 import com.demandware.carbonj.service.events.cfgEventBus;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.cfgAccumulator;
@@ -17,7 +16,6 @@ import com.demandware.carbonj.service.admin.CarbonjAdmin;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.cfgTimeSeriesStorage;
 import com.demandware.carbonj.service.db.index.NameUtils;
-import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.Quota;
 import com.demandware.carbonj.service.engine.netty.NettyChannel;
 import com.demandware.carbonj.service.engine.netty.NettyServer;
@@ -56,7 +54,6 @@ import org.springframework.web.client.RestTemplate;
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
@@ -66,7 +63,7 @@ import java.util.function.Consumer;
 import static com.demandware.carbonj.service.config.ConfigUtils.locateConfigFile;
 
 @Configuration
-@Import( { cfgMetricIndex.class, cfgMetric.class, cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgCentralThreadPools.class,
+@Import( { cfgMetric.class, cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgCentralThreadPools.class,
                 cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class, cfgCheckPointMgr.class } )
 public class cfgCarbonJ
 {

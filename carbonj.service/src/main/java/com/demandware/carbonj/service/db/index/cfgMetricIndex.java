@@ -69,9 +69,6 @@ public class cfgMetricIndex
     @Value( "${metrics.store:config/application.properties}" )
     private String metricStoreConfigFile = "config/application.properties";
 
-    @Value( "${pointFilter.errLogQuota.max:1000}" ) private int errLogQuotaMax = 1000;
-
-    @Value( "${pointFilter.errLogQuota.resetAfter:3600}" ) private int errLogQuotaResetAfter = 3600;
 
     // TODO duplicated in different cfg beans
     @Value( "${app.servicedir:}" )
@@ -105,11 +102,6 @@ public class cfgMetricIndex
         StorageAggregationPolicySource policySource = new StorageAggregationPolicySource( rulesLoader );
         s.scheduleWithFixedDelay( () -> policySource.cleanup(), 10, 120, TimeUnit.MINUTES );
         return policySource;
-    }
-
-    @Bean NameUtils nameUtils()
-    {
-        return new NameUtils( new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
     }
 
 

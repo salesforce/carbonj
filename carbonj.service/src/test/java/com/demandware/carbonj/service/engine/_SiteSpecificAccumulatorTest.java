@@ -19,9 +19,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationContextInitializedEvent;
+import org.springframework.boot.context.event.ApplicationStartedEvent;
+import org.springframework.boot.context.event.ApplicationStartingEvent;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
@@ -49,9 +54,6 @@ public class _SiteSpecificAccumulatorTest {
 
     @Value("${server.port}")
     int jettyHttpPort;
-
-    @Value("${metrics.store.dataDir}")
-    String dataDir;
 
     @Value("${server.dataport}")
     int jettyDataPort;
@@ -81,8 +83,6 @@ public class _SiteSpecificAccumulatorTest {
 
     @Before
     public void start() throws IOException {
-        new File(dataDir).mkdirs();
-
         // start carbonj in relay mode only
         Path aggregationRulesFilePath = Paths.get(aggregationRuleFilePath);
         File aggregationRulesFile = aggregationRulesFilePath.toFile();
