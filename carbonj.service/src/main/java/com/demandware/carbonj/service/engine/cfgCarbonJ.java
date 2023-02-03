@@ -600,6 +600,8 @@ public class cfgCarbonJ
             factory.addServerCustomizers( server -> {
                 server.setAttribute( "org.eclipse.jetty.server.Request.maxFormContentSize", jettyMaxFormContentSize );
 
+                // new jetty 11 uses a slf4j log writer for performance reasons:
+                // https://stackoverflow.com/questions/68737248/how-to-override-request-logging-mechanism-in-jetty-11-0-6
                 RequestLog ncsaLog = new CustomRequestLog( jettyLogfilePath,  CustomRequestLog.EXTENDED_NCSA_FORMAT);
                 server.setRequestLog(ncsaLog);
             } );
