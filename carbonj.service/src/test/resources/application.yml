@@ -38,14 +38,18 @@ logging:
 
 ---
 spring:
-  profiles: testMaxInt
+  config:
+    activate:
+      on-profile: testMaxInt
 metrics:
   store:
     longId: false
 
 ---
 spring:
-  profiles: testLongId
+  config:
+    activate:
+      on-profile: testLongId
 metrics:
   store:
     longId: true

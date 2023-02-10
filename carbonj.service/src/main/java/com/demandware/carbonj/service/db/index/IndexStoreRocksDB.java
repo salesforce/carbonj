@@ -219,7 +219,7 @@ class IndexStoreRocksDB<K, R extends Record<K>>
         final Timer.Context timerContext = delTimer.time();
         try
         {
-            db.remove( keyBytes );
+            db.delete( keyBytes );
         }
         catch ( RocksDBException e )
         {

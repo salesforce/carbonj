@@ -8,6 +8,9 @@ package com.demandware.core.config;
 
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.db.index.NameUtils;
+import com.demandware.carbonj.service.db.util.DatabaseMetrics;
+import com.demandware.carbonj.service.db.util.Quota;
 import com.demandware.core.metric.Util;
 import com.sfcc.um.metrics_reporter.reporter.GraphiteReporter;
 import org.slf4j.Logger;
@@ -24,6 +27,10 @@ import java.util.concurrent.TimeUnit;
  */
 @Configuration public class cfgMetric
 {
+    @Value( "${pointFilter.errLogQuota.max:1000}" ) private int errLogQuotaMax = 1000;
+
+    @Value( "${pointFilter.errLogQuota.resetAfter:3600}" ) private int errLogQuotaResetAfter = 3600;
+
     private static final Logger LOG = LoggerFactory.getLogger( cfgMetric.class );
 
     private MetricRegistry metricRegistry;
@@ -36,6 +43,12 @@ import java.util.concurrent.TimeUnit;
     // CBAYER: I haven't found any evidence that this setting is honored by codahale/dropwizard lib 4.0 that we use. Neither
     // is it referenced in our code. Will not support this value then.
     //graphite.transport.tcp.reconnect=true
+
+    @Bean
+    NameUtils nameUtils()
+    {
+        return new NameUtils( new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
+    }
 
     @Value( "${graphite.host:localhost}" ) private String graphiteHost;
 
@@ -56,6 +69,11 @@ import java.util.concurrent.TimeUnit;
         // expose the singleton, static CodaHale metric registry
         this.metricRegistry = new MetricRegistry();
         return metricRegistry;
+    }
+
+    @Bean public DatabaseMetrics databaseMetrics(MetricRegistry metricRegistry )
+    {
+        return new DatabaseMetrics( metricRegistry );
     }
 
     @Bean public GraphiteReporter graphiteReporter( MetricRegistry metricRegistry )

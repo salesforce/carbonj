@@ -181,7 +181,7 @@ class DataPointArchiveRocksDB
                 {
                     try
                     {
-                        db.remove( key );
+                        db.delete( key );
                     }
                     catch ( RocksDBException e )
                     {
@@ -217,7 +217,7 @@ class DataPointArchiveRocksDB
     {
         try
         {
-            db.remove( key );
+            db.delete( key );
         }
         catch ( RocksDBException e )
         {
@@ -362,7 +362,7 @@ class DataPointArchiveRocksDB
         if ( o != null )
         {
             // contains global lock. Dispose in a separate thread to avoid contention.
-            cleaner.execute( ( ) -> o.dispose() );
+            cleaner.execute( ( ) -> o.close() );
         }
     }
 
