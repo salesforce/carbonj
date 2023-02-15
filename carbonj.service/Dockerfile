@@ -6,7 +6,7 @@
 #
 
 FROM quay.io/centos/centos:stream8
-ARG DEPENDENCY=target/dependency
+ARG DEPENDENCY=build/docker/dependency
 ARG VERSION=latest
 
 # install dependencies
@@ -26,9 +26,9 @@ RUN yum update -y && \
 RUN yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel
 
 RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
-     curl -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
+     yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
      yum update -y && \
-     yum install -y zulu-11 \
+     yum install -y zulu17-jdk \
      python3 \
      perl-URI-Encode \
      perl-Data-Dumper && \
