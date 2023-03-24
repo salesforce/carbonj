@@ -210,7 +210,7 @@ dependencies {
     implementation group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.14.10'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.18'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.18'
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.2.17'
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.2.18'
     implementation 'jakarta.servlet:jakarta.servlet-api:6.0.0'
     implementation 'org.eclipse.jetty:jetty-server'
 //    implementation 'org.mockito:mockito-core:4.11.0'
