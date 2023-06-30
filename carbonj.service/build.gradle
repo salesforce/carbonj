@@ -15,27 +15,47 @@ buildscript {
 }
 
 plugins {
-    id "com.github.hierynomus.license"
+    //id "com.github.hierynomus.license"
     id 'maven-publish'
     id 'net.researchgate.release'
     id 'org.springframework.boot'
+    id 'com.google.protobuf' version "0.9.3"
 }
 
-license {
-    header rootProject.file('LICENSE-HEADER-JAVA')
-    exclude "**/banner.txt"
+sourceSets {
+    main {
+        proto {
+            srcDir 'src/main/protobuf'
+        }
+        java {
+            srcDirs 'build/generated/source/proto/main/java'
+        }
+    }
+}
+
+protobuf {
+  protoc {
+    artifact = 'com.google.protobuf:protoc:3.23.2'
+    //M1 support
+    //artifact = 'com.google.protobuf:protoc:3.14.0:osx-x86_64'
+  }
+}
+
+//license {
+  //  header rootProject.file('LICENSE-HEADER-JAVA')
+  //  exclude "**/banner.txt"
 //    include "**/*.conf"
-}
+//}
 
-task licenseFormatDockerFiles(type: com.hierynomus.gradle.license.tasks.LicenseFormat) {
-    source = fileTree(dir: "src").include("main/docker/files/*")
-}
-licenseFormat.dependsOn licenseFormatDockerFiles
+//task licenseFormatDockerFiles(type: com.hierynomus.gradle.license.tasks.LicenseFormat) {
+//    source = fileTree(dir: "src").include("main/docker/files/*")
+//}
+//licenseFormat.dependsOn licenseFormatDockerFiles
 
-task licenseCheckDockerFiles(type: com.hierynomus.gradle.license.tasks.LicenseFormat) {
-    source = fileTree(dir: "src").include("main/docker/files/*")
-}
-licenseMain.dependsOn licenseCheckDockerFiles
+//task licenseCheckDockerFiles(type: com.hierynomus.gradle.license.tasks.LicenseFormat) {
+//    source = fileTree(dir: "src").include("main/docker/files/*")
+//}
+//licenseMain.dependsOn licenseCheckDockerFiles
 
 apply plugin: 'java'
 apply plugin: 'eclipse'
