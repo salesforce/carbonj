@@ -7,6 +7,8 @@
 package com.demandware.carbonj.service.engine;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.servlet.ServletConfig;
@@ -19,6 +21,7 @@ import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Series;
 import com.demandware.carbonj.service.db.util.SystemTime;
+import com.demandware.carbonj.service.engine.protobuf.MetricsResponse;
 import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,6 +91,7 @@ public class GraphiteSeriesDataServlet
 
         boolean randomTest = req.getParameter("randomTest") != null;
 
+        boolean protobuf = "carbonapi_v3_pb".equals( format );
         boolean json = "json".equals( format );
         if( json )
         {
@@ -137,6 +141,40 @@ public class GraphiteSeriesDataServlet
             Gson gson = new Gson();
             res.getWriter().write( gson.toJson( series ) );
             res.getWriter().close();
+        }
+        else if ( protobuf )
+        {
+            List<Series> seriesList = store.fetchSeriesData( new Query( target, Integer.parseInt( from ),
+                Integer.parseInt( until ), now, System.currentTimeMillis() ) );
+
+            OutputStream output = res.getOutputStream();
+
+            List<MetricsResponse.Series> metricsSeriesList = new ArrayList<MetricsResponse.Series>();
+            for ( Series series : seriesList )
+            {
+                List<MetricsResponse.Value> valuesList = new ArrayList<MetricsResponse.Value>();
+                for ( Double value : series.values )
+                {
+                    valuesList.add( MetricsResponse.Value.newBuilder().setValue( value ).build() );
+                }
+                MetricsResponse.Series metricsSeries =
+                    MetricsResponse.Series.newBuilder().setName( series.name ).setStart( series.start )
+                        .setEnd( series.end ).setStep( series.step ).addAllValues( valuesList ).build();
+
+                metricsSeriesList.add( metricsSeries );
+            }
+
+            MetricsResponse.SeriesList response =
+                MetricsResponse.SeriesList.newBuilder().addAllSeriesList( metricsSeriesList ).build();
+
+            try
+            {
+                response.writeTo( output );
+            }
+            finally
+            {
+                output.close();
+            }
         }
         else
         {

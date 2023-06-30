@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package protobuf;
+
+option java_package = "com.demandware.carbonj.service.engine.protobuf";
+option java_outer_classname = "MetricsResponse";
+
+
+message Value {
+   double value = 1;
+}
+
+message Series {
+   string name = 1;
+   int64 start = 2;
+   int64 end = 3;
+   int64 step = 4;
+   repeated Value values = 5;
+}
+
+message SeriesList {
+   repeated Series seriesList = 1;
+}

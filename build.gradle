@@ -11,8 +11,8 @@ buildscript {
 
 plugins {
     id 'com.palantir.docker' version "0.35.0"
-    id "com.github.jk1.dependency-license-report" version "2.5"
-    id "com.github.hierynomus.license" version "0.16.1"
+    //id "com.github.jk1.dependency-license-report" version "2.5"
+    //id "com.github.hierynomus.license" version "0.16.1"
     id "org.sonarqube" version "4.2.1.3168"
     id 'net.researchgate.release' version '3.0.2'
 }
@@ -27,16 +27,16 @@ release {
 allprojects {
     // TODO remove
     apply plugin: 'maven-publish'
-    apply plugin: "com.github.hierynomus.license"
+    //apply plugin: "com.github.hierynomus.license"
     apply plugin: 'eclipse'
     apply plugin: 'idea'
     group = 'com.demandware.carbonj'
 
-    license {
-        header rootProject.file('LICENSE-HEADER-JAVA')
-        exclude "**/banner.txt"
+    //license {
+    //    header rootProject.file('LICENSE-HEADER-JAVA')
+    //    exclude "**/banner.txt"
     //    include "**/*.conf"
-    }
+    //}
 }
 
 
