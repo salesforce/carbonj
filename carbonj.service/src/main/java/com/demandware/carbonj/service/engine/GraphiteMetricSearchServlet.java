@@ -6,7 +6,9 @@
  */
 package com.demandware.carbonj.service.engine;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +18,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.demandware.carbonj.service.db.model.Series;
+import com.demandware.carbonj.service.engine.protobuf.MetricsResponse;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Metric;
@@ -79,10 +83,26 @@ public class GraphiteMetricSearchServlet
         String query = req.getParameter( "query" );
         boolean randomTest = req.getParameter("randomTest") != null;
 
+        boolean protobuf = "carbonapi_v3_pb".equals( format );
         boolean json = "json".equals(format);
         if( json )
         {
             res.setContentType( "application/json" );
+        }
+        else if ( protobuf )
+        {
+            LOG.info( "carbonapi request: found protobuf request" );
+            res.setContentType( "application/protobuf" );
+
+            StringBuilder sb = new StringBuilder();
+            BufferedReader reader = req.getReader();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            String requestBody = sb.toString();
+            query = requestBody;
+            LOG.info( "carbonapi request: query: " + query + " --- blacklist: " + queryBlacklist );
         }
         else
         {
@@ -117,6 +137,35 @@ public class GraphiteMetricSearchServlet
             Gson gson = new Gson();
             res.getWriter().write( gson.toJson( metrics ) );
             res.getWriter().close();
+        }
+        else if (protobuf) {
+            LOG.info( "carbonapi request: formatting response" );
+            OutputStream output = res.getOutputStream();
+
+            List<MetricsResponse.Metric> metricList = new ArrayList<MetricsResponse.Metric>();
+            for ( Metric metric : metrics )
+            {
+                MetricsResponse.Metric metricResult = MetricsResponse.Metric.newBuilder().setId(metric.id).setName(metric.name).build();
+                metricList.add(metricResult);
+            }
+
+            MetricsResponse.MetricList response =
+                    MetricsResponse.MetricList.newBuilder().addAllMetricList(metricList).build();
+
+            LOG.info( "carbonapi request: done formatting response" );
+            try
+            {
+                LOG.info( "carbonapi request: writing response" );
+                response.writeTo( output );
+            }
+            catch ( Exception e )
+            {
+                LOG.error( "carbonapi request: error writing response", e.getMessage() );
+            }
+            finally
+            {
+                output.close();
+            }
         }
         else
         {

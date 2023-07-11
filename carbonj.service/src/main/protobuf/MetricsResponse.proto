@@ -10,6 +10,11 @@ message Value {
    double value = 1;
 }
 
+message Metric {
+   int64 id = 1;
+   string name = 2;
+}
+
 message Series {
    string name = 1;
    int64 start = 2;
@@ -20,4 +25,8 @@ message Series {
 
 message SeriesList {
    repeated Series seriesList = 1;
+}
+
+message MetricList {
+   repeated Metric metricList = 1;
 }
