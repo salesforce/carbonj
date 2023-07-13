@@ -6,6 +6,7 @@
  */
 package com.demandware.carbonj.service.engine;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -101,8 +102,23 @@ public class GraphiteSeriesDataServlet
         {
             LOG.info( "carbonapi request: found protobuf request" );
             res.setContentType( "application/protobuf" );
-            //target = req.getParameter( "query" );
-            LOG.info( "carbonapi request: query: " + target + " --- blacklist: " + queryBlacklist );
+            // target = req.getParameter( "query" );
+            LOG.info( "carbonapi request: target from param: " + target + " --- blacklist: " + queryBlacklist );
+
+            if ( target == null )
+            {
+                LOG.info( "Target param not set.  Reading from request body..." );
+                StringBuilder sb = new StringBuilder();
+                BufferedReader reader = req.getReader();
+                String line;
+                while ( ( line = reader.readLine() ) != null )
+                {
+                    sb.append( line );
+                }
+                String requestBody = sb.toString();
+                target = requestBody;
+            }
+            LOG.info( "carbonapi request: targe from body: " + target + " --- blacklist: " + queryBlacklist );
         }
         else
         {
