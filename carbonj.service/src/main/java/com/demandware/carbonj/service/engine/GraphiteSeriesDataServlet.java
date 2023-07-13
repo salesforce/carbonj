@@ -93,7 +93,7 @@ public class GraphiteSeriesDataServlet
         boolean randomTest = req.getParameter("randomTest") != null;
 
         boolean protobuf = "carbonapi_v3_pb".equals( format );
-        boolean json = "json".equals( format ) || "msgpack".equals( format );
+        boolean json = "json".equals( format );
         if( json )
         {
             res.setContentType( "application/json" );
