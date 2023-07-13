@@ -92,33 +92,10 @@ public class GraphiteSeriesDataServlet
 
         boolean randomTest = req.getParameter("randomTest") != null;
 
-        boolean protobuf = "carbonapi_v3_pb".equals( format );
         boolean json = "json".equals( format ) || "msgpack".equals( format );
         if( json )
         {
             res.setContentType( "application/json" );
-        }
-        else if ( protobuf )
-        {
-            LOG.info( "carbonapi request: found protobuf request" );
-            res.setContentType( "application/protobuf" );
-            // target = req.getParameter( "query" );
-            LOG.info( "carbonapi request: target from param: " + target + " --- blacklist: " + queryBlacklist );
-
-            if ( target == null )
-            {
-                LOG.info( "Target param not set.  Reading from request body..." );
-                StringBuilder sb = new StringBuilder();
-                BufferedReader reader = req.getReader();
-                String line;
-                while ( ( line = reader.readLine() ) != null )
-                {
-                    sb.append( line );
-                }
-                String requestBody = sb.toString();
-                target = requestBody;
-            }
-            LOG.info( "carbonapi request: targe from body: " + target + " --- blacklist: " + queryBlacklist );
         }
         else
         {
@@ -164,51 +141,6 @@ public class GraphiteSeriesDataServlet
             Gson gson = new Gson();
             res.getWriter().write( gson.toJson( series ) );
             res.getWriter().close();
-        }
-        else if ( protobuf )
-        {
-            LOG.info( "carbonapi request: processing request" );
-            List<Series> seriesList = store.fetchSeriesData( new Query( target, Integer.parseInt( from ),
-                Integer.parseInt( until ), now, System.currentTimeMillis() ) );
-
-            LOG.info( "carbonapi request: formatting response" );
-            OutputStream output = res.getOutputStream();
-
-            List<MetricsResponse.Series> metricsSeriesList = new ArrayList<MetricsResponse.Series>();
-            for ( Series series : seriesList )
-            {
-                List<MetricsResponse.Value> valuesList = new ArrayList<MetricsResponse.Value>();
-                for ( Double value : series.values )
-                {
-
-                    valuesList.add(
-                        MetricsResponse.Value.newBuilder().setValue( value == null ? (double) 0 : value ).build() );
-                }
-                MetricsResponse.Series metricsSeries =
-                    MetricsResponse.Series.newBuilder().setName( series.name ).setStart( series.start )
-                        .setEnd( series.end ).setStep( series.step ).addAllValues( valuesList ).build();
-
-                metricsSeriesList.add( metricsSeries );
-            }
-
-            MetricsResponse.SeriesList response =
-                MetricsResponse.SeriesList.newBuilder().addAllSeriesList( metricsSeriesList ).build();
-
-            LOG.info( "carbonapi request: done formatting response" );
-
-            try
-            {
-                LOG.info( "carbonapi request: writing response" );
-                response.writeTo( output );
-            }
-            catch ( Exception e )
-            {
-                LOG.error( "carbonapi request: error writing response", e.getMessage() );
-            }
-            finally
-            {
-                output.close();
-            }
         }
         else
         {
