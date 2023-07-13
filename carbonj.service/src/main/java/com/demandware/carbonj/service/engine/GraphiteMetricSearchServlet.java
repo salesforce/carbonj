@@ -83,7 +83,7 @@ public class GraphiteMetricSearchServlet
         String query = req.getParameter( "query" );
         boolean randomTest = req.getParameter("randomTest") != null;
 
-        boolean protobuf = "carbonapi_v3_pb".equals( format );
+        boolean protobuf = "protobuf".equals( format );
         boolean json = "json".equals(format);
         if( json )
         {
@@ -93,15 +93,6 @@ public class GraphiteMetricSearchServlet
         {
             LOG.info( "carbonapi request: found protobuf request" );
             res.setContentType( "application/protobuf" );
-
-            StringBuilder sb = new StringBuilder();
-            BufferedReader reader = req.getReader();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-            String requestBody = sb.toString();
-            query = requestBody;
             LOG.info( "carbonapi request: query: " + query + " --- blacklist: " + queryBlacklist );
         }
         else

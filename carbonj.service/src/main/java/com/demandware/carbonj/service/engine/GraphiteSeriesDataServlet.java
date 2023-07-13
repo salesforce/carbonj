@@ -92,7 +92,7 @@ public class GraphiteSeriesDataServlet
 
         boolean randomTest = req.getParameter("randomTest") != null;
 
-        boolean protobuf = "carbonapi_v3_pb".equals( format );
+        boolean protobuf = "protobuf".equals( format );
         boolean json = "json".equals( format );
         if( json )
         {
@@ -104,21 +104,6 @@ public class GraphiteSeriesDataServlet
             res.setContentType( "application/protobuf" );
             // target = req.getParameter( "query" );
             LOG.info( "carbonapi request: target from param: " + target + " --- blacklist: " + queryBlacklist );
-
-            if ( target == null )
-            {
-                LOG.info( "Target param not set.  Reading from request body..." );
-                StringBuilder sb = new StringBuilder();
-                BufferedReader reader = req.getReader();
-                String line;
-                while ( ( line = reader.readLine() ) != null )
-                {
-                    sb.append( line );
-                }
-                String requestBody = sb.toString();
-                target = requestBody;
-            }
-            LOG.info( "carbonapi request: targe from body: " + target + " --- blacklist: " + queryBlacklist );
         }
         else
         {
