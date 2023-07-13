@@ -101,7 +101,7 @@ public class GraphiteSeriesDataServlet
         {
             LOG.info( "carbonapi request: found protobuf request" );
             res.setContentType( "application/protobuf" );
-            target = req.getParameter( "query" );
+            //target = req.getParameter( "query" );
             LOG.info( "carbonapi request: query: " + target + " --- blacklist: " + queryBlacklist );
         }
         else
