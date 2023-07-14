@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.demandware.carbonj.service.db.model.Series;
 import com.demandware.carbonj.service.engine.protobuf.MetricsResponse;
+import com.demandware.carbonj.service.engine.protobuf.TestResponse;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Metric;
@@ -142,12 +143,17 @@ public class GraphiteMetricSearchServlet
 
             MetricsResponse.MetricList response =
                     MetricsResponse.MetricList.newBuilder().addAllMetricList(metricList).build();
+            
+            TestResponse.TestValue testResponse = TestResponse.TestValue.newBuilder().setValue((double)1).setName("testValue").build();
 
-            LOG.info( "carbonapi request: done formatting response " + response);
+            //LOG.info( "carbonapi request: done formatting response " + response);
+            LOG.info( "carbonapi request: done formatting test response " + testResponse);
             try
             {
-                LOG.info( "carbonapi request: writing response" );
-                response.writeTo( output );
+                LOG.info( "carbonapi request: writing test response" );
+                testResponse.writeTo(output);
+                //response.writeTo( output );
+
             }
             catch ( Exception e )
             {

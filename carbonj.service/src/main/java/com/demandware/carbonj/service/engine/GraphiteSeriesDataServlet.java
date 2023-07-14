@@ -18,6 +18,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.demandware.carbonj.service.engine.protobuf.TestResponse;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Series;
@@ -179,12 +180,16 @@ public class GraphiteSeriesDataServlet
             MetricsResponse.SeriesList response =
                 MetricsResponse.SeriesList.newBuilder().addAllSeriesList( metricsSeriesList ).build();
 
-            LOG.info( "carbonapi request: done formatting response " + response);
+            TestResponse.TestValue testResponse = TestResponse.TestValue.newBuilder().setValue((double)1).setName("testValue").build();
+
+            //LOG.info( "carbonapi request: done formatting response " + response);
+            LOG.info( "carbonapi request: done formatting response " + testResponse);
 
             try
             {
-                LOG.info( "carbonapi request: writing response" );
-                response.writeTo( output );
+                LOG.info( "carbonapi request: writing test response" );
+                testResponse.writeTo(output);
+                //response.writeTo( output );
             }
             catch ( Exception e )
             {
