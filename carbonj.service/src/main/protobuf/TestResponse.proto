@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package protobuf;
+
+option java_package = "com.demandware.carbonj.service.engine.protobuf";
+option java_outer_classname = "TestResponse";
+
+
+message TestValue {
+   required string name = 1;
+   required double value = 2;
+}
