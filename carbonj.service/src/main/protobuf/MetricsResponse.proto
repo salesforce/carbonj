@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto2";
 
 package protobuf;
 
@@ -7,19 +7,19 @@ option java_outer_classname = "MetricsResponse";
 
 
 message Value {
-   double value = 1;
+   required double value = 1;
 }
 
 message Metric {
-   int64 id = 1;
-   string name = 2;
+   required int64 id = 1;
+   required string name = 2;
 }
 
 message Series {
-   string name = 1;
-   int64 start = 2;
-   int64 end = 3;
-   int64 step = 4;
+   required string name = 1;
+   required int64 start = 2;
+   required int64 end = 3;
+   required int64 step = 4;
    repeated Value values = 5;
 }
 
