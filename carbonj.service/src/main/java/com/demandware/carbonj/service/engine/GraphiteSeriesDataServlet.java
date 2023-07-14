@@ -179,7 +179,7 @@ public class GraphiteSeriesDataServlet
             MetricsResponse.SeriesList response =
                 MetricsResponse.SeriesList.newBuilder().addAllSeriesList( metricsSeriesList ).build();
 
-            LOG.info( "carbonapi request: done formatting response" );
+            LOG.info( "carbonapi request: done formatting response " + response);
 
             try
             {

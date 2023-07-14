@@ -143,7 +143,7 @@ public class GraphiteMetricSearchServlet
             MetricsResponse.MetricList response =
                     MetricsResponse.MetricList.newBuilder().addAllMetricList(metricList).build();
 
-            LOG.info( "carbonapi request: done formatting response" );
+            LOG.info( "carbonapi request: done formatting response " + response);
             try
             {
                 LOG.info( "carbonapi request: writing response" );
