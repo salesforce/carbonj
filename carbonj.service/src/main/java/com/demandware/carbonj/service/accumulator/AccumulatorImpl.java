@@ -111,12 +111,12 @@ public class AccumulatorImpl implements StatsAware, Accumulator
 
     void add( DataPoint m, long currentTimeInMillis )
     {
-
+        log.info("Adding data points");
         MetricAggregationPolicy policy = aggregationPolicyProvider.metricAggregationPolicyFor( m.name );
 
         // one metric can map to 0..N aggregates
         List<MetricAggregate> aggregates = policy.getAggregates();
-
+        log.info("Get the aggregates list size: " + aggregates.size());
         // no aggregates for this metric - done.
         if( aggregates.size() == 0 )
         {
@@ -124,12 +124,14 @@ public class AccumulatorImpl implements StatsAware, Accumulator
         }
 
         int slotTs = slotStrategy.getSlotTs(m.ts);
+        log.info("Get the slot value: " + slotTs);
 
         int now = Math.toIntExact(currentTimeInMillis / 1000);
-
+        log.info("Get the current time: " + now);
         // check if point arrived too late and this slot has already been closed
         if ( isLate(now, slotTs) )
         {
+            log.info("The point arrived late so slot is closed");
             latePointLogger.logLatePoint(m, now, LatePointLogger.Reason.SLOT_EXPIRED,
                     String.format("slot expiration: [%s]", slotTs + slotMaxLifeSec));
             return;
@@ -138,8 +140,10 @@ public class AccumulatorImpl implements StatsAware, Accumulator
         // one metric can map to multiple aggregates
         for (MetricAggregate agg : aggregates)
         {
+            log.info("Retrieve each aggregate");
             if ( agg.isDropOriginal() )
             {
+                log.info("Dropping the metric");
                 m.drop();
             }
 
@@ -148,11 +152,13 @@ public class AccumulatorImpl implements StatsAware, Accumulator
             Slot s = slots.computeIfAbsent(slotTs, k -> new Slot(k, latePointLogger, batchSize, aggregatorFlushTimer,
                     flushedAggregates, createdSlots) );
             s.apply(agg, m, now);
+            log.info("Compute the value for slot");
         }
-
+        log.info("Completed adding the data points");
     }
 
     private boolean isLate(int now, int slotTs) {
+        log.info("Check if the point is arriving late");
         return now > slotTs + slotMaxLifeSec;
     }
 
