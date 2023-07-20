@@ -114,6 +114,7 @@ public class AccumulatorImpl implements StatsAware, Accumulator
 
         log.info("Adding data points");
         MetricAggregationPolicy policy = aggregationPolicyProvider.metricAggregationPolicyFor( m.name );
+        log.info("Get the metric name: " + m.name);
 
         // one metric can map to 0..N aggregates
         List<MetricAggregate> aggregates = policy.getAggregates();
