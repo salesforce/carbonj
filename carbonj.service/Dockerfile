@@ -5,7 +5,7 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-FROM quay.io/centos/centos:stream8
+FROM docker-registry.releng.demandware.net/common/cc-centos-openjdk-testrunner_11u18:b9da990
 ARG DEPENDENCY=target/dependency
 ARG VERSION=latest
 
@@ -21,18 +21,15 @@ RUN yum update -y && \
   nc \
   lsof \
   sysstat \
-  epel-release
+  epel-release \
+  python3 \
+  perl-URI-Encode \
+  perl-Data-Dumper
+
 
 RUN yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel
 
-RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
-     curl -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
-     yum update -y && \
-     yum install -y zulu-11 \
-     python3 \
-     perl-URI-Encode \
-     perl-Data-Dumper && \
-     yum clean all
+RUN pip3 install --upgrade pip
 
 # Install aiohttp required by the script
 RUN pip3 install aiohttp
@@ -93,10 +90,6 @@ ENV DW_PREFIX=jetty
 ENV SERVICEDIR=/app/
 ENV app_servicedir=/app/
 
-RUN wget https://download.yourkit.com/yjp/2017.02/YourKit-JavaProfiler-2017.02-b75.zip -P /tmp/ && \
-  unzip /tmp/YourKit-JavaProfiler-2017.02-b75.zip && mv YourKit-JavaProfiler-2017.02 /usr/local/yjp/ && \
-  rm /tmp/YourKit-JavaProfiler-2017.02-b75.zip
-RUN wget https://download.yourkit.com/yjp/2017.02/yjp.jar -P /usr/local/yjp/lib/
 # Add Tini for proper sigkill handling https://github.com/krallin/tini
 RUN wget https://github.com/krallin/tini/releases/download/v0.18.0/tini
 RUN mv tini /sbin/tini
