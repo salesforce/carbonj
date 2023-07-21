@@ -23,6 +23,8 @@ interface AggregateFunction
 
     AggregateFunction add( DataPoint v, int now );
 
+    static final Logger log = LoggerFactory.getLogger( AggregateFunction.class );
+
     static AggregateFunction create( String key, MetricAggregationMethod method)
     {
         switch (method)
@@ -63,13 +65,14 @@ interface AggregateFunction
         implements AggregateFunction
     {
         double sum = 0;
+        static final Logger logger = LoggerFactory.getLogger( SumAggregateFunction.class );
 
         @Override
         public synchronized AggregateFunction add( DataPoint dataPoint, int now )
         {
             sum += dataPoint.val;
-            log.info("Calculating the sum for aggreggate function");
-            log.info("Print the datapoint name: " + dataPoint.name);
+            logger.info("Calculating the sum for aggreggate function");
+            logger.info("Print the datapoint name: " + dataPoint.name);
             return this;
         }
 
