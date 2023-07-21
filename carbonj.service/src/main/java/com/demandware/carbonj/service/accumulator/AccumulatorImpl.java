@@ -104,7 +104,7 @@ public class AccumulatorImpl implements StatsAware, Accumulator
     @Override
     public void add(DataPoint m)
     {
-
+        log.info("Start adding data points");
         add(m, System.currentTimeMillis());
 
     }

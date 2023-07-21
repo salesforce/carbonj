@@ -30,6 +30,7 @@ interface AggregateFunction
             case AVG:
                 return new AvgAggregateFunction();
             case SUM:
+                log.info("calling the sum function");
                 return new SumAggregateFunction();
             case CUSTOM1:
                 return custom1( key );
@@ -67,6 +68,8 @@ interface AggregateFunction
         public synchronized AggregateFunction add( DataPoint dataPoint, int now )
         {
             sum += dataPoint.val;
+            log.info("Calculating the sum for aggreggate function");
+            log.info("Print the datapoint name: " + dataPoint.name);
             return this;
         }
 
