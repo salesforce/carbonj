@@ -188,6 +188,7 @@ public class InputQueue
             default:
                 throw new RuntimeException( String.format( "Invalid rejectPolicy value [%s].", rejectPolicy ) );
             case block:
+                log.info("Metric blocked - input queue");
                 return ( q, t ) -> {
                     refreshStats(); // good time to refresh stats
                     try (Context c = blocks.time())
@@ -200,6 +201,7 @@ public class InputQueue
                     }
                 };
             case drop:
+                log.info("Metric dropped - input queue");
                 return ( q, t ) -> {
                     refreshStats(); // good time to refresh stats
                     rejects.mark();
@@ -210,7 +212,6 @@ public class InputQueue
                     t.drop();
                 };
         }
-        log.info("Metric rejected - input queue");
     }
 
     @Override
