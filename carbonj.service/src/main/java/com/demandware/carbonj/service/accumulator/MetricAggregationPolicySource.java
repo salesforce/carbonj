@@ -17,6 +17,7 @@ import com.google.common.base.Preconditions;
 class MetricAggregationPolicySource
 {
     private MetricAggregationRulesLoader rulesLoader;
+    private static final Logger log = LoggerFactory.getLogger( MetricAggregationPolicySource.class );
 
     public MetricAggregationPolicySource( MetricAggregationRulesLoader rulesLoader)
     {

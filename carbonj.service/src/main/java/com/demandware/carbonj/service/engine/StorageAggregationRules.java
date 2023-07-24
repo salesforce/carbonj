@@ -18,6 +18,7 @@ public class StorageAggregationRules
 {
     private int revision;
     private List<StorageAggregationRule> rules = new ArrayList<>();
+    private static final Logger log = LoggerFactory.getLogger( StorageAggregationRules.class );
 
     /**
      * Initializes instance with rules.

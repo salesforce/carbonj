@@ -20,6 +20,7 @@ class StorageAggregationRule
     final private Pattern pattern;
     final AggregationMethod method;
     final private boolean alwaysTrue;
+    private static final Logger log = LoggerFactory.getLogger( StorageAggregationRule.class );
 
     public static StorageAggregationRule parseDefinition( String line)
     {
