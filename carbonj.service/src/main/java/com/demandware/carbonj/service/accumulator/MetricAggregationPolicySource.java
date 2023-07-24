@@ -37,6 +37,7 @@ class MetricAggregationPolicySource
     {
         MetricAggregationRules rules = rulesLoader.getRules();
         List<MetricAggregationRule.Result> results = rules.apply( name );
+        log.info("Print the aggregate name: " + name);
         return getInstance( results, rules.getRevision() );
     }
 
@@ -45,6 +46,7 @@ class MetricAggregationPolicySource
         List<MetricAggregate> aggregates = results.stream()
                                                   .map( r ->  new MetricAggregate( r.getAggregateName(), r.getMethod(), r.isDropOriginal() ))
                                                   .collect( Collectors.toList() );
+        log.info("Get the list of aggregates from the metric aggregation policy: " + aggregates.size());
         return new MetricAggregationPolicy( revision, aggregates );
     }
 }

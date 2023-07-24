@@ -79,6 +79,7 @@ public class PointProcessorImpl implements PointProcessor
     @Override
     public void process( List<DataPoint> points )
     {
+        log.info("Process the data points");
         Runnable task = taskBuilder.task(points);
         if( ex != null ) {
             ex.submit(task);

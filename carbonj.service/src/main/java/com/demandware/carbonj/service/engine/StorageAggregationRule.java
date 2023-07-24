@@ -52,7 +52,7 @@ class StorageAggregationRule
         {
             return method;
         }
-
+        log.info("Get the metric name for single metric: " + name);
         Matcher m = pattern.matcher( name );
         return m.find() ? method : null;
     }

@@ -49,6 +49,7 @@ class MetricAggregationRules
     public List<MetricAggregationRule.Result> apply( String metricName )
     {
         List<MetricAggregationRule.Result> results = new ArrayList<>(  );
+        log.info("Metric Aggregation rules - get the metric name: " + metricName);
 
         for(MetricAggregationRule rule : rules)
         {

@@ -113,6 +113,7 @@ public class PointProcessorTask implements Runnable
             log.trace( "->" + t );
         }
         nsCounter.count( t.name );
+        log.info("Process single data point: " + t.name);
 
         auditLog.accept( t );
 

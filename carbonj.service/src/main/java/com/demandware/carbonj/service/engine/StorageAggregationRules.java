@@ -44,6 +44,7 @@ public class StorageAggregationRules
 
         for(StorageAggregationRule rule : rules)
         {
+            log.info("apply the storage aggregation rule: " + metricName);
             method = rule.apply( metricName );
             if( method != null )
             {

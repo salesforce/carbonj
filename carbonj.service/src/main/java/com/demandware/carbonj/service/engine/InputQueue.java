@@ -210,6 +210,7 @@ public class InputQueue
                     t.drop();
                 };
         }
+        log.info("Metric rejected - input queue");
     }
 
     @Override
