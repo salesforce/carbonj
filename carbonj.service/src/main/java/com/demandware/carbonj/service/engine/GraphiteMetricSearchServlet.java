@@ -136,12 +136,12 @@ public class GraphiteMetricSearchServlet
             List<MetricsResponse.Metric> metricList = new ArrayList<MetricsResponse.Metric>();
             for ( Metric metric : metrics )
             {
-                MetricsResponse.Metric metricResult = MetricsResponse.Metric.newBuilder().setId(metric.id).setName(metric.name).build();
+                MetricsResponse.Metric metricResult = MetricsResponse.Metric.newBuilder().setName(metric.name).setIsLeaf(metric.isLeaf()).build();
                 metricList.add(metricResult);
             }
 
             MetricsResponse.MetricList response =
-                    MetricsResponse.MetricList.newBuilder().addAllMetricList(metricList).build();
+                    MetricsResponse.MetricList.newBuilder().setName("FindResponse").addAllMetrics(metricList).build();
 
             LOG.info( "carbonapi request: done formatting response " + response);
             try

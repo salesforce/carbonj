@@ -11,8 +11,8 @@ message Value {
 }
 
 message Metric {
-   required int64 id = 1;
-   required string name = 2;
+   required string name = 1;
+   required bool isLeaf = 2;
 }
 
 message Series {
@@ -28,5 +28,6 @@ message SeriesList {
 }
 
 message MetricList {
-   repeated Metric metricList = 1;
+   required string name = 1;
+   repeated Metric metrics = 2;
 }
