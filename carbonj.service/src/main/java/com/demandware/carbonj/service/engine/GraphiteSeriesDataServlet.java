@@ -162,16 +162,16 @@ public class GraphiteSeriesDataServlet
             List<MetricsResponse.Series> metricsSeriesList = new ArrayList<MetricsResponse.Series>();
             for ( Series series : seriesList )
             {
-                List<MetricsResponse.Value> valuesList = new ArrayList<MetricsResponse.Value>();
+                List<Double> valuesList = new ArrayList<Double>();
+                List<Boolean> isAbsent = new ArrayList<Boolean>();
                 for ( Double value : series.values )
                 {
-
-                    valuesList.add(
-                        MetricsResponse.Value.newBuilder().setValue( value == null ? (double) 0 : value ).build() );
+                    valuesList.add(value == null ? (double) 0 : value );
+                    isAbsent.add(false);
                 }
                 MetricsResponse.Series metricsSeries =
-                    MetricsResponse.Series.newBuilder().setName( series.name ).setStart( series.start )
-                        .setEnd( series.end ).setStep( series.step ).addAllValues( valuesList ).build();
+                    MetricsResponse.Series.newBuilder().setName( series.name ).setStart( (int)series.start )
+                        .setEnd(  (int)series.end ).setStep(  (int)series.step ).addAllValues( valuesList ).addAllIsAbsent(isAbsent).build();
 
                 metricsSeriesList.add( metricsSeries );
             }

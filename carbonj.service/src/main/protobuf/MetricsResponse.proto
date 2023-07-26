@@ -5,11 +5,6 @@ package protobuf;
 option java_package = "com.demandware.carbonj.service.engine.protobuf";
 option java_outer_classname = "MetricsResponse";
 
-
-message Value {
-   required double value = 1;
-}
-
 message Metric {
    required string name = 1;
    required bool isLeaf = 2;
@@ -17,10 +12,11 @@ message Metric {
 
 message Series {
    required string name = 1;
-   required int64 start = 2;
-   required int64 end = 3;
-   required int64 step = 4;
-   repeated Value values = 5;
+   required int32 start = 2;
+   required int32 end = 3;
+   required int32 step = 4;
+   repeated double values = 5;
+   repeated bool isAbsent = 6;
 }
 
 message SeriesList {
