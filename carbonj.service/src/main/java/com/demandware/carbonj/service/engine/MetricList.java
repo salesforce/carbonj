@@ -6,6 +6,7 @@
  */
 package com.demandware.carbonj.service.engine;
 
+import org.apache.commons.lang3.tuple.Pair;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.util.StatsAware;
@@ -37,18 +38,21 @@ public class MetricList implements StatsAware
 
     volatile private List<String> configLines = new ArrayList<>(  );
 
-    volatile private List<Pattern> patterns = new ArrayList<>(  );
+    volatile private List<Pair<Pattern, Counter>> patternsAndCounters = new ArrayList<>(  );
 
     private final String confSrc;
 
     private final ConfigServerUtil configServerUtil;
 
+    private final MetricRegistry metricRegistry;
+
     public MetricList(MetricRegistry metricRegistry,  String name, File confFile, String confSrc,
-                     ConfigServerUtil configServerUtil )
+                      ConfigServerUtil configServerUtil )
     {
         this.name = Preconditions.checkNotNull(name);
         this.confFile = Preconditions.checkNotNull( confFile );
         log.info( String.format("Creating metric list [%s] with config file [%s]", name, confFile) );
+        this.metricRegistry = metricRegistry;
         this.droppedMetrics = metricRegistry.counter( MetricRegistry.name( name, "drop" ) );
         this.confSrc = confSrc;
         this.configServerUtil = configServerUtil;
@@ -58,7 +62,7 @@ public class MetricList implements StatsAware
 
     public boolean match(String name)
     {
-        if ( patterns.isEmpty() )
+        if ( patternsAndCounters.isEmpty() )
         {
             return false;
         }
@@ -73,22 +77,36 @@ public class MetricList implements StatsAware
             return isBlackListed;
         }
 
-        List<Pattern> currentPatterns = patterns; // copy so we don't keep hitting the volatile barrier
-        for ( Pattern p : currentPatterns )
+        List<Pair<Pattern, Counter>> currentPatternsAndCounters = patternsAndCounters; // copy so we don't keep hitting the volatile barrier
+        for ( int i = 0; i < currentPatternsAndCounters.size(); i++ )
         {
-            if( ".*".equals( p.pattern() ) )
+            Pair<Pattern, Counter> p = currentPatternsAndCounters.get(i);
+
+            if( ".*".equals( p.getLeft().pattern() ) )
             {
+                patternsAndCounters.get(i).getRight().inc();
                 droppedMetrics.inc();
                 isBlackListed = true;
                 break;
             }
 
-            if ( p.matcher( name ).find() )
+            long startTime = 0;
+            if (log.isDebugEnabled()) {
+                startTime = System.nanoTime(); // Record start time
+            }
+            if ( p.getLeft().matcher( name ).find() )
             {
+                patternsAndCounters.get(i).getRight().inc();
                 droppedMetrics.inc();
                 isBlackListed = true;
+                if (log.isDebugEnabled()) {
+                    long endTime = System.nanoTime();   // Record end time
+                    long duration = endTime - startTime; // Calculate duration in nanoseconds
+                    log.debug("Pattern match runtime for {}: {} nanoseconds", p.getLeft().pattern(), duration);
+                }
                 break;
             }
+
         }
         if (state != null) {
             state.setBlackListed(isBlackListed);
@@ -136,8 +154,7 @@ public class MetricList implements StatsAware
             log.info(String.format("Metric list [%s] configuration file has changed. File: [%s]", name, confFile));
 
             List<String> oldLines = this.configLines;
-
-            this.patterns = parseConfig( lines );
+            this.patternsAndCounters = parseConfig( lines );
             this.configLines = lines;
             StringsCache.invalidateCache();
             log.info(String.format("Metric list [%s] updated.", name));
@@ -152,12 +169,24 @@ public class MetricList implements StatsAware
         }
     }
 
-    private List<Pattern> parseConfig(List<String> lines)
+    private List<Pair<Pattern, Counter>> parseConfig(List<String> lines)
     {
-        return lines.stream()
-                    .map( String::trim )
-                    .filter( line -> line.length() > 0 && !line.startsWith( "#" ) )
-                    .map( Pattern::compile ).collect( Collectors.toList() );
+        // Create an empty list to hold pairs of Pattern and Counter
+        List<Pair<Pattern, Counter>> patternCounterPairs = lines.stream()
+                .map(String::trim)
+                .filter(line -> line.length() > 0 && !line.startsWith("#"))
+                .map(line -> {
+                    Pattern pattern = Pattern.compile(line);
+                    Counter counter = metricRegistry.counter( MetricRegistry.name( name, "blacklist" ) );
+                    return Pair.of(pattern, counter); // Create and return the Pair
+                })
+                .collect(Collectors.toList());
+
+        // Reset the counters here if needed
+        for (Pair<Pattern, Counter> pair : patternCounterPairs) {
+            pair.getValue().dec(pair.getValue().getCount()); // Reset the counter to zero
+        }
+        return patternCounterPairs;
     }
 
     @Override
@@ -168,6 +197,6 @@ public class MetricList implements StatsAware
 
     public boolean isEmpty()
     {
-        return patterns.isEmpty();
+        return patternsAndCounters.isEmpty();
     }
 }
