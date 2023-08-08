@@ -26,7 +26,7 @@ RUN yum update -y && \
 RUN yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel
 
 RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
-     curl -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
+     curl -L -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
      yum update -y && \
      yum install -y zulu-11 \
      python3 \
@@ -35,7 +35,8 @@ RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
      yum clean all
 
 # Install aiohttp required by the script
-RUN pip3 install aiohttp
+RUN pip3 install --upgrade pip && \
+  pip3 install aiohttp
 
 # Ensure crontab starts
 RUN /sbin/chkconfig crond on && \
