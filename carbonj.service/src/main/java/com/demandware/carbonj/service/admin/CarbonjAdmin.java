@@ -31,8 +31,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.ServletInputStream;
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.ServletInputStream;
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;

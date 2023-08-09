@@ -28,7 +28,7 @@ RUN yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel
 RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
      yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
      yum update -y && \
-     yum install -y zulu17-jdk \
+     yum install -y zulu11 \
      python3 \
      perl-URI-Encode \
      perl-Data-Dumper && \
