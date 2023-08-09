@@ -21,7 +21,8 @@ RUN yum update -y && \
   yum update -y && \
   yum install -y zulu-11 python3 perl-URI-Encode perl-Data-Dumper && \
   yum clean all && \
-  pip3 install multidict typing_extensions attr yarl async_timeout idna_ssl attrs charset_normalizer aiosignal aiohttp && \
+  pip3 install --upgrade pip setuptools wheel && \
+  pip3 install aiohttp && \
   /sbin/chkconfig crond on && \
   systemctl enable crond.service && \
   mkdir -p /app/bin/ && \
