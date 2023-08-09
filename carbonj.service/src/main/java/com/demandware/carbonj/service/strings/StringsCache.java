@@ -22,9 +22,9 @@ import org.slf4j.LoggerFactory;
 
 public class StringsCache implements StatsAware
 {
-    private static Logger log = LoggerFactory.getLogger( StringsCache.class );
+    private static final Logger log = LoggerFactory.getLogger( StringsCache.class );
 
-    private static LoadingCache<String, String> cache;
+    private static LoadingCache<String, State> cache;
 
     final private CacheStatsReporter statsReporter;
 
@@ -42,13 +42,12 @@ public class StringsCache implements StatsAware
                             .concurrencyLevel( concurrencyLevel )
                             .expireAfterAccess( expireAfterLastAccessInMinutes, TimeUnit.MINUTES )
                             .recordStats()
-                            .build( new CacheLoader<String, String>()
+                            .build( new CacheLoader<>()
                             {
+                                @SuppressWarnings("NullableProblems")
                                 @Override
-                                public String load( String key )
-                                                throws Exception
-                                {
-                                    return key;
+                                public State load( String key ) {
+                                    return new State(key);
                                 }
                             } );
             statsReporter = new CacheStatsReporter( metricRegistry,"StringsCache", maxCacheSize, cache );
@@ -71,11 +70,25 @@ public class StringsCache implements StatsAware
     {
         try
         {
-            return null == cache ? key : cache.get( key );
+            return null == cache ? key : cache.get( key ).key;
         }
         catch ( ExecutionException e )
         {
             throw new RuntimeException( "key: " + key, e);
+        }
+    }
+
+    public static State getState(String key) {
+        try {
+            return cache == null ? null : cache.get(key);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("key: " + key, e);
+        }
+    }
+
+    public static void invalidateCache() {
+        if (cache != null) {
+            cache.invalidateAll();
         }
     }
 
@@ -86,4 +99,24 @@ public class StringsCache implements StatsAware
         statsReporter.close();
     }
 
+    public static class State {
+        private final String key;
+        private volatile Boolean isBlackListed;
+
+        private State(String key) {
+            this.key = key;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public Boolean getBlackListed() {
+            return isBlackListed;
+        }
+
+        public void setBlackListed(Boolean blackListed) {
+            isBlackListed = blackListed;
+        }
+    }
 }
