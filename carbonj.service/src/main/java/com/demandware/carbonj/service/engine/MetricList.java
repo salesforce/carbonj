@@ -64,12 +64,16 @@ public class MetricList implements StatsAware
         }
 
         StringsCache.State state = StringsCache.getState(name);
+        boolean isBlackListed = false;
         if (state != null && state.getBlackListed() != null) {
-            return state.getBlackListed();
+            isBlackListed = state.getBlackListed();
+            if (isBlackListed) {
+                droppedMetrics.inc();
+            }
+            return isBlackListed;
         }
 
         List<Pattern> currentPatterns = patterns; // copy so we don't keep hitting the volatile barrier
-        boolean isBlackListed = false;
         for ( Pattern p : currentPatterns )
         {
             if( ".*".equals( p.pattern() ) )
