@@ -35,10 +35,11 @@ COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
 COPY ${DEPENDENCY}/META-INF /app/META-INF
 COPY ${DEPENDENCY}/BOOT-INF/classes /app
 # add scripts
-COPY --chmod=555 ${DEPENDENCY}/entrypoint.sh ${DEPENDENCY}/onOutOfMemoryError.sh ${DEPENDENCY}/logCleanup.sh \
+COPY ${DEPENDENCY}/entrypoint.sh ${DEPENDENCY}/onOutOfMemoryError.sh ${DEPENDENCY}/logCleanup.sh \
   ${DEPENDENCY}/deletemetrics.py ${DEPENDENCY}/disklog.sh ${DEPENDENCY}/fdlog.sh ${DEPENDENCY}/iolog.sh \
   ${DEPENDENCY}/reportGcMetrics.sh ${DEPENDENCY}/reportRocksDbMetrics.sh ${DEPENDENCY}/requestlog-stats.pl \
   ${DEPENDENCY}/whisper.py ${DEPENDENCY}/cj-load.py /app/bin/
+RUN chmod ugo+x /app/bin/*
 # add java options file
 # default configs
 COPY ${DEPENDENCY}/service.args ${DEPENDENCY}/audit-rules.conf ${DEPENDENCY}/blacklist.conf \
