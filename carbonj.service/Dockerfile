@@ -5,7 +5,7 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-FROM docker-registry.releng.demandware.net/common/cc-centos-openjdk-testrunner_11u18:b9da990
+FROM quay.io/centos/centos:stream8
 ARG DEPENDENCY=target/dependency
 ARG VERSION=latest
 
