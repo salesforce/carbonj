@@ -5,7 +5,7 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-FROM quay.io/centos/centos:stream8
+FROM tgagor/centos-stream:stream8
 ARG DEPENDENCY=build/docker/dependency
 ARG VERSION=latest
 
