@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * List of metrics that should receive special treatment (used for blocking or allowing metric names).
@@ -171,16 +170,16 @@ public class MetricList implements StatsAware
 
     private List<Pair<Pattern, Counter>> parseConfig(List<String> lines)
     {
+        List<Pair<Pattern, Counter>> patternCounterPairs = new ArrayList<>();
         // Create an empty list to hold pairs of Pattern and Counter
-        List<Pair<Pattern, Counter>> patternCounterPairs = lines.stream()
-                .map(String::trim)
-                .filter(line -> line.length() > 0 && !line.startsWith("#"))
-                .map(line -> {
-                    Pattern pattern = Pattern.compile(line);
-                    Counter counter = metricRegistry.counter( MetricRegistry.name( name, "blacklist" ) );
-                    return Pair.of(pattern, counter); // Create and return the Pair
-                })
-                .collect(Collectors.toList());
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i).trim();
+            if (!line.isEmpty() && !line.startsWith("#")) {
+                Pattern pattern = Pattern.compile(line);
+                Counter counter = metricRegistry.counter( MetricRegistry.name( name, "blacklist-" + (i + 1) ) );
+                patternCounterPairs.add(Pair.of(pattern, counter)); // Create and return the Pair
+            }
+        }
 
         // Reset the counters here if needed
         for (Pair<Pattern, Counter> pair : patternCounterPairs) {
