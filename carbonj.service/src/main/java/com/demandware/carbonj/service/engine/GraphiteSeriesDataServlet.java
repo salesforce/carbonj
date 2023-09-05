@@ -160,13 +160,16 @@ public class GraphiteSeriesDataServlet
             OutputStream output = res.getOutputStream();
 
             List<MetricsResponse.Series> metricsSeriesList = new ArrayList<MetricsResponse.Series>();
+            LOG.info( "carbonapi request: setting values..." );
             for ( Series series : seriesList )
             {
                 List<Double> valuesList = new ArrayList<Double>();
                 List<Boolean> isAbsent = new ArrayList<Boolean>();
                 for ( Double value : series.values )
                 {
-                    valuesList.add(value == null ? (double) 0 : value );
+                    LOG.info( String.format( "carbonapi request: found value [%s]",
+                        ( value == null ? "null" : (double) value ) ) );
+                    valuesList.add((Double)value);
                     isAbsent.add(false);
                 }
                 MetricsResponse.Series metricsSeries =
