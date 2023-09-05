@@ -160,26 +160,31 @@ public class GraphiteSeriesDataServlet
             OutputStream output = res.getOutputStream();
 
             List<MetricsResponse.Series> metricsSeriesList = new ArrayList<MetricsResponse.Series>();
+            LOG.info( "carbonapi request: setting values..." );
             for ( Series series : seriesList )
             {
-                List<Double> valuesList = new ArrayList<Double>();
-                List<Boolean> isAbsent = new ArrayList<Boolean>();
+                MetricsResponse.Series.Builder metricsSeriesBuilder = MetricsResponse.Series.newBuilder()
+                    .setName( series.name ).setStart( (int) series.start ).setEnd( (int) series.end ).setStep( (int) series.step );
                 for ( Double value : series.values )
                 {
-                    valuesList.add(value == null ? (double) 0 : value );
-                    isAbsent.add(false);
+                    LOG.info( String.format( "carbonapi request: found value [%s]",
+                        ( value == null ? "null" : (double) value ) ) );
+                    if ( value != null )
+                    {
+                        metricsSeriesBuilder =
+                            metricsSeriesBuilder.addValues( value ).addIsAbsent( false );
+                    }
                 }
-                MetricsResponse.Series metricsSeries =
-                    MetricsResponse.Series.newBuilder().setName( series.name ).setStart( (int)series.start )
-                        .setEnd(  (int)series.end ).setStep(  (int)series.step ).addAllValues( valuesList ).addAllIsAbsent(isAbsent).build();
 
+                MetricsResponse.Series metricsSeries = metricsSeriesBuilder.build();
                 metricsSeriesList.add( metricsSeries );
+
             }
 
             MetricsResponse.SeriesList response =
                 MetricsResponse.SeriesList.newBuilder().addAllSeriesList( metricsSeriesList ).build();
 
-            LOG.info( "carbonapi request: done formatting response " + response);
+            LOG.info( "carbonapi request: done formatting response " + response );
 
             try
             {
