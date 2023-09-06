@@ -171,8 +171,15 @@ public class GraphiteSeriesDataServlet
                 {
                     LOG.info( String.format( "carbonapi request: found value [%s]",
                         ( value == null ? "null" : (double) value ) ) );
-                    metricsSeriesBuilder.addValues(value);
-                    metricsSeriesBuilder.addIsAbsent(false);
+                    if ( value == null )
+                    {
+                        metricsSeriesBuilder.addIsAbsent(true);
+                    }
+                    else
+                    {
+                        metricsSeriesBuilder.addValues(value);
+                        metricsSeriesBuilder.addIsAbsent(false);
+                    }
                 }
 
                 MetricsResponse.Series metricsSeries = metricsSeriesBuilder.build();
