@@ -163,19 +163,19 @@ public class GraphiteSeriesDataServlet
             LOG.info( "carbonapi request: setting values..." );
             for ( Series series : seriesList )
             {
-                List<Double> valuesList = new ArrayList<Double>();
-                List<Boolean> isAbsent = new ArrayList<Boolean>();
+
+                MetricsResponse.Series.Builder metricsSeriesBuilder = MetricsResponse.Series.newBuilder().setName( series.name )
+                    .setStart( (int) series.start ).setEnd( (int) series.end );
+                metricsSeriesBuilder.setStep( (int) series.step );
                 for ( Double value : series.values )
                 {
                     LOG.info( String.format( "carbonapi request: found value [%s]",
                         ( value == null ? "null" : (double) value ) ) );
-                    valuesList.add((Double)value);
-                    isAbsent.add(false);
+                    metricsSeriesBuilder.addValues(value);
+                    metricsSeriesBuilder.addIsAbsent(false);
                 }
-                MetricsResponse.Series metricsSeries =
-                    MetricsResponse.Series.newBuilder().setName( series.name ).setStart( (int)series.start )
-                        .setEnd(  (int)series.end ).setStep(  (int)series.step ).addAllValues( valuesList ).addAllIsAbsent(isAbsent).build();
 
+                MetricsResponse.Series metricsSeries = metricsSeriesBuilder.build();
                 metricsSeriesList.add( metricsSeries );
             }
 
