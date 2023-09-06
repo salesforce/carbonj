@@ -165,21 +165,12 @@ public class GraphiteSeriesDataServlet
             {
 
                 MetricsResponse.Series.Builder metricsSeriesBuilder = MetricsResponse.Series.newBuilder().setName( series.name )
-                    .setStart( (int) series.start ).setEnd( (int) series.end );
-                metricsSeriesBuilder.setStep( (int) series.step );
+                    .setStart( (int) series.start ).setEnd( (int) series.end ).setStep( (int) series.step );
                 for ( Double value : series.values )
                 {
                     LOG.info( String.format( "carbonapi request: found value [%s]",
                         ( value == null ? "null" : (double) value ) ) );
-                    if ( value == null )
-                    {
-                        metricsSeriesBuilder.addIsAbsent(true);
-                    }
-                    else
-                    {
-                        metricsSeriesBuilder.addValues(value);
-                        metricsSeriesBuilder.addIsAbsent(false);
-                    }
+                    metricsSeriesBuilder = metricsSeriesBuilder.addValues( value ).addIsAbsent( false );
                 }
 
                 MetricsResponse.Series metricsSeries = metricsSeriesBuilder.build();
