@@ -163,32 +163,28 @@ public class GraphiteSeriesDataServlet
             LOG.info( "carbonapi request: setting values..." );
             for ( Series series : seriesList )
             {
-
-                MetricsResponse.Series.Builder metricsSeriesBuilder = MetricsResponse.Series.newBuilder().setName( series.name )
-                    .setStart( (int) series.start ).setEnd( (int) series.end ).setStep( (int) series.step );
+                MetricsResponse.Series.Builder metricsSeriesBuilder = MetricsResponse.Series.newBuilder()
+                    .setName( series.name ).setStart( (int) series.start ).setEnd( (int) series.end ).setStep( (int) series.step );
                 for ( Double value : series.values )
                 {
                     LOG.info( String.format( "carbonapi request: found value [%s]",
                         ( value == null ? "null" : (double) value ) ) );
-                    if ( value == null )
+                    if ( value != null )
                     {
-
-                        metricsSeriesBuilder = metricsSeriesBuilder.addIsAbsent( true );
-                    }
-                    else
-                    {
-                        metricsSeriesBuilder = metricsSeriesBuilder.addValues( value ).addIsAbsent( false );
+                        metricsSeriesBuilder =
+                            metricsSeriesBuilder.addValues( value ).addIsAbsent( false );
                     }
                 }
 
                 MetricsResponse.Series metricsSeries = metricsSeriesBuilder.build();
                 metricsSeriesList.add( metricsSeries );
+
             }
 
             MetricsResponse.SeriesList response =
                 MetricsResponse.SeriesList.newBuilder().addAllSeriesList( metricsSeriesList ).build();
 
-            LOG.info( "carbonapi request: done formatting response " + response);
+            LOG.info( "carbonapi request: done formatting response " + response );
 
             try
             {
