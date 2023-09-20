@@ -21,6 +21,8 @@ public class _MetricAggregationRule
     private MetricAggregationRule ecom_agRule;
     private MetricAggregationRule ocapiRule;
     private MetricAggregationRule ecom_agLatencyRule;
+    private MetricAggregationRule ecom_agRequestRule;
+    private MetricAggregationRule ecom_agRequest_new_Rule;
 
 
     @Before
@@ -29,6 +31,31 @@ public class _MetricAggregationRule
         ecom_agRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.<metric> (60) = sum <pod>.ecom.<realm>.<tenant>.*.*.<<metric>>" );
         ocapiRule  = MetricAggregationRule.parseDefinition( "ocapi.<metric> (60) drop = sum pod[0-9]{1,2}.ecom.*.*.*.*.ocapi.<<metric>>" );
         ecom_agLatencyRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag_latency.infrastructure.metrics.blade.reachability (60) = latency <pod>.infrastructure.metrics.blade.*.*.reachability" );
+
+        ecom_agRequestRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.requests.active-requests.count (60) c = sum <pod>.ecom.<realm>.<tenant>.*.*.requests.*.active-requests.count" );
+        ecom_agRequest_new_Rule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.requests.active-requests.count (60) c = sum <pod>.ecom.<realm>.<tenant>.*.*.requests.((?!on-request)(*)).active-requests.count" );
+    }
+
+    @Test
+    public void shouldApply_ecom_ag_request_rule()
+    {
+        String name1 = "pod1.ecom.aaba.aaba_prd.blade5-4.aaba_prd.requests.on-request.active-requests.count";
+        String name2 = "pod1.ecom.aaba.aaba_prd.blade5-4.aaba_prd.requests.pipeline.active-requests.count";
+        Result expected1 = new Result("pod1.ecom_ag.aaba.aaba_prd.requests.active-requests.count", SUM, false );
+        Result expected2 = new Result("pod1.ecom_ag.aaba.aaba_prd.requests.active-requests.count", SUM, false );
+        assertThat( ecom_agRequestRule.apply( name1 ), equalTo( expected1 ) );
+        assertThat( ecom_agRequestRule.apply( name2 ), equalTo( expected2 ) );
+    }
+
+    @Test
+    public void shouldApply_ecom_ag_request_new_rule()
+    {
+        String name1 = "pod1.ecom.aaba.aaba_prd.blade5-4.aaba_prd.requests.on-request.active-requests.count";
+        String name2 = "pod1.ecom.aaba.aaba_prd.blade5-4.aaba_prd.requests.pipeline.active-requests.count";
+        Result expected1 = new Result(null, null, false ); // Should drop on-request
+        Result expected2 = new Result("pod1.ecom_ag.aaba.aaba_prd.requests.active-requests.count", SUM, false );
+        assertThat( ecom_agRequest_new_Rule.apply( name1 ), equalTo( expected1 ) );
+        assertThat( ecom_agRequest_new_Rule.apply( name2 ), equalTo( expected2 ) );
     }
     @Test
     public void shouldApply_ecom_ag_rule()

@@ -15,7 +15,7 @@ from pathlib import Path
 
 prd_base_delete_url = 'http://carbonj-{shard}-{replica}.carbonj-{shard}.carbonj.svc.cluster.local:2001/_dw/rest/carbonj/metrics/deleteAPI/{metric_id}?'
 local_base_delete_url = 'http://localhost:56687/_dw/rest/carbonj/metrics/deleteAPI/{}?'
-shard_count = 15
+shard_count = 27
 is_prd = True
 file_name = ''.join(["delete-", str(datetime.datetime.now().date()), str(datetime.datetime.now().time()), ".txt"])
 
@@ -57,7 +57,7 @@ def _get_int_list(list_name, message):
 
 
 def _get_shards_replicas():
-    shards = _get_int_list("shards", "What are the shrards you would like to delete metrics on Ex: 1, 2, 3? ")
+    shards = _get_int_list("shards", "What are the shards you would like to delete metrics on Ex: 1, 2, 3? ")
     replicas = []
     if shards:
         replicas = _get_int_list("replicas", "What are the replicas you would like to delete metrics on Ex: 0,1? ")

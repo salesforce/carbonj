@@ -61,7 +61,7 @@ public class KinesisConsumer extends Thread {
         this.kinesisStreamName = kinesisStreamName;
         this.kinesisApplicationName = kinesisApplicationName;
         this.kinesisConfig = kinesisConfig;
-        this.checkPointMgr =  Preconditions.checkNotNull(checkPointMgr);
+        this.checkPointMgr = checkPointMgr;
         this.noOfRestarts = noOfRestarts;
         this.kinesisConsumerRegion = kinesisConsumerRegion;
         log.info("Kinesis consumer started");

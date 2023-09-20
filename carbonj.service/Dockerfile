@@ -6,7 +6,7 @@
 #
 
 FROM quay.io/centos/centos:stream8
-ARG DEPENDENCY=target/dependency
+ARG DEPENDENCY=build/docker/dependency
 ARG VERSION=latest
 
 # install dependencies
