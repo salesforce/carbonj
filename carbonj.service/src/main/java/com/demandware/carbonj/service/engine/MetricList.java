@@ -40,8 +40,6 @@ public class MetricList implements StatsAware
 
     volatile private List<Pair<Pattern, Counter>> patternsAndCounters = new ArrayList<>(  );
 
-    volatile private boolean empty = patternsAndCounters.isEmpty();
-
     private final String confSrc;
 
     private final ConfigServerUtil configServerUtil;
@@ -156,13 +154,7 @@ public class MetricList implements StatsAware
             log.info(String.format("Metric list [%s] configuration file has changed. File: [%s]", name, confFile));
 
             List<String> oldLines = this.configLines;
-<<<<<<< HEAD
-            List<Pair<Pattern, Counter>> newPatternsAndCounters = parseConfig( lines );
-            this.patternsAndCounters = newPatternsAndCounters;
-=======
-
-            this.patterns = parseConfig( lines );
->>>>>>> origin/master
+            this.patternsAndCounters = parseConfig( lines );
             this.configLines = lines;
             StringsCache.invalidateCache();
             log.info(String.format("Metric list [%s] updated.", name));
