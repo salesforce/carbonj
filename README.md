@@ -57,7 +57,7 @@ carbonj.namespace | Kubernetes namespace to deploy to | carbonj
 carbonj.version | Version of CarbonJ to deploy | 1.1.17
 carbonj.nodes | Number of replicas to run per shard | 2
 carbonj.instanceType | AWS instance type to deploy to | r5.2xlarge
-carbonj.registry | Container registry to pull image from | chrbayer84
+carbonj.registry | Container registry to pull image from | salesforce
 carbonj.memory.xms | Initial Java heap size (-Xms value) | 2G
 carbonj.memory.xmx | Maximum Java heap size (-Xmx value) | 18G
 carbonj.spring.profiles.active | Active Spring Profile to use | dev

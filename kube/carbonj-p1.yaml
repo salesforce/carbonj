@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: carbonj-p1
-        image: "chrbayer84/carbonj:1.1.5-SNAPSHOT"
+        image: "salesforce/carbonj:1.1.5-SNAPSHOT"
         imagePullPolicy: Always
         env:
           - name: XMS_SIZE

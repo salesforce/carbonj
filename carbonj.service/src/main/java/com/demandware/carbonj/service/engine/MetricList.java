@@ -10,6 +10,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.util.StatsAware;
+import com.demandware.carbonj.service.strings.StringsCache;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.re2j.Pattern;
@@ -68,6 +69,16 @@ public class MetricList implements StatsAware
             return false;
         }
 
+        StringsCache.State state = StringsCache.getState(name);
+        boolean isBlackListed = false;
+        if (state != null && state.getBlackListed() != null) {
+            isBlackListed = state.getBlackListed();
+            if (isBlackListed) {
+                droppedMetrics.inc();
+            }
+            return isBlackListed;
+        }
+
         List<Pair<Pattern, Counter>> currentPatternsAndCounters = patternsAndCounters; // copy so we don't keep hitting the volatile barrier
         for ( int i = 0; i < currentPatternsAndCounters.size(); i++ )
         {
@@ -77,7 +88,8 @@ public class MetricList implements StatsAware
             {
                 patternsAndCounters.get(i).getRight().inc();
                 droppedMetrics.inc();
-                return true;
+                isBlackListed = true;
+                break;
             }
 
             long startTime = 0;
@@ -93,11 +105,15 @@ public class MetricList implements StatsAware
                     long duration = endTime - startTime; // Calculate duration in nanoseconds
                     log.debug("Pattern match runtime for {}: {} nanoseconds", p.getLeft().pattern(), duration);
                 }
-                return true;
+                isBlackListed = true;
+                break;
             }
 
         }
-        return false;
+        if (state != null) {
+            state.setBlackListed(isBlackListed);
+        }
+        return isBlackListed;
     }
 
     public void reload()
@@ -117,7 +133,7 @@ public class MetricList implements StatsAware
                 }
                 lines = FileUtils.readLines(confFile, Charsets.UTF_8);
             } else if (confSrc.equalsIgnoreCase("server")) {
-                if (configServerUtil == null || !configServerUtil.getConfigLines(name).isPresent()) {
+                if (configServerUtil == null || configServerUtil.getConfigLines(name).isEmpty()) {
                     log.warn("Unable to read metric list configuration from config server. Falling back to file.");
                     if (!confFile.exists()) {
                         log.warn(String.format("Metric list [%s] configuration file doesn't exist. File: [%s]", name, confFile));
@@ -140,9 +156,15 @@ public class MetricList implements StatsAware
             log.info(String.format("Metric list [%s] configuration file has changed. File: [%s]", name, confFile));
 
             List<String> oldLines = this.configLines;
+<<<<<<< HEAD
             List<Pair<Pattern, Counter>> newPatternsAndCounters = parseConfig( lines );
             this.patternsAndCounters = newPatternsAndCounters;
+=======
+
+            this.patterns = parseConfig( lines );
+>>>>>>> origin/master
             this.configLines = lines;
+            StringsCache.invalidateCache();
             log.info(String.format("Metric list [%s] updated.", name));
             if( log.isDebugEnabled() )
             {

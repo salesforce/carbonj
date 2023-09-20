@@ -6,9 +6,9 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.db.index.cfgMetricIndex;
+import com.demandware.carbonj.service.engine.kinesis.cfgCheckPointMgr;
 import com.demandware.carbonj.service.events.cfgEventBus;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.cfgAccumulator;
@@ -16,7 +16,6 @@ import com.demandware.carbonj.service.admin.CarbonjAdmin;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.cfgTimeSeriesStorage;
 import com.demandware.carbonj.service.db.index.NameUtils;
-import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.Quota;
 import com.demandware.carbonj.service.engine.netty.NettyChannel;
 import com.demandware.carbonj.service.engine.netty.NettyServer;
@@ -33,7 +32,10 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import org.eclipse.jetty.server.NCSARequestLog;
+//import org.eclipse.jetty.server.NCSARequestLog;
+import org.eclipse.jetty.server.CustomRequestLog;
+import org.eclipse.jetty.server.RequestLog;
+import org.eclipse.jetty.server.Slf4jRequestLogWriter;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +57,6 @@ import org.springframework.web.client.RestTemplate;
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
@@ -65,8 +66,8 @@ import java.util.function.Consumer;
 import static com.demandware.carbonj.service.config.ConfigUtils.locateConfigFile;
 
 @Configuration
-@Import( { cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgMetric.class, cfgCentralThreadPools.class,
-                cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class } )
+@Import( { cfgMetric.class, cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgCentralThreadPools.class,
+                cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class, cfgCheckPointMgr.class } )
 public class cfgCarbonJ
 {
     private static final Logger log = LoggerFactory.getLogger( cfgCarbonJ.class );
@@ -76,6 +77,8 @@ public class cfgCarbonJ
     @Autowired StringsCache stringsCache;
 
     @Autowired MetricRegistry metricRegistry;
+
+    @Autowired NameUtils nameUtils;
 
     @Value( "${server.port:56788}" ) private int jettyPort;
 
@@ -170,16 +173,6 @@ public class cfgCarbonJ
     @Value( "${namespaces.runInactiveNamespaceCheckEverySeconds:300}" ) private int
                     runInactiveNamespaceCheckEverySeconds = 300;
 
-    @Value( "${metrics.store.checkPoint.dir:work/carbonj-checkpoint}" ) private String checkPointDir;
-
-    @Value( "${metrics.store.checkPoint.offset.default.mins:5}" ) private int defaultCheckPointOffset;
-
-    @Value( "${metrics.store.checkPoint.provider:filesystem}" ) private String checkPointProvider;
-
-    @Value( "${metrics.store.checkPoint.applicationName:cjajna}" ) private String checkPointApplicationName;
-
-    @Value( "${metrics.store.checkPoint.table.provisioned.throughput:2}" ) private int
-                    checkPointTableProvisionedThroughput;
 
     @Value( "${dest.config.dir:config}" ) private String destConfigDir;
 
@@ -247,11 +240,6 @@ public class cfgCarbonJ
                         destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, auditRulesSrc, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
-    }
-
-    @Bean NameUtils nameUtils()
-    {
-        return new NameUtils( new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
     }
 
     @Bean PointFilter pointFilter( NameUtils nameUtils )
@@ -540,52 +528,11 @@ public class cfgCarbonJ
         } );
     }
 
-    @Bean CarbonjAdmin cjAdmin( InputQueue agg, NameUtils nu )
+    @Bean CarbonjAdmin cjAdmin( InputQueue agg, NameUtils nameUtils )
     {
-        return new CarbonjAdmin( agg, nu, Optional.ofNullable( db ) );
+        return new CarbonjAdmin( agg, nameUtils, Optional.ofNullable( db ) );
     }
 
-    @Bean CheckPointMgr<Date> checkPointMgr( ScheduledExecutorService s, KinesisConfig kinesisConfig,
-                                             @Autowired( required = false ) @Qualifier( "accumulator" ) Accumulator accu )
-                    throws Exception
-    {
-        if ( !kinesisConfig.isKinesisConsumerEnabled() || accu == null )
-        {
-            log.debug( "CheckPointMgr is disabled because kinesis consumer is disabled or accumulator is null: Kinesis"
-                            + " consumer: {}, Accumulator: {}", kinesisConfig.isKinesisConsumerEnabled(), accu );
-            return null;
-        }
-
-        CheckPointMgr<Date> checkPointMgr;
-        if ( checkPointProvider.equalsIgnoreCase( "dynamodb" ) )
-        {
-            log.info( "Creating Dynamo DB Checkpoint Mgr" );
-            AmazonDynamoDB dynamoDbClient = AmazonDynamoDBClientBuilder.standard().build();
-            checkPointMgr = new DynamoDbCheckPointMgr( dynamoDbClient, checkPointApplicationName,
-                            defaultCheckPointOffset, checkPointTableProvisionedThroughput );
-        }
-        else
-        {
-            log.info( "Creating File Checkpoint Mgr" );
-            checkPointMgr = new FileCheckPointMgr( Paths.get( checkPointDir ), defaultCheckPointOffset );
-        }
-
-        s.scheduleWithFixedDelay( () -> {
-            try
-            {
-                long slotTs = accu.getMaxClosedSlotTs() * 1000L;
-                if ( slotTs > 0 )
-                {
-                    checkPointMgr.checkPoint( new Date( slotTs ) );
-                }
-            }
-            catch ( Exception e )
-            {
-                log.error( "Error while checkpointing", e );
-            }
-        }, 120, 60, TimeUnit.SECONDS );
-        return checkPointMgr;
-    }
 
     /*
     Graphite re-configuration summary:
@@ -653,23 +600,11 @@ public class cfgCarbonJ
             factory.addServerCustomizers( server -> {
                 server.setAttribute( "org.eclipse.jetty.server.Request.maxFormContentSize", jettyMaxFormContentSize );
 
-                // TODO change to use logback ch.qos.logback.access.jetty.RequestLogImpl?
-                NCSARequestLog ncsaLog = new NCSARequestLog( jettyLogfilePath );
-                ncsaLog.setExtended( true );
-                ncsaLog.setAppend( true );
-                ncsaLog.setLogTimeZone( "GMT" );
-                ncsaLog.setRetainDays( jettyRequestLogRetentionDays );
-
-                RequestLogHandler requestLogHandler = new RequestLogHandler();
-                requestLogHandler.setRequestLog( ncsaLog );
-                requestLogHandler.setHandler( server.getHandler() );
-                server.setHandler( requestLogHandler );
+                // new jetty 11 uses a slf4j log writer for performance reasons:
+                // https://stackoverflow.com/questions/68737248/how-to-override-request-logging-mechanism-in-jetty-11-0-6
+                RequestLog ncsaLog = new CustomRequestLog( jettyLogfilePath,  CustomRequestLog.EXTENDED_NCSA_FORMAT);
+                server.setRequestLog(ncsaLog);
             } );
         }
-    }
-
-    @Bean public DatabaseMetrics databaseMetrics( MetricRegistry metricRegistry )
-    {
-        return new DatabaseMetrics( metricRegistry );
     }
 }
