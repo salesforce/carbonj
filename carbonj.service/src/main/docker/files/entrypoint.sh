@@ -54,14 +54,30 @@ for SVC_PROP in `compgen -A variable | grep "^SVC_PROP_"` ; do
 	printf '%s=%s\n' "$var_lowercase" "${!SVC_PROP}" >> $SERVICEDIR/config/overrides.properties
 done
 
+YOURKIT_PROFILER_OPTS=
+YOURKIT_PROFILER_AGENT_FILE=/app/lib/libyjpagent.so
+
 # download optional yourkit profiler at runtime
-if [ "$ENABLE_YOURKIT_PROFILER" == "true" ]
-then
-  wget https://download.yourkit.com/yjp/2017.02/YourKit-JavaProfiler-2017.02-b75.zip -P /tmp/ && \
-    unzip /tmp/YourKit-JavaProfiler-2017.02-b75.zip && mv YourKit-JavaProfiler-2017.02 /usr/local/yjp/ && \
-    rm /tmp/YourKit-JavaProfiler-2017.02-b75.zip
-  wget https://download.yourkit.com/yjp/2017.02/yjp.jar -P /tmp
-  mv /tmp/yjp.jar /usr/local/yjp/lib/yjp.jar
+if [ "${ENABLE_YOURKIT_PROFILER}" == "true" ]; then
+  if [ ! -f ${YOURKIT_PROFILER_AGENT_FILE} ]; then
+    if [ -z $YOURKIT_PROFILER_VERSION ]; then
+      YOURKIT_PROFILER_VERSION=2023.5-b229
+    fi
+    YOURKIT_PROFILER_VERSION_PREFIX=${YOURKIT_PROFILER_VERSION%-*}
+    YOURKIT_PROFILER_ZIP_FILE=YourKit-JavaProfiler-${YOURKIT_PROFILER_VERSION}.zip
+    YOURKIT_PROFILER_UNZIPPED_DIR=YourKit-JavaProfiler-${YOURKIT_PROFILER_VERSION_PREFIX}
+    if [ ! -d /tmp/${YOURKIT_PROFILER_UNZIPPED_DIR} ]; then
+      if [ ! -f /tmp/${YOURKIT_PROFILER_ZIP_FILE} ]; then
+        wget https://download.yourkit.com/yjp/${YOURKIT_PROFILER_VERSION_PREFIX}/${YOURKIT_PROFILER_ZIP_FILE} -P /tmp || wget https://archive.yourkit.com/yjp/${YOURKIT_PROFILER_VERSION_PREFIX}/${YOURKIT_PROFILER_ZIP_FILE} -P /tmp
+      fi
+      unzip -q -d /tmp /tmp/${YOURKIT_PROFILER_ZIP_FILE}
+      rm -f /tmp/${YOURKIT_PROFILER_ZIP_FILE}
+    fi
+    cp -f /tmp/${YOURKIT_PROFILER_UNZIPPED_DIR}/bin/linux-x86-64/libyjpagent.so ${YOURKIT_PROFILER_AGENT_FILE}
+    chmod 444 ${YOURKIT_PROFILER_AGENT_FILE}
+    rm -rf /tmp/${YOURKIT_PROFILER_UNZIPPED_DIR}
+  fi
+  YOURKIT_PROFILER_OPTS="-agentpath:${YOURKIT_PROFILER_AGENT_FILE}=port=20001"
 fi
 
 #########################
@@ -119,6 +135,6 @@ else
 fi
 
 cd /app
-exec java $JAVA_OPTS $JAVA_OPTS_OVERRIDE --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED \
+exec java $JAVA_OPTS $YOURKIT_PROFILER_OPTS $JAVA_OPTS_OVERRIDE --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED \
 --add-opens java.base/java.util=ALL-UNNAMED -Dlogback.debug=true -cp /app:/app/lib/* com.demandware.carbonj.service.engine.CarbonJServiceMain \
 --spring.config.location=$CONFIG_LOCATIONS
