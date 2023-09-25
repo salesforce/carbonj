@@ -10,7 +10,12 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.cfgAccumulator;
-import com.demandware.carbonj.service.engine.*;
+import com.demandware.carbonj.service.engine.CheckPointMgr;
+import com.demandware.carbonj.service.engine.DynamoDbCheckPointMgr;
+import com.demandware.carbonj.service.engine.FileCheckPointMgr;
+import com.demandware.carbonj.service.engine.KinesisConfig;
+import com.demandware.carbonj.service.engine.cfgCarbonJ;
+import com.demandware.carbonj.service.engine.cfgKinesis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,10 +52,13 @@ public class cfgCheckPointMgr {
                                       @Autowired( required = false ) @Qualifier( "accumulator" ) Accumulator accu )
             throws Exception
     {
-        if ( !kinesisConfig.isKinesisConsumerEnabled() || accu == null )
+        if (!kinesisConfig.isKinesisConsumerEnabled()) {
+            log.warn("CheckPointMgr is disabled because kinesis consumer is disabled");
+            return null;
+        }
+        if (accu == null)
         {
-            log.debug( "CheckPointMgr is disabled because kinesis consumer is disabled or accumulator is null: Kinesis"
-                    + " consumer: {}, Accumulator: {}", kinesisConfig.isKinesisConsumerEnabled(), accu );
+            log.warn("CheckPointMgr is disabled because accumulator is null");
             return null;
         }
 
