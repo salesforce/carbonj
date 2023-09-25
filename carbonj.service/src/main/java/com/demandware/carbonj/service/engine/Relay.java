@@ -7,6 +7,7 @@
 package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.strings.StringsCache;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,11 +23,11 @@ import java.util.function.Consumer;
 public class Relay
     implements Consumer<DataPoints>
 {
-    private static Logger log = LoggerFactory.getLogger( Relay.class );
+    private static final Logger log = LoggerFactory.getLogger( Relay.class );
 
     private final MetricRegistry metricRegistry;
 
-    private String type;
+    private final String type;
 
     private final int refreshIntervalInMillis;
 
@@ -139,6 +140,7 @@ public class Relay
             }
 
             reconfigureRelayRouter( newRules );
+            StringsCache.invalidateCache();
         }
         catch ( Exception e )
         {

@@ -103,6 +103,8 @@ public class StringsCache implements StatsAware
         private final String key;
         private volatile Boolean isBlackListed;
 
+        private volatile String[] relayDestinations;
+
         private State(String key) {
             this.key = key;
         }
@@ -117,6 +119,14 @@ public class StringsCache implements StatsAware
 
         public void setBlackListed(Boolean blackListed) {
             isBlackListed = blackListed;
+        }
+
+        public String[] getRelayDestinations() {
+            return relayDestinations;
+        }
+
+        public void setRelayDestinations(String[] relayDestinations) {
+            this.relayDestinations = relayDestinations;
         }
     }
 }
