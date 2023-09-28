@@ -100,10 +100,10 @@ public class GraphiteSeriesDataServlet
         }
         else if ( protobuf )
         {
-            LOG.info( "carbonapi request: found protobuf request" );
+            //LOG.info( "carbonapi request: found protobuf request" );
             res.setContentType( "application/protobuf" );
             // target = req.getParameter( "query" );
-            LOG.info( "carbonapi request: target from param: " + target + " --- blacklist: " + queryBlacklist );
+            //LOG.info( "carbonapi request: target from param: " + target + " --- blacklist: " + queryBlacklist );
         }
         else
         {
@@ -152,23 +152,23 @@ public class GraphiteSeriesDataServlet
         }
         else if ( protobuf )
         {
-            LOG.info( "carbonapi request: processing request" );
+            //LOG.info( "carbonapi request: processing request" );
             List<Series> seriesList = store.fetchSeriesData( new Query( target, Integer.parseInt( from ),
                 Integer.parseInt( until ), now, System.currentTimeMillis() ) );
 
-            LOG.info( "carbonapi request: formatting response" );
+            //LOG.info( "carbonapi request: formatting response" );
             OutputStream output = res.getOutputStream();
 
             List<MetricsResponse.Series> metricsSeriesList = new ArrayList<MetricsResponse.Series>();
-            LOG.info( "carbonapi request: setting values..." );
+            //LOG.info( "carbonapi request: setting values..." );
             for ( Series series : seriesList )
             {
                 MetricsResponse.Series.Builder metricsSeriesBuilder = MetricsResponse.Series.newBuilder()
                     .setName( series.name ).setStart( (int) series.start ).setEnd( (int) series.end ).setStep( (int) series.step );
                 for ( Double value : series.values )
                 {
-                    LOG.info( String.format( "carbonapi request: found value [%s]",
-                        ( value == null ? "null" : (double) value ) ) );
+                    //LOG.info( String.format( "carbonapi request: found value [%s]",
+                        //( value == null ? "null" : (double) value ) ) );
                     if ( value != null )
                     {
                         metricsSeriesBuilder =
@@ -184,11 +184,11 @@ public class GraphiteSeriesDataServlet
             MetricsResponse.SeriesList response =
                 MetricsResponse.SeriesList.newBuilder().addAllSeriesList( metricsSeriesList ).build();
 
-            LOG.info( "carbonapi request: done formatting response " + response );
+            //LOG.info( "carbonapi request: done formatting response " + response );
 
             try
             {
-                LOG.info( "carbonapi request: writing response" );
+                //LOG.info( "carbonapi request: writing response" );
                 response.writeTo( output );
             }
             catch ( Exception e )

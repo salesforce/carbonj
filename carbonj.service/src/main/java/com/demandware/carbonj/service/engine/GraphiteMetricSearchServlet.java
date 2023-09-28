@@ -130,7 +130,7 @@ public class GraphiteMetricSearchServlet
             res.getWriter().close();
         }
         else if (protobuf) {
-            LOG.info( "carbonapi request: formatting response" );
+            //LOG.info( "carbonapi request: formatting response" );
             OutputStream output = res.getOutputStream();
 
             List<MetricsResponse.Metric> metricList = new ArrayList<MetricsResponse.Metric>();
@@ -143,10 +143,10 @@ public class GraphiteMetricSearchServlet
             MetricsResponse.MetricList response =
                     MetricsResponse.MetricList.newBuilder().setName("FindResponse").addAllMetrics(metricList).build();
 
-            LOG.info( "carbonapi request: done formatting response " + response);
+            //LOG.info( "carbonapi request: done formatting response " + response);
             try
             {
-                LOG.info( "carbonapi request: writing response" );
+                //LOG.info( "carbonapi request: writing response" );
                 response.writeTo( output );
             }
             catch ( Exception e )
