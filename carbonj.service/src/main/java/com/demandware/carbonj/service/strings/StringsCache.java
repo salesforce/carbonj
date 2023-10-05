@@ -6,6 +6,8 @@
  */
 package com.demandware.carbonj.service.strings;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -105,6 +107,8 @@ public class StringsCache implements StatsAware
 
         private volatile String[] relayDestinations;
 
+        private volatile ConcurrentMap<Integer, Boolean> aggregationRuleMap = new ConcurrentHashMap<>();
+
         private State(String key) {
             this.key = key;
         }
@@ -127,6 +131,10 @@ public class StringsCache implements StatsAware
 
         public void setRelayDestinations(String[] relayDestinations) {
             this.relayDestinations = relayDestinations;
+        }
+
+        public ConcurrentMap<Integer, Boolean> getAggregationRuleMap() {
+            return aggregationRuleMap;
         }
     }
 }

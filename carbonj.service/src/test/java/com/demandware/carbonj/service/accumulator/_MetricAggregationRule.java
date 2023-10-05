@@ -28,12 +28,12 @@ public class _MetricAggregationRule
     @Before
     public void setUp()
     {
-        ecom_agRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.<metric> (60) = sum <pod>.ecom.<realm>.<tenant>.*.*.<<metric>>" );
-        ocapiRule  = MetricAggregationRule.parseDefinition( "ocapi.<metric> (60) drop = sum pod[0-9]{1,2}.ecom.*.*.*.*.ocapi.<<metric>>" );
-        ecom_agLatencyRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag_latency.infrastructure.metrics.blade.reachability (60) = latency <pod>.infrastructure.metrics.blade.*.*.reachability" );
+        ecom_agRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.<metric> (60) = sum <pod>.ecom.<realm>.<tenant>.*.*.<<metric>>", 0 );
+        ocapiRule  = MetricAggregationRule.parseDefinition( "ocapi.<metric> (60) drop = sum pod[0-9]{1,2}.ecom.*.*.*.*.ocapi.<<metric>>", 1 );
+        ecom_agLatencyRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag_latency.infrastructure.metrics.blade.reachability (60) = latency <pod>.infrastructure.metrics.blade.*.*.reachability", 2 );
 
-        ecom_agRequestRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.requests.active-requests.count (60) c = sum <pod>.ecom.<realm>.<tenant>.*.*.requests.*.active-requests.count" );
-        ecom_agRequest_new_Rule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.requests.active-requests.count (60) c = sum <pod>.ecom.<realm>.<tenant>.*.*.requests.((?!on-request)(*)).active-requests.count" );
+        ecom_agRequestRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.requests.active-requests.count (60) c = sum <pod>.ecom.<realm>.<tenant>.*.*.requests.*.active-requests.count", 3 );
+        ecom_agRequest_new_Rule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.requests.active-requests.count (60) c = sum <pod>.ecom.<realm>.<tenant>.*.*.requests.((?!on-request)(*)).active-requests.count", 4 );
     }
 
     @Test

@@ -7,10 +7,12 @@
 package com.demandware.carbonj.service.accumulator;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.demandware.carbonj.service.strings.StringsCache;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -87,9 +89,11 @@ class MetricAggregationRulesLoader
 
     private List<MetricAggregationRule> parseConfig( List<String> lines )
     {
-        return lines.stream()
-                    .map( line -> MetricAggregationRule.parseDefinition( line )  )
-                    .collect( Collectors.toList());
+        List<MetricAggregationRule> metricAggregationRules = new ArrayList<>();
+        for (int i = 0; i < lines.size(); i++) {
+            metricAggregationRules.add(MetricAggregationRule.parseDefinition(lines.get(i), i));
+        }
+        return metricAggregationRules;
     }
 
     @Override

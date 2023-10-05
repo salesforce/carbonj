@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.demandware.carbonj.service.strings.StringsCache;
 import com.google.common.base.MoreObjects;
 import org.apache.commons.lang3.text.StrSubstitutor;
 
@@ -21,6 +22,8 @@ import com.google.common.base.Preconditions;
 
 class MetricAggregationRule
 {
+    private final int id;
+
     final private String inputPattern;
     final private String outputPattern;
     final MetricAggregationMethod method;
@@ -100,7 +103,7 @@ class MetricAggregationRule
         }
     }
 
-    public static MetricAggregationRule parseDefinition( String line)
+    public static MetricAggregationRule parseDefinition(String line, int id)
     {
         String[] parts = line.split( "=", 2 );
         String left_side = parts[0].trim();
@@ -140,14 +143,15 @@ class MetricAggregationRule
         String method = rightParts[0].trim().toUpperCase();
         String inputPattern = rightParts[1].trim();
 
-        return new MetricAggregationRule(inputPattern, frequency, outputPattern,
+        return new MetricAggregationRule(id, inputPattern, frequency, outputPattern,
             MetricAggregationMethod.valueOf( method ), dropOriginal, stopRule);
     }
 
 
-    public MetricAggregationRule( String inputPattern, int frequency, String outputPattern,
+    public MetricAggregationRule(int id, String inputPattern, int frequency, String outputPattern,
                                   MetricAggregationMethod method, boolean dropOriginal, boolean stopRule)
     {
+        this.id = id;
         this.inputPattern = Preconditions.checkNotNull( inputPattern );
         this.outputPattern = Preconditions.checkNotNull( outputPattern );
         this.frequency = frequency;
@@ -173,7 +177,7 @@ class MetricAggregationRule
         {
             String part = inputPatternParts[k];
 
-            if( part.indexOf( "<<" ) >= 0 && part.indexOf( ">" ) > 0 )
+            if(part.contains("<<") && part.indexOf( ">" ) > 0 )
             {
                 int i = part.indexOf( "<<" );
                 int j = part.indexOf( ">>" );
@@ -188,7 +192,7 @@ class MetricAggregationRule
                 }
             }
 
-            if( part.indexOf( "<" ) >= 0 && part.indexOf( ">" ) > 0 )
+            if(part.contains("<") && part.indexOf( ">" ) > 0 )
             {
                 int i = part.indexOf( "<" );
                 int j = part.indexOf( ">" );
@@ -229,8 +233,17 @@ class MetricAggregationRule
 
     private String aggregatedName(String name)
     {
+        StringsCache.State state = StringsCache.getState(name);
+        if (state != null && state.getAggregationRuleMap().containsKey(id)
+                && state.getAggregationRuleMap().get(id) == Boolean.FALSE) {
+            return null;
+        }
+
         Matcher m = pattern.matcher( name );
         boolean success = m.find();
+        if (state != null) {
+            state.getAggregationRuleMap().putIfAbsent(id, success);
+        }
         if( success )
         {
             Map<String, String> fieldValues = new HashMap<>(  );
@@ -239,6 +252,7 @@ class MetricAggregationRule
                 fieldValues.put( fieldName,  m.group( fieldName ));
             }
 
+            //noinspection deprecation
             return StrSubstitutor.replace( outputTemplate, fieldValues, "%(", ")" );
         }
         else
