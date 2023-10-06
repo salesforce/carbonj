@@ -48,6 +48,9 @@ public class cfgAccumulator
     @Value( "${aggregation.enabled:true}" )
     private boolean aggregationEnabled;
 
+    @Value( "${aggregation.rule.cache.enabled:false}" )
+    private boolean aggregationRuleCacheEnabled;
+
     // TODO duplicated in different cfg beans
     @Value( "${app.servicedir:}" )
     private String serviceDir;
@@ -68,8 +71,8 @@ public class cfgAccumulator
 
     private MetricAggregationPolicyProvider getMetricAggregationPolicyProvider(ScheduledExecutorService s) {
         File rulesFile = locateConfigFile( serviceDir, metricAggregationRulesConfigFile );
-        MetricAggregationRulesLoader rulesLoader = new MetricAggregationRulesLoader( rulesFile );
-        s.scheduleWithFixedDelay( ( ) -> rulesLoader.reload(), 60, 45, TimeUnit.SECONDS );
+        MetricAggregationRulesLoader rulesLoader = new MetricAggregationRulesLoader( rulesFile, aggregationRuleCacheEnabled );
+        s.scheduleWithFixedDelay(rulesLoader::reload, 60, 45, TimeUnit.SECONDS );
 
         MetricAggregationPolicySource policySource = new MetricAggregationPolicySource( rulesLoader );
 

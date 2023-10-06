@@ -27,7 +27,6 @@ class MetricAggregationRule
     final private String inputPattern;
     final private String outputPattern;
     final MetricAggregationMethod method;
-    final private int frequency;
 
     final private String outputTemplate;
     final private Pattern pattern;
@@ -38,7 +37,7 @@ class MetricAggregationRule
     // do not check any other rules after this one has matched.
     final private boolean stopRule;
 
-    final public static Result RESULT_NO_RULE_APPLIED = new Result( null, null, false );
+    private final boolean aggregationRuleCacheEnabled;
 
     public static class Result
     {
@@ -103,7 +102,7 @@ class MetricAggregationRule
         }
     }
 
-    public static MetricAggregationRule parseDefinition(String line, int id)
+    public static MetricAggregationRule parseDefinition(String line, int id, boolean aggregationRuleCacheEnabled)
     {
         String[] parts = line.split( "=", 2 );
         String left_side = parts[0].trim();
@@ -144,18 +143,19 @@ class MetricAggregationRule
         String inputPattern = rightParts[1].trim();
 
         return new MetricAggregationRule(id, inputPattern, frequency, outputPattern,
-            MetricAggregationMethod.valueOf( method ), dropOriginal, stopRule);
+            MetricAggregationMethod.valueOf( method ), dropOriginal, stopRule, aggregationRuleCacheEnabled);
     }
 
 
     public MetricAggregationRule(int id, String inputPattern, int frequency, String outputPattern,
-                                  MetricAggregationMethod method, boolean dropOriginal, boolean stopRule)
+                                 MetricAggregationMethod method, boolean dropOriginal, boolean stopRule,
+                                 boolean aggregationRuleCacheEnabled)
     {
         this.id = id;
         this.inputPattern = Preconditions.checkNotNull( inputPattern );
         this.outputPattern = Preconditions.checkNotNull( outputPattern );
-        this.frequency = frequency;
         this.stopRule = stopRule;
+        this.aggregationRuleCacheEnabled = aggregationRuleCacheEnabled;
 
         Preconditions.checkArgument( frequency == 60,
             "Aggregation for frequency [%s] is not supported. For now only %s second frequency is supported",
@@ -233,7 +233,7 @@ class MetricAggregationRule
 
     private String aggregatedName(String name)
     {
-        StringsCache.State state = StringsCache.getState(name);
+        StringsCache.State state = aggregationRuleCacheEnabled ? StringsCache.getState(name) : null;
         if (state != null && state.getAggregationRuleMap().containsKey(id)
                 && state.getAggregationRuleMap().get(id) == Boolean.FALSE) {
             return null;

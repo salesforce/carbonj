@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,7 +50,7 @@ public class RelayRules
 
     private final String type;
 
-    private final boolean cachingEnabled;
+    private final boolean relayCacheEnabled;
 
     private final String[] emptyResult = new String[0];
     /**
@@ -63,25 +64,25 @@ public class RelayRules
         this.confFile = null;
         this.configLines = new ArrayList<>( );
         this.rules = new LinkedHashMap<>();
-        this.empty = rules.isEmpty();
-        this.cachingEnabled = "relay".equals(type);
+        this.empty = true;
+        this.relayCacheEnabled = false;
     }
 
     /**
      * Initializes instance with rules loaded from file.
      *
-     * @param confFile
+     * @param confFile relay rules config file
      */
-    public RelayRules( String type, File confFile, String confSrc, ConfigServerUtil configServerUtil )
+    public RelayRules( String type, File confFile, String confSrc, boolean relayCacheEnabled, ConfigServerUtil configServerUtil )
     {
         this.type = type;
         this.confFile = Preconditions.checkNotNull( confFile );
         this.confSrc = Preconditions.checkNotNull(confSrc);
+        this.relayCacheEnabled = relayCacheEnabled;
         this.configServerUtil = configServerUtil;
         log.debug( String.format( "Creating relay rules with config file [%s]", confFile ) );
         load();
         log.debug( "Relay rules created" );
-        cachingEnabled = "relay".equals(type);
     }
 
     public boolean isEmpty()
@@ -107,7 +108,7 @@ public class RelayRules
      *
      * @param metricName metric name.
      *
-     * @return
+     * @return an array of destination groups
      */
     public String[] getDestinationGroups( String metricName )
     {
@@ -122,11 +123,9 @@ public class RelayRules
         }
 
         // Support relay type only but not audit
-        StringsCache.State state = cachingEnabled ? StringsCache.getState(metricName) : null;
-        if (cachingEnabled) {
-            if (state != null && state.getRelayDestinations() != null) {
-                return state.getRelayDestinations();
-            }
+        StringsCache.State state = relayCacheEnabled ? StringsCache.getState(metricName) : null;
+        if (state != null && state.getRelayDestinations() != null) {
+            return state.getRelayDestinations();
         }
 
         String[] relayDestination = emptyResult;
@@ -253,7 +252,7 @@ public class RelayRules
     {
         try
         {
-            return FileUtils.readLines( confFile ).stream()
+            return FileUtils.readLines(confFile, StandardCharsets.UTF_8).stream()
                             .map(String::trim)
                             .filter( line -> line.length() != 0 && !line.startsWith( "#" ) )
                             .collect( Collectors.toList() );
