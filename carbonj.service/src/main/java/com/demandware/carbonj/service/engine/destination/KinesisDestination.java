@@ -6,14 +6,19 @@
  */
 package com.demandware.carbonj.service.engine.destination;
 
-import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import com.codahale.metrics.*;
-import com.demandware.carbonj.service.engine.*;
+
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
+import com.demandware.carbonj.service.engine.BlockingPolicy;
+import com.demandware.carbonj.service.engine.DataPoint;
+import com.demandware.carbonj.service.engine.InputQueueThreadFactory;
 import com.demandware.carbonj.service.engine.kinesis.GzipDataPointCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,11 +57,7 @@ public class KinesisDestination
 
     private final Histogram activeThreads;
 
-    private final Timer blockingTimer;
-
     private final Timer producerTimer;
-
-    private final String kinesisRelayRegion;
 
     public KinesisDestination(MetricRegistry metricRegistry, String type, int queueSize,
                               String streamName, int batchSize, int threadCount, int maxWaitTimeInSecs, String kinesisRelayRegion)
@@ -78,12 +79,11 @@ public class KinesisDestination
         this.activeThreads = metricRegistry.histogram(
                 MetricRegistry.name("kinesis", "producerActiveThreads" ) );
 
-        this.blockingTimer = metricRegistry.timer(
-                MetricRegistry.name( "kinesis", "producer" ) );
+        Timer blockingTimer = metricRegistry.timer(
+                MetricRegistry.name("kinesis", "producer"));
 
         this.producerTimer = metricRegistry.timer(
                 MetricRegistry.name( "kinesis", "producerTimer" ) );
-        this.kinesisRelayRegion = kinesisRelayRegion;
 
 
         this.maxWaitTimeInSecs = maxWaitTimeInSecs;
@@ -135,6 +135,7 @@ public class KinesisDestination
                 stop = true;
                 log.info("Stop flag set to true in kinesis Destination");
                 ex.shutdown();
+                //noinspection ResultOfMethodCallIgnored
                 ex.awaitTermination(15, TimeUnit.SECONDS);
                 log.info( "Kinesis Stream Dest stopped." );
             }
@@ -161,6 +162,7 @@ public class KinesisDestination
             int remainingBatchSize = batchSize;
             final Timer.Context timerContext = producerTimer.time();
             long maxWaitTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(maxWaitTimeInSecs);
+            int noOfDataPoints = 0;
             try {
                 while (remainingBatchSize > 0 && System.currentTimeMillis() < maxWaitTime) {
                     if (q.drainTo(buf, remainingBatchSize) == 0) {
@@ -171,7 +173,7 @@ public class KinesisDestination
                     }
                     remainingBatchSize = batchSize - buf.size();
                 }
-                int noOfDataPoints = buf.size();
+                noOfDataPoints = buf.size();
                 if (noOfDataPoints > 0) {
                     Runnable task = taskBuilder(buf, timerContext);
                     ex.submit(task);
@@ -179,15 +181,15 @@ public class KinesisDestination
                 }
             } catch (Throwable  e) {
                 log.error(e.getMessage(), e);
-                drop.mark();
+                drop.mark(noOfDataPoints);
             }
         }
     }
 
     @Override
-    public Consumer<DataPoint> andThen(Consumer<? super DataPoint> after) {
+    public Consumer<DataPoint> andThen(@SuppressWarnings("NullableProblems") Consumer<? super DataPoint> after) {
+        //noinspection DataFlowIssue
         return null;
     }
 
 }
-

@@ -122,7 +122,6 @@ public class RelayRules
             return emptyResult;
         }
 
-        // Support relay type only but not audit
         StringsCache.State state = relayCacheEnabled ? StringsCache.getState(metricName) : null;
         if (state != null && state.getRelayDestinations() != null) {
             return state.getRelayDestinations();
