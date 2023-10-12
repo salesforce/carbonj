@@ -6,16 +6,25 @@
  */
 package com.demandware.carbonj.service.engine;
 
+import com.demandware.carbonj.service.strings.StringsCache;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -32,8 +41,6 @@ public class RelayRules
 
     final private ConfigServerUtil configServerUtil;
 
-    final private RestTemplate restTemplate;
-
     private List<String> configLines = new ArrayList<>();
 
     // rule order is important
@@ -42,6 +49,8 @@ public class RelayRules
     private boolean empty;
 
     private final String type;
+
+    private final boolean relayCacheEnabled;
 
     private final String[] emptyResult = new String[0];
     /**
@@ -53,24 +62,24 @@ public class RelayRules
         this.confSrc = "file";
         this.configServerUtil = null;
         this.confFile = null;
-        this.restTemplate = new RestTemplate();
         this.configLines = new ArrayList<>( );
         this.rules = new LinkedHashMap<>();
-        this.empty = rules.isEmpty();
+        this.empty = true;
+        this.relayCacheEnabled = false;
     }
 
     /**
      * Initializes instance with rules loaded from file.
      *
-     * @param confFile
+     * @param confFile relay rules config file
      */
-    public RelayRules( String type, File confFile, String confSrc, ConfigServerUtil configServerUtil )
+    public RelayRules( String type, File confFile, String confSrc, boolean relayCacheEnabled, ConfigServerUtil configServerUtil )
     {
         this.type = type;
         this.confFile = Preconditions.checkNotNull( confFile );
         this.confSrc = Preconditions.checkNotNull(confSrc);
+        this.relayCacheEnabled = relayCacheEnabled;
         this.configServerUtil = configServerUtil;
-        this.restTemplate = new RestTemplate();
         log.debug( String.format( "Creating relay rules with config file [%s]", confFile ) );
         load();
         log.debug( "Relay rules created" );
@@ -89,10 +98,7 @@ public class RelayRules
         Set<String> all = new HashSet<>();
         for ( String[] destinationGroups : rules.values() )
         {
-            for ( String d : destinationGroups )
-            {
-                all.add( d );
-            }
+            Collections.addAll(all, destinationGroups);
         }
         return all;
     }
@@ -102,7 +108,7 @@ public class RelayRules
      *
      * @param metricName metric name.
      *
-     * @return
+     * @return an array of destination groups
      */
     public String[] getDestinationGroups( String metricName )
     {
@@ -115,13 +121,21 @@ public class RelayRules
         {
             return emptyResult;
         }
+
+        StringsCache.State state = relayCacheEnabled ? StringsCache.getState(metricName) : null;
+        if (state != null && state.getRelayDestinations() != null) {
+            return state.getRelayDestinations();
+        }
+
+        String[] relayDestination = emptyResult;
         // iterate over patterns and return the first match.
         for ( Map.Entry<Pattern, String[]> e : rules.entrySet() )
         {
             Pattern p = e.getKey();
             if( ".*".equals( p.pattern() ) )
             {
-                return e.getValue();
+                relayDestination = e.getValue();
+                break;
             }
 
             boolean m = p.matcher( metricName ).find();
@@ -132,23 +146,23 @@ public class RelayRules
                     log.debug( String.format( "Matched name [%s] on pattern [%s], Returning value [%s]", metricName, p,
                                     Arrays.toString(e.getValue()) ) );
                 }
-                return e.getValue();
+                relayDestination = e.getValue();
+                break;
             }
-            else
-            {
-                if ( log.isDebugEnabled() )
-                {
-                    log.debug( String.format( "Name [%s] didn't match pattern [%s]", metricName, p ) );
-                }
+            else if ( log.isDebugEnabled() ) {
+                log.debug( String.format( "Name [%s] didn't match pattern [%s]", metricName, p ) );
             }
         }
 
-        if( log.isDebugEnabled() )
+        if( log.isDebugEnabled() && relayDestination == emptyResult )
         {
             log.debug( String.format( "Name [%s] didn't match any of the rules.", metricName ) );
         }
 
-        return emptyResult;
+        if (state != null) {
+            state.setRelayDestinations(relayDestination);
+        }
+        return relayDestination;
     }
 
     private void  load() {
@@ -237,8 +251,8 @@ public class RelayRules
     {
         try
         {
-            return FileUtils.readLines( confFile ).stream()
-                            .map( line -> line.trim() )
+            return FileUtils.readLines(confFile, StandardCharsets.UTF_8).stream()
+                            .map(String::trim)
                             .filter( line -> line.length() != 0 && !line.startsWith( "#" ) )
                             .collect( Collectors.toList() );
         }
@@ -253,10 +267,8 @@ public class RelayRules
     {
         if ( this == o )
             return true;
-        if ( !( o instanceof RelayRules ) )
+        if ( !(o instanceof RelayRules that) )
             return false;
-
-        RelayRules that = (RelayRules) o;
 
         return configLines.equals( that.configLines );
 

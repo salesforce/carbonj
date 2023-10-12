@@ -7,6 +7,7 @@
 package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.strings.StringsCache;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,11 +23,11 @@ import java.util.function.Consumer;
 public class Relay
     implements Consumer<DataPoints>
 {
-    private static Logger log = LoggerFactory.getLogger( Relay.class );
+    private static final Logger log = LoggerFactory.getLogger( Relay.class );
 
     private final MetricRegistry metricRegistry;
 
-    private String type;
+    private final String type;
 
     private final int refreshIntervalInMillis;
 
@@ -47,8 +48,10 @@ public class Relay
 
     private final String kinesisRelayRegion;
 
+    private final boolean relayCacheEnabled;
+
     Relay(MetricRegistry metricRegistry, String type, File rulesFile, int queueSize, int batchSize, int refreshIntervalInMillis, String destConfigDir,
-          int maxWaitTimeInMillis, String kinesisRelayRegion, String relayRulesSrc, ConfigServerUtil configServerUtil )
+          int maxWaitTimeInMillis, String kinesisRelayRegion, String relayRulesSrc, boolean relayCacheEnabled, ConfigServerUtil configServerUtil )
     {
         this.metricRegistry = metricRegistry;
         this.type = type;
@@ -57,6 +60,7 @@ public class Relay
         this.maxWaitTimeInMillis = maxWaitTimeInMillis;
         log.info( String.format("[%s] Starting relay", type) );
         this.rulesSrc = Preconditions.checkNotNull(relayRulesSrc);
+        this.relayCacheEnabled = relayCacheEnabled;
         this.configServerUtil = configServerUtil;
         this.rulesFile = Preconditions.checkNotNull( rulesFile );
         this.queueSize = queueSize;
@@ -120,7 +124,7 @@ public class Relay
         }
         try
         {
-            RelayRules newRules = new RelayRules(type, rulesFile, rulesSrc, configServerUtil);
+            RelayRules newRules = new RelayRules(type, rulesFile, rulesSrc, relayCacheEnabled, configServerUtil);
             RelayRules currentRules = router.getRules();
 
             if ( log.isDebugEnabled() )
@@ -139,6 +143,7 @@ public class Relay
             }
 
             reconfigureRelayRouter( newRules );
+            StringsCache.invalidateCache();
         }
         catch ( Exception e )
         {

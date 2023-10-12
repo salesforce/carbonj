@@ -7,7 +7,6 @@
 package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.MetricRegistry;
-import com.demandware.carbonj.service.db.index.cfgMetricIndex;
 import com.demandware.carbonj.service.engine.kinesis.cfgCheckPointMgr;
 import com.demandware.carbonj.service.events.cfgEventBus;
 import com.demandware.carbonj.service.accumulator.Accumulator;
@@ -32,11 +31,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-//import org.eclipse.jetty.server.NCSARequestLog;
 import org.eclipse.jetty.server.CustomRequestLog;
 import org.eclipse.jetty.server.RequestLog;
-import org.eclipse.jetty.server.Slf4jRequestLogWriter;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,8 +79,6 @@ public class cfgCarbonJ
     @Value( "${server.port:56788}" ) private int jettyPort;
 
     @Value( "${jetty.logfilepath:log/request-yyyy_mm_dd.log}" ) private String jettyLogfilePath;
-
-    @Value( "${jetty.requestLogRetentionDays:5}" ) private int jettyRequestLogRetentionDays;
 
     @Value( "${line.protocol.udp.port:-1}" ) private int lineProtocolUdpPort;
 
@@ -136,6 +130,8 @@ public class cfgCarbonJ
     // Relay rules can be pulled from file or server
     @Value( "${relay.configSrc:file}" ) private String relayRulesSrc;
 
+    @Value("${relay.cache.enabled:false}") private boolean relayCacheEnabled;
+
     @Value( "${audit.rules:config/audit-rules.conf}" ) private String auditRulesFile = "config/audit-rules.conf";
 
     @Value( "${audit.rules.configSrc:file}" ) private String auditRulesSrc;
@@ -148,8 +144,6 @@ public class cfgCarbonJ
     @Value( "${inputQueue.batchSize:10000}" ) private int batchSize;
 
     @Value( "${inputQueue.emptyQueuePauseMillis:500}" ) private long emptyQueuePauseMillis;
-
-    @Value( "${inputQueue.maxQueueReadsPerBatch:10}" ) private int maxQueueReadsPerBatch;
 
     @Value( "${inputQueue.refreshStatsInterval:1}" ) private int inputQueueRefreshStatsInterval;
 
@@ -227,7 +221,7 @@ public class cfgCarbonJ
     {
         File rulesFile = locateConfigFile( serviceDir, relayRulesFile );
         Relay r = new Relay( metricRegistry, "relay", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, relayRulesSrc, configServerUtil);
+                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, relayRulesSrc, relayCacheEnabled, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
@@ -237,7 +231,7 @@ public class cfgCarbonJ
     {
         File rulesFile = locateConfigFile( serviceDir, auditRulesFile );
         Relay r = new Relay( metricRegistry, "audit", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, auditRulesSrc, configServerUtil);
+                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, auditRulesSrc, false, configServerUtil);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
@@ -474,7 +468,7 @@ public class cfgCarbonJ
         lineProtocolTcpPort = ( lineProtocolTcpPort == -1 ) ? jettyPort + 2 : lineProtocolTcpPort;
         return netty.bind( lineProtocolTcpHost, lineProtocolTcpPort, new ChannelInitializer<SocketChannel>()
         {
-            @Override public void initChannel( SocketChannel ch )
+            @Override public void initChannel(@SuppressWarnings("NullableProblems") SocketChannel ch )
             {
                 if ( log.isDebugEnabled() )
                 {
@@ -492,7 +486,7 @@ public class cfgCarbonJ
         NettyChannel channel = netty.udpBind( lineProtocolUdpHost, lineProtocolUdpPort, udpBuff, udpMsgBuff,
                         new SimpleChannelInboundHandler<DatagramPacket>()
                         {
-                            LineProtocolHandler lp = new LineProtocolHandler( metricRegistry, r );
+                            final LineProtocolHandler lp = new LineProtocolHandler( metricRegistry, r );
 
                             @Override protected void channelRead0( ChannelHandlerContext ctx, DatagramPacket msg )
                             {
@@ -515,7 +509,7 @@ public class cfgCarbonJ
     {
         return netty.bind( "0.0.0.0", jettyPort + 3, new ChannelInitializer<SocketChannel>()
         {
-            @Override public void initChannel( SocketChannel ch )
+            @Override public void initChannel(@SuppressWarnings("NullableProblems") SocketChannel ch )
             {
                 if ( log.isDebugEnabled() )
                 {
@@ -557,26 +551,26 @@ public class cfgCarbonJ
     #      raise valueError("directories and remote_hosts cannot both be empty")
     */
 
-    @Bean public ServletRegistrationBean graphiteMetricSearchServlet()
+    @Bean public ServletRegistrationBean<GraphiteMetricSearchServlet> graphiteMetricSearchServlet()
     {
-        ServletRegistrationBean servletRegistration =
-                        new ServletRegistrationBean( new GraphiteMetricSearchServlet(), "/metrics/*" );
+        ServletRegistrationBean<GraphiteMetricSearchServlet> servletRegistration =
+                        new ServletRegistrationBean<>( new GraphiteMetricSearchServlet(), "/metrics/*" );
         servletRegistration.setLoadOnStartup( 1 );
         return servletRegistration;
     }
 
-    @Bean public ServletRegistrationBean graphiteSeriesDataServlet()
+    @Bean public ServletRegistrationBean<GraphiteSeriesDataServlet> graphiteSeriesDataServlet()
     {
-        ServletRegistrationBean servletRegistration =
-                        new ServletRegistrationBean( new GraphiteSeriesDataServlet(), "/render/*" );
+        ServletRegistrationBean<GraphiteSeriesDataServlet> servletRegistration =
+                        new ServletRegistrationBean<>( new GraphiteSeriesDataServlet(), "/render/*" );
         servletRegistration.setLoadOnStartup( 1 );
         return servletRegistration;
     }
 
-    @Bean public ServletRegistrationBean graphiteSeriesDataTestServlet()
+    @Bean public ServletRegistrationBean<GraphiteSeriesDataTestServlet> graphiteSeriesDataTestServlet()
     {
-        ServletRegistrationBean servletRegistration =
-                        new ServletRegistrationBean( new GraphiteSeriesDataTestServlet(), "/render-test/*" );
+        ServletRegistrationBean<GraphiteSeriesDataTestServlet> servletRegistration =
+                        new ServletRegistrationBean<>( new GraphiteSeriesDataTestServlet(), "/render-test/*" );
         servletRegistration.setLoadOnStartup( 1 );
         return servletRegistration;
     }

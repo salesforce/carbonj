@@ -7,10 +7,11 @@
 package com.demandware.carbonj.service.accumulator;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
+import com.demandware.carbonj.service.strings.StringsCache;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -31,11 +32,14 @@ class MetricAggregationRulesLoader
 
     volatile private MetricAggregationRules rules;
 
-    public MetricAggregationRulesLoader( File confFile )
+    private final boolean aggregationRuleCacheEnabled;
+
+    public MetricAggregationRulesLoader( File confFile, boolean aggregationRuleCacheEnabled )
     {
+        this.aggregationRuleCacheEnabled = aggregationRuleCacheEnabled;
         this.confFile = Preconditions.checkNotNull( confFile );
-        this.lines = Collections.EMPTY_LIST;
-        this.rules = new MetricAggregationRules( 0, Collections.EMPTY_LIST );
+        this.lines = Collections.emptyList();
+        this.rules = new MetricAggregationRules( 0, Collections.emptyList() );
         log.info( String.format( "Creating metric aggregation rules with config file [%s]", confFile ) );
         reload();
         log.info( "metric aggregation rules created" );
@@ -58,7 +62,8 @@ class MetricAggregationRulesLoader
                 if( rules.size() > 0 )
                 {
                     log.warn( "Clear current metric aggregation rules." );
-                    this.rules = new MetricAggregationRules( rules.getRevision(), Collections.EMPTY_LIST );
+                    int revision = rules.getRevision();
+                    this.rules = new MetricAggregationRules( revision, Collections.emptyList() );
                 }
                 return;
             }
@@ -69,9 +74,11 @@ class MetricAggregationRulesLoader
             {
                 // rules changed
                 log.info(String.format("metric aggregation rules configuration file has changed. File: [%s]", confFile));
-                this.rules = new MetricAggregationRules( rules.getRevision() + 1, parseConfig( newLines ) );
+                int nextRevision = rules.getRevision() + 1;
+                this.rules = new MetricAggregationRules( nextRevision, parseConfig( newLines ) );
                 this.lines = newLines;
                 log.info( String.format( "New metric aggregation rules %s", lines ) );
+                StringsCache.invalidateCache();
             }
         }
         catch ( Exception e )
@@ -87,9 +94,12 @@ class MetricAggregationRulesLoader
 
     private List<MetricAggregationRule> parseConfig( List<String> lines )
     {
-        return lines.stream()
-                    .map( line -> MetricAggregationRule.parseDefinition( line )  )
-                    .collect( Collectors.toList());
+        List<MetricAggregationRule> metricAggregationRules = new ArrayList<>();
+        for (int i = 0; i < lines.size(); i++) {
+            metricAggregationRules.add(
+                    MetricAggregationRule.parseDefinition(lines.get(i), i, aggregationRuleCacheEnabled));
+        }
+        return metricAggregationRules;
     }
 
     @Override

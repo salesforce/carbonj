@@ -6,6 +6,8 @@
  */
 package com.demandware.carbonj.service.strings;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -103,6 +105,10 @@ public class StringsCache implements StatsAware
         private final String key;
         private volatile Boolean isBlackListed;
 
+        private volatile String[] relayDestinations;
+
+        private volatile ConcurrentMap<Integer, Boolean> aggregationRuleMap = new ConcurrentHashMap<>();
+
         private State(String key) {
             this.key = key;
         }
@@ -117,6 +123,18 @@ public class StringsCache implements StatsAware
 
         public void setBlackListed(Boolean blackListed) {
             isBlackListed = blackListed;
+        }
+
+        public String[] getRelayDestinations() {
+            return relayDestinations;
+        }
+
+        public void setRelayDestinations(String[] relayDestinations) {
+            this.relayDestinations = relayDestinations;
+        }
+
+        public ConcurrentMap<Integer, Boolean> getAggregationRuleMap() {
+            return aggregationRuleMap;
         }
     }
 }
