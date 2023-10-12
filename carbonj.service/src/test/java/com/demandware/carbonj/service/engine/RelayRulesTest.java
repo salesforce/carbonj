@@ -20,7 +20,7 @@ public class RelayRulesTest {
     }
 
     @Test
-    public void testRelayRules() throws Exception {
+    public void testRelayRules() {
         RelayRules relayRules = new RelayRules("relay",
                 new File(Objects.requireNonNull(this.getClass().getClassLoader().getResource("relay-rules.conf")).getFile()),
                 "file", true, null);
@@ -28,11 +28,11 @@ public class RelayRulesTest {
         assertEquals(0, destinationGroups.length);
         destinationGroups = Objects.requireNonNull(StringsCache.getState("foo.bar")).getRelayDestinations();
         assertEquals(0, destinationGroups.length);
-        destinationGroups = relayRules.getDestinationGroups("pod240.ecom.blade.jvm.memory.heap.usage");
+        destinationGroups = relayRules.getDestinationGroups("pod240.ecom.host.jvm.memory.heap.usage");
         assertEquals(2, destinationGroups.length);
         assertEquals("kinesis:umon-prd-v2-cjajna", destinationGroups[0]);
         assertEquals("kinesis:umon-prd-v2-cjArgus", destinationGroups[1]);
-        destinationGroups = Objects.requireNonNull(StringsCache.getState("pod240.ecom.blade.jvm.memory.heap.usage")).getRelayDestinations();
+        destinationGroups = Objects.requireNonNull(StringsCache.getState("pod240.ecom.host.jvm.memory.heap.usage")).getRelayDestinations();
         assertEquals(2, destinationGroups.length);
         assertEquals("kinesis:umon-prd-v2-cjajna", destinationGroups[0]);
         assertEquals("kinesis:umon-prd-v2-cjArgus", destinationGroups[1]);
