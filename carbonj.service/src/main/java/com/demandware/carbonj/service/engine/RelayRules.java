@@ -154,7 +154,7 @@ public class RelayRules
             }
         }
 
-        if( log.isDebugEnabled() )
+        if( log.isDebugEnabled() && relayDestination == emptyResult )
         {
             log.debug( String.format( "Name [%s] didn't match any of the rules.", metricName ) );
         }
