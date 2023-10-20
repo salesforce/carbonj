@@ -17,7 +17,7 @@ jobs:
       run: chmod +x gradlew
     - name: Log into registry
       #  run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
-      run: echo "${{ secrets.DOCKER_HUB_SECRET }}" | docker login --username chrbayer84 --password-stdin
+      run: echo "${{ secrets.SALESFORCE_DOCKER_HUB_SECRET }}" | docker login --username sholavanalli508 --password-stdin
     - name: Build with Gradle
       run: ./gradlew build --info --stacktrace
     - name: Publish Failure Test Report
@@ -34,7 +34,7 @@ jobs:
       run: echo "$GRADLE_PROJECT_VERSION"
     - name: Publish Docker container
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
-      run: ./gradlew -PdockerRepo=chrbayer84/ -x test publish  --info
+      run: ./gradlew -PdockerRepo=salesforce/ -x test publish  --info
 #    - name: scan docker image
 #      uses: azure/container-scan@v0
 #      with:
