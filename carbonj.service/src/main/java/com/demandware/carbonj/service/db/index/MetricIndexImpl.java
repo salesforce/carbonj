@@ -231,12 +231,12 @@ public class MetricIndexImpl implements MetricIndex {
             for (String dbProperty : StringUtils.split(dbPropertiesValue, ',')) {
                 if (!nameIndexStorePropertyMetricMap.containsKey(dbProperty)) {
                     nameIndexStorePropertyMetricMap.put(dbProperty, new Counter());
-                    metricRegistry.register(nameIndex.getName() + "." + dbProperty,
+                    metricRegistry.register("db." + nameIndex.getName() + "." + dbProperty,
                             nameIndexStorePropertyMetricMap.get(dbProperty));
                 }
                 if (!idIndexStorePropertyMetricMap.containsKey(dbProperty)) {
                     idIndexStorePropertyMetricMap.put(dbProperty, new Counter());
-                    metricRegistry.register(idIndex.getName() + "." + dbProperty, idIndexStorePropertyMetricMap.get(dbProperty));
+                    metricRegistry.register("db." + idIndex.getName() + "." + dbProperty, idIndexStorePropertyMetricMap.get(dbProperty));
                 }
             }
         }
