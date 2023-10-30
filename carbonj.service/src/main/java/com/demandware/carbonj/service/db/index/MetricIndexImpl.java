@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ObjectArrays;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -233,15 +234,24 @@ public class MetricIndexImpl implements MetricIndex {
         maxSeriesPerRequest = Integer.parseInt(properties.getProperty("metrics.store.maxSeriesPerRequest", DEFAULT_MAX_SERIES_PER_REQUEST));
         String dbPropertiesValue = properties.getProperty("metrics.store.dbProperties");
         if (!StringUtils.isEmpty(dbPropertiesValue)) {
-            for (String dbProperty : StringUtils.split(dbPropertiesValue, ',')) {
-                if (!nameIndexStorePropertyMetricMap.containsKey(dbProperty)) {
-                    nameIndexStorePropertyMetricMap.put(dbProperty, new Counter());
+            parseDbProperties(dbPropertiesValue, metricRegistry);
+        }
+    }
+
+    void parseDbProperties(String dbProperties, MetricRegistry metricRegistry) {
+        for (String dbProperty : StringUtils.split(dbProperties, ',')) {
+            if (!nameIndexStorePropertyMetricMap.containsKey(dbProperty)) {
+                nameIndexStorePropertyMetricMap.put(dbProperty, new Counter());
+                if (metricRegistry != null) {
                     metricRegistry.register("db." + nameIndex.getName() + "." + dbProperty,
                             nameIndexStorePropertyMetricMap.get(dbProperty));
                 }
-                if (!idIndexStorePropertyMetricMap.containsKey(dbProperty)) {
-                    idIndexStorePropertyMetricMap.put(dbProperty, new Counter());
-                    metricRegistry.register("db." + idIndex.getName() + "." + dbProperty, idIndexStorePropertyMetricMap.get(dbProperty));
+            }
+            if (!idIndexStorePropertyMetricMap.containsKey(dbProperty)) {
+                idIndexStorePropertyMetricMap.put(dbProperty, new Counter());
+                if (metricRegistry != null) {
+                    metricRegistry.register("db." + idIndex.getName() + "." + dbProperty,
+                            idIndexStorePropertyMetricMap.get(dbProperty));
                 }
             }
         }
@@ -362,6 +372,14 @@ public class MetricIndexImpl implements MetricIndex {
                 indexStorePropertyMetricMap.get(property).inc(Long.parseLong(value));
             }
         }
+    }
+
+    Map<String, Counter> getNameIndexStorePropertyMetricMap() {
+        return ImmutableMap.copyOf(nameIndexStorePropertyMetricMap);
+    }
+
+    Map<String, Counter> getIdIndexStorePropertyMetricMap() {
+        return ImmutableMap.copyOf(idIndexStorePropertyMetricMap);
     }
 
     @Override
