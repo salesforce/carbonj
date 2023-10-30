@@ -11,8 +11,13 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
-import com.demandware.carbonj.service.db.model.*;
+import com.demandware.carbonj.service.db.model.DeleteAPIResult;
 import com.demandware.carbonj.service.db.model.Metric;
+import com.demandware.carbonj.service.db.model.MetricIndex;
+import com.demandware.carbonj.service.db.model.RetentionPolicy;
+import com.demandware.carbonj.service.db.model.RetentionPolicyConf;
+import com.demandware.carbonj.service.db.model.StorageAggregationPolicySource;
+import com.demandware.carbonj.service.db.model.TooManyMetricsFoundException;
 import com.demandware.carbonj.service.db.util.CacheStatsReporter;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.strings.StringsCache;
@@ -32,7 +37,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +44,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -65,11 +70,11 @@ public class MetricIndexImpl implements MetricIndex {
 
     private final IndexStore<String, NameRecord> nameIndex;
 
-    private final Map<String, Counter> nameIndexStorePropertyMetricMap = new HashMap<>();
+    private final Map<String, Counter> nameIndexStorePropertyMetricMap = new ConcurrentHashMap<>();
 
     private final IndexStore<Long, IdRecord> idIndex;
 
-    private final Map<String, Counter> idIndexStorePropertyMetricMap = new HashMap<>();
+    private final Map<String, Counter> idIndexStorePropertyMetricMap = new ConcurrentHashMap<>();
 
     private final DatabaseMetrics dbMetrics;
 
@@ -350,7 +355,8 @@ public class MetricIndexImpl implements MetricIndex {
 
     private <K> void dumpDbPropertyStats(Map<String, Counter> indexStorePropertyMetricMap,
                                          IndexStore<K, ? extends Record<K>> indexStore) {
-        for (String property : indexStorePropertyMetricMap.keySet()) {
+        Set<String> dbProperties = new HashSet<>(indexStorePropertyMetricMap.keySet());
+        for (String property : dbProperties) {
             String value = indexStore.dbGetProperty(property);
             if (!StringUtils.isEmpty(value)) {
                 indexStorePropertyMetricMap.get(property).inc(Long.parseLong(value));
