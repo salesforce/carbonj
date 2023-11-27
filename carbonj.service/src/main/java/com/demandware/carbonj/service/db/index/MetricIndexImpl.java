@@ -6,10 +6,18 @@
  */
 package com.demandware.carbonj.service.db.index;
 
-import com.codahale.metrics.*;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
-import com.demandware.carbonj.service.db.model.*;
+import com.demandware.carbonj.service.db.model.DeleteAPIResult;
 import com.demandware.carbonj.service.db.model.Metric;
+import com.demandware.carbonj.service.db.model.MetricIndex;
+import com.demandware.carbonj.service.db.model.RetentionPolicy;
+import com.demandware.carbonj.service.db.model.RetentionPolicyConf;
+import com.demandware.carbonj.service.db.model.StorageAggregationPolicySource;
+import com.demandware.carbonj.service.db.model.TooManyMetricsFoundException;
 import com.demandware.carbonj.service.db.util.CacheStatsReporter;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.strings.StringsCache;
@@ -26,7 +34,14 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -62,7 +77,7 @@ public class MetricIndexImpl implements MetricIndex {
 
     private final RetentionPolicyConf retentionPolicyConf;
 
-    private Timer insertNewMetricIdTimer;
+    private final Timer insertNewMetricIdTimer;
 
     private final Random rnd = new Random();
 
@@ -82,7 +97,7 @@ public class MetricIndexImpl implements MetricIndex {
 
     private volatile boolean strictMode = false;
 
-    private StorageAggregationPolicySource aggrPolicySource;
+    private final StorageAggregationPolicySource aggrPolicySource;
 
     /**
      * Maximum number of leaf metric names that can be returned as part of metric query.
@@ -94,17 +109,20 @@ public class MetricIndexImpl implements MetricIndex {
      */
     private volatile boolean enforceMaxSeriesPerRequest;
 
-    private boolean longId;
+    private volatile String retentions;
+
+    private final boolean longId;
 
     private final Counter longIdMetricCounter;
 
-    private class DeleteResult extends DeleteAPIResult
+    private static class DeleteResult extends DeleteAPIResult
     {
         public List<Metric> metrics = new ArrayList<>();
         public boolean deleteBranch = true;
     }
 
-    public MetricIndexImpl( MetricRegistry metricRegistry, String metricsStoreConfigFile, IndexStore<String, NameRecord> nameIndex, IndexStore<Long, IdRecord> idIndex,
+    public MetricIndexImpl( MetricRegistry metricRegistry, String metricsStoreConfigFile,
+                            IndexStore<String, NameRecord> nameIndex, IndexStore<Long, IdRecord> idIndex,
                             DatabaseMetrics dbMetrics, int nameIndexMaxCacheSize, int expireAfterAccessInMinutes,
                             NameUtils nameUtils, StorageAggregationPolicySource aggrPolicySource,
                             int nameIndexQueryCacheMaxSize, int expireAfterWriteQueryCacheInSeconds,
@@ -116,12 +134,12 @@ public class MetricIndexImpl implements MetricIndex {
         this.nameIndex = Preconditions.checkNotNull(nameIndex);
         this.idIndex = Preconditions.checkNotNull(idIndex);
         this.dbMetrics = Preconditions.checkNotNull(dbMetrics);
-        this.retentionPolicyConf = new RetentionPolicyConf();
         this.insertNewMetricIdTimer = metricRegistry.timer("db.index.insertNewMetricId.time");
         this.lastAssignedMetricIdGauge = registerLastAssignedMetricIdGauge();
         this.longId = longId;
         this.longIdMetricCounter = metricRegistry.counter("metrics.store.longId");
         loadFromConfigFile(metricsStoreConfigFile);
+        this.retentionPolicyConf = new RetentionPolicyConf(retentions);
 
         this.metricCache =
                 CacheBuilder.newBuilder().initialCapacity(nameIndexMaxCacheSize).maximumSize(nameIndexMaxCacheSize)
@@ -130,7 +148,8 @@ public class MetricIndexImpl implements MetricIndex {
                         .concurrencyLevel(8)
                         // TODO: make configurable
                         .expireAfterAccess(expireAfterAccessInMinutes, TimeUnit.MINUTES)
-                        .build(new CacheLoader<String, Metric>() {
+                        .build(new CacheLoader<>() {
+                            @SuppressWarnings("NullableProblems")
                             @Override
                             public Metric load(String name) {
                                 NameRecord e = nameIndex.dbGet(name);
@@ -149,7 +168,8 @@ public class MetricIndexImpl implements MetricIndex {
                             .recordStats()
                             .concurrencyLevel(8)
                             .expireAfterAccess(expireAfterAccessInMinutes, TimeUnit.MINUTES)
-                            .build(new CacheLoader<Long, Metric>() {
+                            .build(new CacheLoader<>() {
+                                @SuppressWarnings("NullableProblems")
                                 @Override
                                 public Metric load(Long id)
                                         throws Exception {
@@ -175,18 +195,15 @@ public class MetricIndexImpl implements MetricIndex {
                         .recordStats()
                         .concurrencyLevel(8)
                         .expireAfterWrite(expireAfterWriteQueryCacheInSeconds, TimeUnit.SECONDS)
-                        .build( new CacheLoader<String, List<Metric>>()
-                        {
+                        .build(new CacheLoader<>() {
+                            @SuppressWarnings("NullableProblems")
                             @Override
-                            public List<Metric> load(String pattern)
-                            {
+                            public List<Metric> load(String pattern) {
                                 try {
                                     return findMetricsNoCache(pattern, true, true, true);
-                                }
-                                catch(TooManyMetricsFoundException e)
-                                {
+                                } catch (TooManyMetricsFoundException e) {
                                     log.error("Error: ", e);
-                                    return Collections.EMPTY_LIST;
+                                    return Collections.emptyList();
                                 }
                             }
                         });
@@ -208,8 +225,11 @@ public class MetricIndexImpl implements MetricIndex {
             log.warn("Error while loading metric store configuration", e);
         }
 
-        enforceMaxSeriesPerRequest = Boolean.valueOf(properties.getProperty("metrics.store.enforceMaxSeriesPerRequest", DEFAULT_ENFORCE_MAX_SERIES_PER_REQUEST));
-        maxSeriesPerRequest = Integer.parseInt(properties.getProperty("metrics.store.maxSeriesPerRequest", DEFAULT_MAX_SERIES_PER_REQUEST));
+        enforceMaxSeriesPerRequest = Boolean.parseBoolean(
+                properties.getProperty("metrics.store.enforceMaxSeriesPerRequest", DEFAULT_ENFORCE_MAX_SERIES_PER_REQUEST));
+        maxSeriesPerRequest = Integer.parseInt(
+                properties.getProperty("metrics.store.maxSeriesPerRequest", DEFAULT_MAX_SERIES_PER_REQUEST));
+        retentions = properties.getProperty("metrics.store.retentions", RetentionPolicyConf.DEFAULT_RETENTIONS);
     }
 
     @Override
@@ -247,7 +267,7 @@ public class MetricIndexImpl implements MetricIndex {
         }
         catch ( IOException e )
         {
-            Throwables.propagate( e );
+            Throwables.throwIfUnchecked(e);
         }
     }
 
@@ -272,7 +292,8 @@ public class MetricIndexImpl implements MetricIndex {
                 Metric m = metricIdCache.get(metricId);
                 return m == Metric.METRIC_NULL ? null : m;
             } catch (ExecutionException e) {
-                throw Throwables.propagate(e);
+                Throwables.throwIfUnchecked(e);
+                return null;
             }
         }
     }
@@ -322,7 +343,7 @@ public class MetricIndexImpl implements MetricIndex {
         idIndex.open();
         createRootIfMissing();
         log.info( "Loading maxMetricId..." );
-        Long maxId = findMaxMetricId(); // should not be null because root node is inserted first if index is empty.
+        long maxId = findMaxMetricId(); // should not be null because root node is inserted first if index is empty.
         log.info( "maxMetricId=" + maxId );
         setMaxId(maxId);
         log.info("Long Id support: " +  longId );
@@ -375,7 +396,8 @@ public class MetricIndexImpl implements MetricIndex {
         }
         catch ( ExecutionException e )
         {
-            throw Throwables.propagate( e );
+            Throwables.throwIfUnchecked(e);
+            return null;
         }
     }
 
@@ -404,7 +426,7 @@ public class MetricIndexImpl implements MetricIndex {
         DeleteResult deleteResult = new DeleteResult();
         synchronized ( lock )
         {
-            doDeleteMetric( deleteResult, parentName.orElse( rootKey ), name, recursive, testRun, false, Collections.EMPTY_SET );
+            doDeleteMetric( deleteResult, parentName.orElse( rootKey ), name, recursive, testRun, false, Collections.emptySet() );
         }
         return  deleteResult.metrics;
     }
@@ -421,7 +443,7 @@ public class MetricIndexImpl implements MetricIndex {
         else
         {
             metricNames.addAll( findMetrics( rootKey, 0, splitQuery( name ), false, Integer.MAX_VALUE, false )
-                    .stream().map(m -> m.name ).collect(Collectors.toList()) );
+                    .stream().map(m -> m.name ).toList());
         }
 
         DeleteResult deleteResult = new DeleteResult();
@@ -540,8 +562,7 @@ public class MetricIndexImpl implements MetricIndex {
     @Override
     public List<Metric> findMetrics( String pattern )
     {
-        String parentKey = rootKey;
-        return findMetrics( parentKey, 0, splitQuery( pattern ), false, Integer.MAX_VALUE, false );
+        return findMetrics(rootKey, 0, splitQuery( pattern ), false, Integer.MAX_VALUE, false );
     }
 
 
@@ -564,7 +585,8 @@ public class MetricIndexImpl implements MetricIndex {
             }
             catch(ExecutionException e)
             {
-                throw Throwables.propagate(e);
+                Throwables.throwIfUnchecked(e);
+                return null;
             }
         }
         else
@@ -610,21 +632,21 @@ public class MetricIndexImpl implements MetricIndex {
         if ( parent == null )
         {
             DatabaseMetrics.deletedMetricAccessError.mark();
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
         List<String> matches = filter( parent.children(), queryParts[queryPartIdx] );
         boolean isLastQuerySegment = queryPartIdx + 1 >= queryParts.length;
         if ( isLastQuerySegment )
         {
             return matches.stream().map( childName -> toMetricName( parentKey, childName ) )
-                .filter(childKey -> excludeInvalid ? isValidName(childKey) : true)
+                .filter(childKey -> !excludeInvalid || isValidName(childKey))
             // .peek( System.out::println )
-                .map( childKey -> getMetric( childKey ) )
+                .map(this::getMetric)
                 // childKey was present in parent but not found. This means inconsistent data.
                 // if strictMode == false cover up and filter out such children otherwise include null values in the
                 // result.
-                .filter( m -> strictMode ? true : m != null )
-                .filter( m -> leafOnly ? m != null && m.isLeaf() : true  )
+                .filter( m -> strictMode || m != null)
+                .filter( m -> !leafOnly || m != null && m.isLeaf())
                 .collect( Collectors.toList() );
         }
         else
@@ -639,13 +661,13 @@ public class MetricIndexImpl implements MetricIndex {
                 }
                 catch( TooManyMetricsFoundException e)
                 {
-                    Throwables.propagate(e);
+                    Throwables.throwIfUnchecked(e);
                 }
                 catch ( Throwable t )
                 {
                     if ( strictMode )
                     {
-                        Throwables.propagate( t );
+                        Throwables.throwIfUnchecked(t);
                     }
                     else
                     {
@@ -696,9 +718,7 @@ public class MetricIndexImpl implements MetricIndex {
     }
     private List<String> findAllMetricsWithSegment( String parentKey, int queryPartIdx, String[] queryParts )
     {
-        List<String> metrics = new ArrayList<>();
-        metrics.addAll(findMetricWithSegment(parentKey, queryPartIdx, queryParts));
-        return metrics;
+        return new ArrayList<>(findMetricWithSegment(parentKey, queryPartIdx, queryParts));
     }
 
     private String toMetricName( String parent, String child )
@@ -716,7 +736,7 @@ public class MetricIndexImpl implements MetricIndex {
         while ( true )
         {
             List<Metric> metrics = findMetrics( pattern );
-            if ( metrics.size() == 0 )
+            if (metrics.isEmpty())
             {
                 if ( attempts > maxAttempts )
                 {
@@ -1039,7 +1059,7 @@ public class MetricIndexImpl implements MetricIndex {
     private Gauge<Long> registerLastAssignedMetricIdGauge()
     {
         return metricRegistry.register( maxMetricIdGaugeName(),
-            ( ) -> lastAssignedMetricIdGaugeValue() );
+                this::lastAssignedMetricIdGaugeValue);
     }
 
     private long lastAssignedMetricIdGaugeValue()

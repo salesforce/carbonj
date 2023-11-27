@@ -42,9 +42,6 @@ public class cfgDataPoints
     @Value( "${metrics.store.lowerResolutionArchives.enabled:true}" )
     private boolean updateLowerResolutionArchives = true;
 
-    @Value( "${metrics.store.stagingFileProcessorIntervals:5m7d: 320, 30m2y: 600, default: 300}")
-    private String stagingFileProcessorIntervals = "default: 300";
-
     @Value( "${metrics.store.stagingQueueSize:1000000}" )
     private int stagingQueueSize = 1000000;
 
@@ -65,6 +62,9 @@ public class cfgDataPoints
     // we can generalize this later. For now keeping it simple.
     @Value("${metrics.store.query.useTimeSeriesCacheFor60s24h:true}")
     boolean useTimeSeriesCacheFor60s24h = true;
+
+    @Value("${metrics.store.query.useTimeSeriesCacheFor60s30d:true}")
+    boolean useTimeSeriesCacheFor60s30d = true;
 
     @Value("${metrics.store.query.useTimeSeriesCacheFor5m7d:false}")
     boolean useTimeSeriesCacheFor5m7d = false;
@@ -136,8 +136,8 @@ public class cfgDataPoints
     DataPointStore dataPointStore(DataPointArchiveFactory dbFactory, DatabaseMetrics dbMetrics,
                                   DataPointStagingStore stagingStore, NamespaceCounter nsCounter)
     {
-        QueryCachePolicy qcp = new QueryCachePolicy( useTimeSeriesCacheFor60s24h, useTimeSeriesCacheFor5m7d,
-            useTimeSeriesCacheFor30m2y );
+        QueryCachePolicy qcp = new QueryCachePolicy( useTimeSeriesCacheFor60s24h, useTimeSeriesCacheFor60s30d,
+                useTimeSeriesCacheFor5m7d, useTimeSeriesCacheFor30m2y );
 
         Predicate<String> nameSpaceCounterCheck;
         if (disableNameSpaceCounterCheck) {

@@ -33,17 +33,24 @@ public class IndexUtils
 
     public static MetricIndex metricIndex( File dbDir, boolean longId )
     {
-        return metricIndex( metricNameIndexStore( dbDir, longId ), metricIdIndexStore( dbDir, longId ), databaseMetrics() );
+        return metricIndex( metricNameIndexStore( dbDir, longId ), metricIdIndexStore( dbDir, longId ), databaseMetrics(), longId, "does-not-exist" );
+    }
+
+    public static MetricIndex metricIndex( File dbDir, boolean longId, String metricStoreConfig )
+    {
+        return metricIndex( metricNameIndexStore( dbDir, longId ), metricIdIndexStore( dbDir, longId ), databaseMetrics(), longId, metricStoreConfig );
     }
 
     private static MetricIndex metricIndex( IndexStore<String, NameRecord> nameIndex,
-                                            IndexStore<Long, IdRecord> idIndex, DatabaseMetrics dbMetrics )
+                                            IndexStore<Long, IdRecord> idIndex,
+                                            DatabaseMetrics dbMetrics, boolean longId,
+                                            String metricStoreConfig)
     {
         StorageAggregationRulesLoader rulesLoader = new StorageAggregationRulesLoader( new File("unknownFile") );
         StorageAggregationPolicySource policySource = new StorageAggregationPolicySource( rulesLoader );
 
-        return new MetricIndexImpl( metricRegistry,"doesnt-exist.conf", nameIndex, idIndex, dbMetrics, 10000, 60,
-                new NameUtils(),  policySource, 2000,120, false, false);
+        return new MetricIndexImpl( metricRegistry,metricStoreConfig, nameIndex, idIndex, dbMetrics, 10000, 60,
+                new NameUtils(),  policySource, 2000,120, false, longId);
     }
 
     private static DatabaseMetrics databaseMetrics()
