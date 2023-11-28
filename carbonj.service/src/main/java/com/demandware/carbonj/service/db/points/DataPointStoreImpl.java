@@ -7,7 +7,13 @@
 package com.demandware.carbonj.service.db.points;
 
 import com.codahale.metrics.MetricRegistry;
-import com.demandware.carbonj.service.db.model.*;
+import com.demandware.carbonj.service.db.model.DataPointImportResults;
+import com.demandware.carbonj.service.db.model.DataPointStore;
+import com.demandware.carbonj.service.db.model.DataPointValue;
+import com.demandware.carbonj.service.db.model.Metric;
+import com.demandware.carbonj.service.db.model.QueryCachePolicy;
+import com.demandware.carbonj.service.db.model.RetentionPolicy;
+import com.demandware.carbonj.service.db.model.Series;
 import com.demandware.carbonj.service.db.util.CacheStatsReporter;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
@@ -30,20 +36,20 @@ import java.util.function.Predicate;
 class DataPointStoreImpl
     implements DataPointStore
 {
-    private static Logger log = LoggerFactory.getLogger( DataPointStoreImpl.class );
+    private static final Logger log = LoggerFactory.getLogger( DataPointStoreImpl.class );
 
-    private DataPointArchiveFactory dbFactory;
+    private final DataPointArchiveFactory dbFactory;
 
-    private DatabaseMetrics dbMetrics;
+    private final DatabaseMetrics dbMetrics;
 
-    private DataPointStagingStore stagingStore;
+    private final DataPointStagingStore stagingStore;
 
-    private boolean updateLowerResolutionArchives;
+    private final boolean updateLowerResolutionArchives;
 
-    private TimeSource timeSource = TimeSource.defaultTimeSource();
+    private final TimeSource timeSource = TimeSource.defaultTimeSource();
 
-    private CacheStatsReporter seriesCacheStatsReporter;
-    private LoadingCache<SeriesCacheKey, Series> seriesCache;
+    private final CacheStatsReporter seriesCacheStatsReporter;
+    private final LoadingCache<SeriesCacheKey, Series> seriesCache;
 
     private final QueryCachePolicy queryCachePolicy;
 
@@ -74,12 +80,10 @@ class DataPointStoreImpl
             {
                 return true;
             }
-            if ( !( o instanceof SeriesCacheKey ) )
+            if ( !(o instanceof SeriesCacheKey that) )
             {
                 return false;
             }
-
-            SeriesCacheKey that = (SeriesCacheKey) o;
 
             if ( from != that.from )
             {
@@ -122,8 +126,9 @@ class DataPointStoreImpl
         seriesCache =
             CacheBuilder.newBuilder().initialCapacity( timeSeriesCacheMaxSize ).maximumSize( timeSeriesCacheMaxSize )
                 .recordStats().concurrencyLevel( 8 ).expireAfterWrite( timeSeriesCacheExpireInSec, TimeUnit.SECONDS )
-                .build( new CacheLoader<SeriesCacheKey, Series>()
+                .build( new CacheLoader<>()
                 {
+                    @SuppressWarnings("NullableProblems")
                     @Override
                     public Series load( SeriesCacheKey key )
                         throws Exception
@@ -133,13 +138,6 @@ class DataPointStoreImpl
                 } );
         seriesCacheStatsReporter = new CacheStatsReporter( metricRegistry,"SeriesQueryResults", timeSeriesCacheMaxSize, seriesCache );
     }
-
-//    @Override
-//    public void setMetricNamePresentPredicate(Predicate<String> p)
-//    {
-//        this.isMetricNamePresent = p;
-//    }
-
 
     @Override
     public void dumpStats()
@@ -279,7 +277,7 @@ class DataPointStoreImpl
             List<Double> points;
 
             // for empty one
-            if( (archivePolicy.is5m7d() || archivePolicy.is60s24h()) && !metricNamePresent.test(key.m.name)  )
+            if( (archivePolicy.is5m7d() || archivePolicy.is60s24h() || archivePolicy.is60s30d()) && !metricNamePresent.test(key.m.name)  )
             {
                 DatabaseMetrics.obsoleteSeriesAccessMeter.mark();
 
@@ -319,7 +317,7 @@ class DataPointStoreImpl
     public void insertDataPoints( DataPoints points )
     {
         Set<RetentionPolicy> pointPolicies = points.getPresentPolicies();
-        if ( pointPolicies == null || pointPolicies.size() == 0 )
+        if ( pointPolicies == null || pointPolicies.isEmpty())
         {
             log.debug( String.format( "there were no point retention policies provided. data point batch size: %s",
                 points.size() ) );
