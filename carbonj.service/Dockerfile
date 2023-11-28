@@ -10,9 +10,7 @@ ARG DEPENDENCY=target/dependency
 ARG VERSION=latest
 
 # install dependencies
-RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
-  sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* && \
-  yum update -y && \
+RUN yum update -y && \
   yum install -y \
   libevent \
   perl \
@@ -30,17 +28,10 @@ RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
 
 RUN yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel
 
-RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
-     curl -L -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
-     yum update -y && \
-     yum install -y zulu-11 \
-     python3 \
-     perl-URI-Encode \
-     perl-Data-Dumper && \
-     yum clean all
+RUN pip3 install --upgrade pip
 
 # Install aiohttp required by the script
-RUN pip3 install --upgrade pip && pip3 install aiohttp
+RUN pip3 install aiohttp
 
 # Ensure crontab starts
 RUN /sbin/chkconfig crond on && \
@@ -98,9 +89,6 @@ ENV DW_PREFIX=jetty
 ENV SERVICEDIR=/app/
 ENV app_servicedir=/app/
 
-RUN wget https://archive.yourkit.com/yjp/2023.5/YourKit-JavaProfiler-2023.5-b231.zip -P /tmp/ && \
-  unzip /tmp/YourKit-JavaProfiler-2023.5-b231.zip && mv YourKit-JavaProfiler-2023.5 /usr/local/yjp/ && \
-  rm -f /tmp/YourKit-JavaProfiler-2023.5-b231.zip
 # Add Tini for proper sigkill handling https://github.com/krallin/tini
 RUN wget https://github.com/krallin/tini/releases/download/v0.18.0/tini
 RUN mv tini /sbin/tini
