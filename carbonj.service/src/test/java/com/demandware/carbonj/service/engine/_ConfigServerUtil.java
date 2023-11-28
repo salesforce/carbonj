@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
 @RunWith(JUnit4.class)
 public class _ConfigServerUtil {
 
-    private final String backupFile = "work/config-server-bkup.txt";
+    private final String backupFile = "/tmp/config-server-bkup.txt";
 
     private final Path backupFilePath = Paths.get(backupFile);
 
