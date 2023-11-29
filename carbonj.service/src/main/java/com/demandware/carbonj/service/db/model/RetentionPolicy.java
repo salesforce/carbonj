@@ -22,6 +22,7 @@ public class RetentionPolicy
     private static final ConcurrentMap<String, RetentionPolicy> policies = new ConcurrentHashMap<>();
 
     private static final String _60s24h = "60s24h";
+    private static final String _60s30d = "60s30d";
     private static final String _5m7d = "5m7d";
     private static final String _30m2y = "30m2y";
 
@@ -82,14 +83,14 @@ public class RetentionPolicy
         List<RetentionPolicy> list = policyLists.get( retentionLine );
         if ( list == null )
         {
-            list = policyLists.computeIfAbsent( retentionLine, key -> newPolicyList( key ) );
+            list = policyLists.computeIfAbsent( retentionLine, RetentionPolicy::newPolicyList);
         }
         return list;
     }
 
     private static List<RetentionPolicy> newPolicyList( String retentionLine )
     {
-        return Arrays.stream( retentionLine.split( "," ) ).map( v -> RetentionPolicy.getInstance( v ) )
+        return Arrays.stream( retentionLine.split( "," ) ).map(RetentionPolicy::getInstance)
             .collect( Collectors.toList() );
     }
 
@@ -114,6 +115,11 @@ public class RetentionPolicy
         return _60s24h.equals( dbName );
     }
 
+    public boolean is60s30d()
+    {
+        return _60s30d.equals( dbName );
+    }
+
     public boolean is5m7d()
     {
         return _5m7d.equals( dbName );
@@ -129,7 +135,7 @@ public class RetentionPolicy
         RetentionPolicy p = policies.get( name );
         if ( p == null )
         {
-            p = policies.computeIfAbsent( name, ( key ) -> new RetentionPolicy( key ) );
+            p = policies.computeIfAbsent( name, RetentionPolicy::new);
         }
         return p;
     }
@@ -164,22 +170,16 @@ public class RetentionPolicy
     {
         char suffix = value.charAt( value.length() - 1 );
         int t = Integer.parseInt( value.substring( 0, value.length() - 1 ) );
-        switch ( suffix )
-        {
-            case 's':
-                return t;
-            case 'm':
-                return t * 60;
-            case 'h':
-                return t * 3600;
-            case 'd':
-                return t * 3600 * 24;
-            case 'y':
-                return t * 3600 * 24 * 365;
-            default:
-                throw new IllegalArgumentException( "Unsupported time unit suffix [" + suffix + "] in value [" + value
-                    + "]" );
-        }
+        return switch (suffix) {
+            case 's' -> t;
+            case 'm' -> t * 60;
+            case 'h' -> t * 3600;
+            case 'd' -> t * 3600 * 24;
+            case 'y' -> t * 3600 * 24 * 365;
+            default ->
+                    throw new IllegalArgumentException("Unsupported time unit suffix [" + suffix + "] in value [" + value
+                            + "]");
+        };
     }
 
     public static Optional<RetentionPolicy> pickArchiveForQuery(int from, int until, int now)
@@ -217,12 +217,10 @@ public class RetentionPolicy
         {
             return true;
         }
-        if ( !( o instanceof RetentionPolicy ) )
+        if ( !(o instanceof RetentionPolicy that) )
         {
             return false;
         }
-
-        RetentionPolicy that = (RetentionPolicy) o;
 
         return name.equals( that.name );
 

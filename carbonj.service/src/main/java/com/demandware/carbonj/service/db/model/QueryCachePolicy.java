@@ -12,13 +12,17 @@ package com.demandware.carbonj.service.db.model;
 public class QueryCachePolicy
 {
     final private boolean useTimeSeriesCacheFor60s24h;
+    final private boolean useTimeSeriesCacheFor60s30d;
     final private boolean useTimeSeriesCacheFor5m7d;
     final private boolean useTimeSeriesCacheFor30m2y;
 
-    public QueryCachePolicy(boolean useTimeSeriesCacheFor60s24h, boolean useTimeSeriesCacheFor5m7d,
+    public QueryCachePolicy(boolean useTimeSeriesCacheFor60s24h,
+                            boolean useTimeSeriesCacheFor60s30d,
+                            boolean useTimeSeriesCacheFor5m7d,
                             boolean useTimeSeriesCacheFor30m2y)
     {
         this.useTimeSeriesCacheFor60s24h = useTimeSeriesCacheFor60s24h;
+        this.useTimeSeriesCacheFor60s30d = useTimeSeriesCacheFor60s30d;
         this.useTimeSeriesCacheFor5m7d = useTimeSeriesCacheFor5m7d;
         this.useTimeSeriesCacheFor30m2y = useTimeSeriesCacheFor30m2y;
     }
@@ -33,6 +37,10 @@ public class QueryCachePolicy
         if( p.is60s24h() )
         {
             return useTimeSeriesCacheFor60s24h;
+        }
+
+        if (p.is60s30d()) {
+            return useTimeSeriesCacheFor60s30d;
         }
 
         if( p.is5m7d() )

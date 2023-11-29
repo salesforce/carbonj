@@ -28,10 +28,8 @@ import com.demandware.carbonj.service.db.model.DataPointStore;
 import com.demandware.carbonj.service.db.model.DataPointValue;
 import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.MetricIndex;
-import com.demandware.carbonj.service.db.model.QueryCachePolicy;
 import com.demandware.carbonj.service.db.model.RetentionPolicy;
 import com.demandware.carbonj.service.db.model.Series;
-import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.engine.DataPoint;
 import com.demandware.carbonj.service.engine.DataPoints;
 import com.google.common.io.Files;
@@ -51,13 +49,7 @@ public class _Archives extends BaseTest
         File dbDirFile = Files.createTempDir();
         index = IndexUtils.metricIndex( dbDirFile, false );
         index.open();
-        File stagingDir = new File( dbDirFile, "staging" );
-        stagingDir.mkdirs();
-        StagingFiles sFiles = new StagingFiles(metricRegistry, stagingDir, new SystemSort(), index );
-        DataPointStagingStore stagingStore = new DataPointStagingStore( metricRegistry, sFiles, 1000, 1, 1, 1, 100, 30, 3);
-        DataPointArchiveFactory pointArchiveFactory = new DataPointArchiveFactory( metricRegistry, dbDirFile, new RocksDBConfig(), false );
-        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true );
-        archives = new DataPointStoreImpl( metricRegistry, pointArchiveFactory, new DatabaseMetrics(metricRegistry), stagingStore, true, 100, 10, qcp, name -> true );
+        archives = DataPointStoreUtils.createDataPointStore(metricRegistry, dbDirFile, false, index);
         archives.open();
     }
 

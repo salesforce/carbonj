@@ -10,15 +10,21 @@ import java.util.List;
 
 public class RetentionPolicyConf
 {
+    public static final String DEFAULT_RETENTIONS = "60s:24h,5m:7d,30m:2y";
+    private final String retentions;
+
+    public RetentionPolicyConf(String retentions) {
+        this.retentions = retentions;
+    }
+
     /**
      * Provides retention policies defined for a given metric.
      *
      * @param metricName name of the metric.
      * @return list of retention policies ordered by resolution. Highest resolution to Lowest.
      */
-    public List<RetentionPolicy> getRetentionPolicies( String metricName )
+    public List<RetentionPolicy> getRetentionPolicies(String metricName)
     {
-        return RetentionPolicy.getPolicyList( "60s:24h,5m:7d,30m:2y" );
+        return RetentionPolicy.getPolicyList(retentions);
     }
-
 }
