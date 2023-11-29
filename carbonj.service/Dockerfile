@@ -5,84 +5,45 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-FROM docker-registry.releng.demandware.net/common/cc-centos-openjdk-testrunner_11u18:b9da990
-ARG DEPENDENCY=target/dependency
+FROM quay.io/centos/centos:stream8
+ARG DEPENDENCY=build/docker/dependency
 ARG VERSION=latest
 
 # install dependencies
-RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
-  sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* && \
-  yum update -y && \
-  yum install -y \
-  libevent \
-  perl \
-  wget \
-  util-linux-ng \
-  cronie \
-  procps \
-  nc \
-  lsof \
-  sysstat \
-  epel-release \
-  python3 \
-  perl-URI-Encode \
-  perl-Data-Dumper
-
-RUN yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel
-
-RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
-     curl -L -o /etc/yum.repos.d/zulu.repo http://repos.azulsystems.com/rhel/zulu.repo && \
-     yum update -y && \
-     yum install -y zulu-11 \
-     python3 \
-     perl-URI-Encode \
-     perl-Data-Dumper && \
-     yum clean all
-
 # Install aiohttp required by the script
-RUN pip3 install --upgrade pip && pip3 install aiohttp
-
 # Ensure crontab starts
-RUN /sbin/chkconfig crond on && \
-  systemctl enable crond.service
+# Add Tini for proper sigkill handling https://github.com/krallin/tini
+RUN yum update -y && \
+  yum install -y libevent perl wget util-linux-ng cronie procps nc lsof sysstat epel-release && \
+  yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel && \
+  rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
+  yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
+  yum update -y && \
+  yum install -y zulu17-jdk python3 perl-URI-Encode perl-Data-Dumper && \
+  yum clean all && \
+  pip3 install --upgrade pip && \
+  pip3 install aiohttp && \
+  /sbin/chkconfig crond on && \
+  systemctl enable crond.service && \
+  mkdir -p /app/bin/ && \
+  wget https://github.com/krallin/tini/releases/download/v0.18.0/tini && \
+  mv tini /sbin/tini && \
+  chmod +x /sbin/tini
 
 # add java code
 COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
 COPY ${DEPENDENCY}/META-INF /app/META-INF
 COPY ${DEPENDENCY}/BOOT-INF/classes /app
 # add scripts
-RUN mkdir -p /app/bin/
-COPY ${DEPENDENCY}/entrypoint.sh /app/bin/
-COPY ${DEPENDENCY}/onOutOfMemoryError.sh /app/bin/
-COPY ${DEPENDENCY}/logCleanup.sh /app/bin/
-COPY ${DEPENDENCY}/deletemetrics.py /app/bin/
-COPY ${DEPENDENCY}/disklog.sh /app/bin/
-COPY ${DEPENDENCY}/fdlog.sh /app/bin/
-COPY ${DEPENDENCY}/iolog.sh /app/bin/
-COPY ${DEPENDENCY}/reportGcMetrics.sh /app/bin/
-COPY ${DEPENDENCY}/reportRocksDbMetrics.sh /app/bin/
-COPY ${DEPENDENCY}/requestlog-stats.pl /app/bin/
-COPY ${DEPENDENCY}/whisper.py /app/bin/
-COPY ${DEPENDENCY}/cj-load.py /app/bin/
+COPY ${DEPENDENCY}/entrypoint.sh ${DEPENDENCY}/onOutOfMemoryError.sh ${DEPENDENCY}/logCleanup.sh \
+  ${DEPENDENCY}/deletemetrics.py ${DEPENDENCY}/disklog.sh ${DEPENDENCY}/fdlog.sh ${DEPENDENCY}/iolog.sh \
+  ${DEPENDENCY}/reportGcMetrics.sh ${DEPENDENCY}/reportRocksDbMetrics.sh ${DEPENDENCY}/requestlog-stats.pl \
+  ${DEPENDENCY}/whisper.py ${DEPENDENCY}/cj-load.py /app/bin/
+RUN chmod ugo+x /app/bin/*
 # add java options file
-COPY ${DEPENDENCY}/service.args /app/config/
 # default configs
-COPY ${DEPENDENCY}/audit-rules.conf /app/config/
-COPY ${DEPENDENCY}/blacklist.conf /app/config/
-COPY ${DEPENDENCY}/query-blacklist.conf /app/config/
-COPY ${DEPENDENCY}/relay-rules.conf /app/config/
-COPY ${DEPENDENCY}/storage-aggregation.conf /app/config/
-
-RUN chmod ugo+x /app/bin/deletemetrics.py
-RUN chmod ugo+x /app/bin/onOutOfMemoryError.sh
-RUN chmod ugo+x /app/bin/entrypoint.sh
-RUN chmod ugo+x /app/bin/logCleanup.sh
-RUN chmod ugo+x /app/bin/disklog.sh
-RUN chmod ugo+x /app/bin/fdlog.sh
-RUN chmod ugo+x /app/bin/iolog.sh
-RUN chmod ugo+x /app/bin/reportGcMetrics.sh
-RUN chmod ugo+x /app/bin/reportRocksDbMetrics.sh
-RUN chmod ugo+x /app/bin/requestlog-stats.pl
+COPY ${DEPENDENCY}/service.args ${DEPENDENCY}/audit-rules.conf ${DEPENDENCY}/blacklist.conf \
+  ${DEPENDENCY}/query-blacklist.conf ${DEPENDENCY}/relay-rules.conf ${DEPENDENCY}/storage-aggregation.conf /app/config/
 
 VOLUME /data
 
@@ -98,13 +59,6 @@ ENV DW_PREFIX=jetty
 ENV SERVICEDIR=/app/
 ENV app_servicedir=/app/
 
-RUN wget https://archive.yourkit.com/yjp/2023.5/YourKit-JavaProfiler-2023.5-b231.zip -P /tmp/ && \
-  unzip /tmp/YourKit-JavaProfiler-2023.5-b231.zip && mv YourKit-JavaProfiler-2023.5 /usr/local/yjp/ && \
-  rm -f /tmp/YourKit-JavaProfiler-2023.5-b231.zip
-# Add Tini for proper sigkill handling https://github.com/krallin/tini
-RUN wget https://github.com/krallin/tini/releases/download/v0.18.0/tini
-RUN mv tini /sbin/tini
-RUN chmod +x /sbin/tini
 ENTRYPOINT ["/sbin/tini", "--"]
 
 # Run your program under Tini
