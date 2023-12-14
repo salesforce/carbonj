@@ -79,8 +79,6 @@ RUN chmod ugo+x /app/bin/reportGcMetrics.sh
 RUN chmod ugo+x /app/bin/reportRocksDbMetrics.sh
 RUN chmod ugo+x /app/bin/requestlog-stats.pl
 
-VOLUME /data
-
 ENV TERM=xterm
 ENV USE_JAVA_ARCH_64=true
 ENV SVC_PROP_JETTY_PORT=2001

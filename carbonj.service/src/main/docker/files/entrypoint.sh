@@ -31,10 +31,10 @@ fi
 if [ -d /data ]; then
 	rm -Rf $SERVICEDIR/work
 	ln -s /data $SERVICEDIR/work
-	mkdir -p $SERVICEDIR/work/carbonj-data
-	mkdir -p $SERVICEDIR/work/carbonj-tmp
-	mkdir -p $SERVICEDIR/work/carbonj-staging
-	mkdir -p $SERVICEDIR/work/log
+	mkdir $SERVICEDIR/work/carbonj-data
+	mkdir $SERVICEDIR/work/carbonj-tmp
+	mkdir $SERVICEDIR/work/carbonj-staging
+	mkdir $SERVICEDIR/work/log
 	ln -s $SERVICEDIR/work/log $SERVICEDIR/log
 fi
 
