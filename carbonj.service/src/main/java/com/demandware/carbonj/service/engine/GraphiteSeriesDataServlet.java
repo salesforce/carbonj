@@ -169,11 +169,11 @@ public class GraphiteSeriesDataServlet
                 {
                     //LOG.info( String.format( "carbonapi request: found value [%s]",
                         //( value == null ? "null" : (double) value ) ) );
-                    if ( value != null )
+                    if ( value == null )
                     {
-                        metricsSeriesBuilder =
-                            metricsSeriesBuilder.addValues( value ).addIsAbsent( false );
+                        value = 0.0;
                     }
+                    metricsSeriesBuilder = metricsSeriesBuilder.addValues( value ).addIsAbsent( false );
                 }
 
                 MetricsResponse.Series metricsSeries = metricsSeriesBuilder.build();
