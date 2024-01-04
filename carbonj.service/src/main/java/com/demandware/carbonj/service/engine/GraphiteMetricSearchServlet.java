@@ -23,6 +23,9 @@ import com.demandware.carbonj.service.engine.protobuf.MetricsResponse;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Metric;
+import com.demandware.carbonj.service.db.model.MsgPackMetric;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
 import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +87,7 @@ public class GraphiteMetricSearchServlet
         boolean randomTest = req.getParameter("randomTest") != null;
 
         boolean protobuf = "protobuf".equals( format );
+        boolean msgpack = "msgpack".equals( format );
         boolean json = "json".equals(format);
         if( json )
         {
@@ -93,7 +97,12 @@ public class GraphiteMetricSearchServlet
         {
             LOG.info( "carbonapi request: found protobuf request" );
             res.setContentType( "application/protobuf" );
-            LOG.info( "carbonapi request: query: " + query + " --- blacklist: " + queryBlacklist );
+            //LOG.info( "carbonapi request: query: " + query + " --- blacklist: " + queryBlacklist );
+        }
+        else if ( msgpack )
+        {
+            LOG.info( "carbonapi request: found msgpack request" );
+            res.setContentType("application/octet-stream");
         }
         else
         {
@@ -129,6 +138,35 @@ public class GraphiteMetricSearchServlet
             res.getWriter().write( gson.toJson( metrics ) );
             res.getWriter().close();
         }
+        else if ( msgpack )
+        {
+            ObjectMapper objectMapper = new ObjectMapper( new MessagePackFactory() );
+
+            List<MsgPackMetric> msgPackMetrics = new ArrayList<MsgPackMetric>();
+
+            for ( Metric metric : metrics )
+            {
+                msgPackMetrics.add( new MsgPackMetric( metric ) );
+            }
+
+            OutputStream output = res.getOutputStream();
+            try
+            {
+                // Serialize the metrics
+                byte[] serialized = objectMapper.writeValueAsBytes( msgPackMetrics );
+                res.setContentLength( serialized.length );
+                output.write( serialized );
+                
+            }
+            catch ( IOException e )
+            {
+                LOG.error( "carbonapi request: error writing msgpack response", e.getMessage() );
+            }
+            finally
+            {
+                output.close();
+            }
+        }     
         else if (protobuf) {
             //LOG.info( "carbonapi request: formatting response" );
             OutputStream output = res.getOutputStream();

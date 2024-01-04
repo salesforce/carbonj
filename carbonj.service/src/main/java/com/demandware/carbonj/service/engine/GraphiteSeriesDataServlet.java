@@ -21,9 +21,13 @@ import javax.servlet.http.HttpServletResponse;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Series;
+import com.demandware.carbonj.service.db.model.MsgPackSeries;
 import com.demandware.carbonj.service.db.util.SystemTime;
 import com.demandware.carbonj.service.engine.protobuf.MetricsResponse;
 import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
+import org.msgpack.jackson.dataformat.JsonArrayFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,25 +89,37 @@ public class GraphiteSeriesDataServlet
         String until = req.getParameter( "until" );
         String nowText = req.getParameter("now");
         int now = SystemTime.nowEpochSecond();
-        if( nowText != null )
-        {
-            now = Integer.parseInt( nowText );
-        }
 
         boolean randomTest = req.getParameter("randomTest") != null;
 
         boolean protobuf = "protobuf".equals( format );
+        boolean msgpack = "msgpack".equals( format );
         boolean json = "json".equals( format );
+
+        if( nowText != null )
+        {
+            now = Integer.parseInt( nowText );
+        }
+        else if (msgpack)
+        {
+            now = Integer.parseInt( until );
+        }
+
         if( json )
         {
             res.setContentType( "application/json" );
         }
         else if ( protobuf )
         {
-            //LOG.info( "carbonapi request: found protobuf request" );
+            LOG.info( "carbonapi request: found protobuf request" );
             res.setContentType( "application/protobuf" );
             // target = req.getParameter( "query" );
             //LOG.info( "carbonapi request: target from param: " + target + " --- blacklist: " + queryBlacklist );
+        }
+        else if (msgpack)
+        {
+            //LOG.info( "carbonapi request: found msgpack request." );
+            res.setContentType("application/octet-stream");
         }
         else
         {
@@ -150,6 +166,43 @@ public class GraphiteSeriesDataServlet
             res.getWriter().write( gson.toJson( series ) );
             res.getWriter().close();
         }
+        else if ( msgpack )
+        {
+            List<Series> seriesList = store.fetchSeriesData( new Query( target, Integer.parseInt( from ),
+                Integer.parseInt( until ), now, System.currentTimeMillis() ) );
+
+            ObjectMapper objectMapper = new ObjectMapper( new MessagePackFactory() );
+
+            List<MsgPackSeries> msgPackSeries = new ArrayList<MsgPackSeries>();
+
+            for ( Series series : seriesList )
+            {
+                if (target.contains("gm.prd") && target.contains("jvm.runtime.uptime") && !(series.values.stream().allMatch(x -> x == null)) &&
+                        series.values.contains(null))
+                {
+                    LOG.info( "carbonapi request: Found null datapoint. From=" + from + ". Until=" + until + ". Total datapoints before serialization: " + series.values.size() + ". Target: " + target + ". Series: " +  series.toString() );
+                }
+                msgPackSeries.add( new MsgPackSeries( series ) );
+            }
+
+            OutputStream output = res.getOutputStream();
+            try
+            {
+                // Serialize the series
+                byte[] serialized = objectMapper.writeValueAsBytes( msgPackSeries );
+                //LOG.info("Serialized data: " + serialized );
+                res.setContentLength( serialized.length );
+                output.write( serialized );
+            }
+            catch ( IOException e )
+            {
+                LOG.error( "carbonapi request: error writing msgpack response", e.getMessage() );
+            }
+            finally
+            {
+                output.close();
+            }
+        }
         else if ( protobuf )
         {
             //LOG.info( "carbonapi request: processing request" );
@@ -171,8 +224,7 @@ public class GraphiteSeriesDataServlet
                         //( value == null ? "null" : (double) value ) ) );
                     if ( value != null )
                     {
-                        metricsSeriesBuilder =
-                            metricsSeriesBuilder.addValues( value ).addIsAbsent( false );
+                        metricsSeriesBuilder = metricsSeriesBuilder.addValues( value ).addIsAbsent( false );
                     }
                 }
 
