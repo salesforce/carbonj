@@ -7,6 +7,7 @@
 package com.demandware.carbonj.service.engine;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +21,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Metric;
+import com.demandware.carbonj.service.db.model.MsgPackMetric;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
 import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,10 +85,15 @@ public class GraphiteMetricSearchServlet
         Preconditions.checkNotNull(query);
         boolean randomTest = req.getParameter("randomTest") != null;
 
+        boolean msgpack = "msgpack".equals( format );
         boolean json = "json".equals(format);
         if( json )
         {
             res.setContentType( "application/json" );
+        }
+        else if ( msgpack )
+        {
+            res.setContentType("application/octet-stream");
         }
         else
         {
@@ -119,6 +128,30 @@ public class GraphiteMetricSearchServlet
             Gson gson = new Gson();
             res.getWriter().write( gson.toJson( metrics ) );
             res.getWriter().close();
+        }
+        else if ( msgpack )
+        {
+            ObjectMapper objectMapper = new ObjectMapper( new MessagePackFactory() );
+
+            List<MsgPackMetric> msgPackMetrics = new ArrayList<>();
+
+            for ( Metric metric : metrics )
+            {
+                msgPackMetrics.add( new MsgPackMetric( metric ) );
+            }
+
+            try ( OutputStream output = res.getOutputStream() )
+            {
+                // Serialize the metrics
+                byte[] serialized = objectMapper.writeValueAsBytes( msgPackMetrics );
+                res.setContentLength( serialized.length );
+                output.write( serialized );
+
+            }
+            catch ( IOException e )
+            {
+                LOG.error( "carbonapi request: error writing msgpack response", e.getMessage() );
+            }
         }
         else
         {
