@@ -15,7 +15,7 @@ message Series {
    required int32 start = 2;
    required int32 end = 3;
    required int32 step = 4;
-   repeated double values = 5;
+   repeated string values = 5;
    repeated bool isAbsent = 6;
 }
 
