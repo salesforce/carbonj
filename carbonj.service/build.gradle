@@ -212,6 +212,7 @@ dependencies {
     implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.25'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.25'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.2.25'
+    implementation group: 'org.msgpack', name: 'jackson-dataformat-msgpack', version: '0.9.6'
     implementation 'jakarta.servlet:jakarta.servlet-api:6.0.0'
     implementation 'org.eclipse.jetty:jetty-server'
 //    implementation 'org.mockito:mockito-core:4.11.0'
