@@ -23,6 +23,7 @@ import com.demandware.carbonj.service.engine.protobuf.MetricsResponse;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Metric;
+import com.demandware.carbonj.service.db.model.MsgPackMetric;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 import com.google.gson.Gson;
@@ -141,11 +142,18 @@ public class GraphiteMetricSearchServlet
         {
             ObjectMapper objectMapper = new ObjectMapper( new MessagePackFactory() );
 
+            List<MsgPackMetric> msgPackMetrics = new ArrayList<MsgPackMetric>();
+
+            for ( Metric metric : metrics )
+            {
+                msgPackMetrics.add( new MsgPackMetric( metric ) );
+            }
+
             OutputStream output = res.getOutputStream();
             try
             {
                 // Serialize the metrics
-                byte[] serialized = objectMapper.writeValueAsBytes( metrics );
+                byte[] serialized = objectMapper.writeValueAsBytes( msgPackMetrics );
                 res.setContentLength( serialized.length );
                 output.write( serialized );
                 
