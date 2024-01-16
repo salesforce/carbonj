@@ -131,6 +131,9 @@ public class ConfigServerUtil {
     }
 
     private void updateConfig(Process process) {
+        final Optional<ProcessConfig> processConfigOptional = process.getProcessConfigs().stream()
+                        .filter(pc -> pc.getName().startsWith("prepend-template"))
+                        .collect(Collectors.toList()).stream().findFirst();
         final List<ProcessConfig> idBasedConfigs = process.getProcessConfigs().stream()
                 .filter(pc -> pc.getName().startsWith("id-based"))
                 .collect(Collectors.toList());
@@ -143,9 +146,9 @@ public class ConfigServerUtil {
             if (nameToConfigTmp.containsKey(genericConfigName)) {
                 ProcessConfig genericConfig = nameToConfigTmp.get(genericConfigName);
                 if (pc.getValue().endsWith("\n")) {
-                    genericConfig.setValue(pc.getValue() + genericConfig.getValue());
+                    genericConfig.setValue(processConfigOptional.get().getValue() + "\n" + pc.getValue() + genericConfig.getValue());
                 } else {
-                    genericConfig.setValue(pc.getValue() + "\n" + genericConfig.getValue());
+                    genericConfig.setValue(processConfigOptional.get().getValue() + "\n" + pc.getValue() + "\n" + genericConfig.getValue());
                 }
             } else {
                 log.warn("Config merge failed. Generic config not found for id based config {}", pc.getName());
