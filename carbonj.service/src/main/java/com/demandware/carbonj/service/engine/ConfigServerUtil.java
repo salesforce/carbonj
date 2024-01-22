@@ -146,9 +146,17 @@ public class ConfigServerUtil {
             if (nameToConfigTmp.containsKey(genericConfigName)) {
                 ProcessConfig genericConfig = nameToConfigTmp.get(genericConfigName);
                 if (pc.getValue().endsWith("\n")) {
-                    genericConfig.setValue(processConfigOptional.get().getValue() + "\n" + pc.getValue() + genericConfig.getValue());
+                    if(processConfigOptional.isPresent()) {
+                        genericConfig.setValue(processConfigOptional.get().getValue() + "\n" + pc.getValue() + genericConfig.getValue());
+                    }else {
+                        genericConfig.setValue(pc.getValue() + genericConfig.getValue());
+                    }
                 } else {
-                    genericConfig.setValue(processConfigOptional.get().getValue() + "\n" + pc.getValue() + "\n" + genericConfig.getValue());
+                    if(processConfigOptional.isPresent()) {
+                        genericConfig.setValue(processConfigOptional.get().getValue() + "\n" + pc.getValue() + "\n" + genericConfig.getValue());
+                    }else {
+                        genericConfig.setValue(pc.getValue() + "\n" + genericConfig.getValue());
+                    }
                 }
             } else {
                 log.warn("Config merge failed. Generic config not found for id based config {}", pc.getName());
