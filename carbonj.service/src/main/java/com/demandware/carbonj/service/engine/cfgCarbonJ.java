@@ -130,7 +130,7 @@ public class cfgCarbonJ
     // Relay rules can be pulled from file or server
     @Value( "${relay.configSrc:file}" ) private String relayRulesSrc;
 
-    @Value("${relay.cache.enabled:false}") private boolean relayCacheEnabled;
+    @Value("${relay.cache.enabled:true}") private boolean relayCacheEnabled;
 
     @Value( "${audit.rules:config/audit-rules.conf}" ) private String auditRulesFile = "config/audit-rules.conf";
 
