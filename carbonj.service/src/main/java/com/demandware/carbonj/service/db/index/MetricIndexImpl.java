@@ -26,7 +26,9 @@ import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ObjectArrays;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,11 +39,14 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -67,7 +72,11 @@ public class MetricIndexImpl implements MetricIndex {
 
     private final IndexStore<String, NameRecord> nameIndex;
 
+    private final Map<String, Counter> nameIndexStorePropertyMetricMap = new ConcurrentHashMap<>();
+
     private final IndexStore<Long, IdRecord> idIndex;
+
+    private final Map<String, Counter> idIndexStorePropertyMetricMap = new ConcurrentHashMap<>();
 
     private final DatabaseMetrics dbMetrics;
 
@@ -138,7 +147,7 @@ public class MetricIndexImpl implements MetricIndex {
         this.lastAssignedMetricIdGauge = registerLastAssignedMetricIdGauge();
         this.longId = longId;
         this.longIdMetricCounter = metricRegistry.counter("metrics.store.longId");
-        loadFromConfigFile(metricsStoreConfigFile);
+        loadFromConfigFile(metricsStoreConfigFile, metricRegistry);
         this.retentionPolicyConf = new RetentionPolicyConf(retentions);
 
         this.metricCache =
@@ -212,7 +221,7 @@ public class MetricIndexImpl implements MetricIndex {
         this.aggrPolicySource = Preconditions.checkNotNull( aggrPolicySource );
     }
 
-    private void loadFromConfigFile(String metricsStoreConfigFileName) {
+    private void loadFromConfigFile(String metricsStoreConfigFileName, MetricRegistry metricRegistry) {
         File metricStoreConfigFile = new File(metricsStoreConfigFileName);
         Properties properties = new Properties();
         try {
@@ -230,6 +239,29 @@ public class MetricIndexImpl implements MetricIndex {
         maxSeriesPerRequest = Integer.parseInt(
                 properties.getProperty("metrics.store.maxSeriesPerRequest", DEFAULT_MAX_SERIES_PER_REQUEST));
         retentions = properties.getProperty("metrics.store.retentions", RetentionPolicyConf.DEFAULT_RETENTIONS);
+        String dbPropertiesValue = properties.getProperty("metrics.store.dbProperties");
+        if (!StringUtils.isEmpty(dbPropertiesValue)) {
+            parseDbProperties(dbPropertiesValue, metricRegistry);
+        }
+    }
+
+    void parseDbProperties(String dbProperties, MetricRegistry metricRegistry) {
+        for (String dbProperty : StringUtils.split(dbProperties, ',')) {
+            if (!nameIndexStorePropertyMetricMap.containsKey(dbProperty)) {
+                nameIndexStorePropertyMetricMap.put(dbProperty, new Counter());
+                if (metricRegistry != null) {
+                    metricRegistry.register("db." + nameIndex.getName() + "." + dbProperty,
+                            nameIndexStorePropertyMetricMap.get(dbProperty));
+                }
+            }
+            if (!idIndexStorePropertyMetricMap.containsKey(dbProperty)) {
+                idIndexStorePropertyMetricMap.put(dbProperty, new Counter());
+                if (metricRegistry != null) {
+                    metricRegistry.register("db." + idIndex.getName() + "." + dbProperty,
+                            idIndexStorePropertyMetricMap.get(dbProperty));
+                }
+            }
+        }
     }
 
     @Override
@@ -333,7 +365,27 @@ public class MetricIndexImpl implements MetricIndex {
             metricIdCacheStatsReporter.dumpStats();
         }
         queryCacheStatsReporter.dumpStats();
+        dumpDbPropertyStats(nameIndexStorePropertyMetricMap, nameIndex);
+        dumpDbPropertyStats(idIndexStorePropertyMetricMap, idIndex);
+    }
 
+    private <K> void dumpDbPropertyStats(Map<String, Counter> indexStorePropertyMetricMap,
+                                         IndexStore<K, ? extends Record<K>> indexStore) {
+        Set<String> dbProperties = new HashSet<>(indexStorePropertyMetricMap.keySet());
+        for (String property : dbProperties) {
+            String value = indexStore.dbGetProperty(property);
+            if (!StringUtils.isEmpty(value)) {
+                indexStorePropertyMetricMap.get(property).inc(Long.parseLong(value));
+            }
+        }
+    }
+
+    Map<String, Counter> getNameIndexStorePropertyMetricMap() {
+        return ImmutableMap.copyOf(nameIndexStorePropertyMetricMap);
+    }
+
+    Map<String, Counter> getIdIndexStorePropertyMetricMap() {
+        return ImmutableMap.copyOf(idIndexStorePropertyMetricMap);
     }
 
     @Override
@@ -1074,6 +1126,6 @@ public class MetricIndexImpl implements MetricIndex {
     }
 
     public void reload() {
-        loadFromConfigFile(metricsStoreConfigFile);
+        loadFromConfigFile(metricsStoreConfigFile, metricRegistry);
     }
 }
