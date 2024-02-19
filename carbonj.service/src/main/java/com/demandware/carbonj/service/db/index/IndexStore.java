@@ -27,6 +27,8 @@ public interface IndexStore<K, R extends Record<K>>
 
     void dump( PrintWriter pw );
 
+    String dbGetProperty(String property);
+
     K maxKey();
 
     long scan( K startKey, K endKey, Consumer<R> c );

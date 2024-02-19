@@ -6,10 +6,6 @@
  */
 package com.demandware.carbonj.service.db.index;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 
 import org.junit.After;
@@ -20,87 +16,89 @@ import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.MetricIndex;
 import com.google.common.io.Files;
 
-public class _CreateNames
-{
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class _CreateNames {
     File dbDirFile;
     MetricIndex index;
     NameUtils nameUtils;
 
     @Before
-    public void setUp()
-    {
+    public void setUp() {
         nameUtils = new NameUtils(InternalConfig.getRootEntryKey());
         dbDirFile = Files.createTempDir();
         index = IndexUtils.metricIndex( dbDirFile, false );
         index.open();
+        ((MetricIndexImpl) index).parseDbProperties("estimate-num-keys", null);
     }
 
     @After
-    public void tearDown()
-    {
-        if( index != null )
-        {
+    public void tearDown() {
+        if ( index != null ) {
             index.close();
         }
 
-        if( dbDirFile != null )
-        {
+        if ( dbDirFile != null ) {
             dbDirFile.delete();
         }
     }
 
     @Test
-    public void newNameIsAlwaysCreatedAsLeaf() throws Exception
-    {
+    public void newNameIsAlwaysCreatedAsLeaf() {
         index.setStrictMode( true );
 
         // create metric
         Metric aMetric = index.createLeafMetric( "a" );
-        assertEquals(true, aMetric.isLeaf());
+        assertTrue(aMetric.isLeaf());
+
+        index.dumpStats();
+        // name key: root, a plus an update to root
+        // id key: 1:root, 2:a
+        checkStats(3, 2);
     }
 
 
     @Test
-    public void doNotAllowNewNodesForLeaf() throws Exception
-    {
+    public void doNotAllowNewNodesForLeaf() {
         index.setStrictMode( true );
         
         // create metric
         Metric aMetric = index.createLeafMetric( "a.b.c" );
-        assertEquals(true, aMetric.isLeaf());
+        assertTrue(aMetric.isLeaf());
 
         // 1. verify exception is thrown
-        try
-        {
+        try {
             index.createLeafMetric( "a.b.c.d" );
             fail("Expected exception");
-        }
-        catch(RuntimeException e)
-        {
+        } catch(RuntimeException e) {
             assertEquals("Cannot create metric with name [a.b.c.d] because [a.b.c] is already a leaf",
                 e.getMessage());
         }
         // 2. verify we didn't leave any partial nodes behind
         assertNull(index.getMetric( "a.b.c.d" ));
+
+        index.dumpStats();
+        // name key: root, a.b.c, a.b, a plus an update to root
+        // id key: 1:root, 2:a.b.c
+        checkStats(5, 2);
     }
 
     @Test
-    public void doNotAllowNewNodesForLeaf2() throws Exception
-    {
+    public void doNotAllowNewNodesForLeaf2() {
         index.setStrictMode( true );
 
         // create metric
         Metric aMetric = index.createLeafMetric( "a.b.c" );
-        assertEquals(true, aMetric.isLeaf());
+        assertTrue(aMetric.isLeaf());
 
         // verify exception is thrown
-        try
-        {
+        try {
             index.createLeafMetric( "a.b.c.d.e.f" );
             fail("Expected exception");
-        }
-        catch(RuntimeException e)
-        {
+        } catch(RuntimeException e) {
             assertEquals("Cannot create metric with name [a.b.c.d.e.f] because [a.b.c] is already a leaf",
                 e.getMessage());
         }
@@ -109,5 +107,19 @@ public class _CreateNames
         assertNull(index.getMetric( "a.b.c.d" ));
         assertNull(index.getMetric( "a.b.c.d.e" ));
         assertNull(index.getMetric( "a.b.c.d.e.f" ));
+
+        index.dumpStats();
+        // name key: root, a.b.c, a.b, a plus an update to root
+        // id key: 1:root, 2:a.b.c
+        checkStats(5, 2);
+    }
+
+    private void checkStats(long expectedIndexNameCount, long expectedIndexIdCount) {
+        assertEquals(1, ((MetricIndexImpl) index).getNameIndexStorePropertyMetricMap().size());
+        assertTrue(((MetricIndexImpl) index).getNameIndexStorePropertyMetricMap().containsKey("estimate-num-keys"));
+        assertEquals(expectedIndexNameCount, ((MetricIndexImpl) index).getNameIndexStorePropertyMetricMap().get("estimate-num-keys").getCount());
+        assertEquals(1, ((MetricIndexImpl) index).getIdIndexStorePropertyMetricMap().size());
+        assertTrue(((MetricIndexImpl) index).getIdIndexStorePropertyMetricMap().containsKey("estimate-num-keys"));
+        assertEquals(expectedIndexIdCount, ((MetricIndexImpl) index).getIdIndexStorePropertyMetricMap().get("estimate-num-keys").getCount());
     }
 }

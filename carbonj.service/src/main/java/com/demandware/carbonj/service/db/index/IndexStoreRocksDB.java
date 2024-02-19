@@ -32,11 +32,11 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     final private RecordSerializer<K, R> recSerializer;
 
-    private Timer writeTimer;
+    private final Timer writeTimer;
 
-    private Timer readTimer;
+    private final Timer readTimer;
 
-    private Timer delTimer;
+    private final Timer delTimer;
 
     public IndexStoreRocksDB(MetricRegistry metricRegistry, String dbName, File dbDir, RecordSerializer<K, R> recSerializer )
     {
@@ -69,6 +69,7 @@ class IndexStoreRocksDB<K, R extends Record<K>>
         }
         catch ( RocksDBException e )
         {
+            //noinspection deprecation
             throw Throwables.propagate( e );
         }
     }
@@ -76,7 +77,7 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     @Override
     public void dump( PrintWriter pw )
     {
-        scan( null, null, r -> pw.println( r ) );
+        scan( null, null, pw::println);
     }
 
     private static int keyCompare( byte[] keyBytes1, byte[] keyBytes2 )
@@ -180,10 +181,19 @@ class IndexStoreRocksDB<K, R extends Record<K>>
         dbPut( key, value );
     }
 
+    @Override
+    public String dbGetProperty(String property) {
+        try {
+            return db.getProperty("rocksdb." + property);
+        } catch (RocksDBException e) {
+            log.error("Failed to retrieve property {} - {}", property, e.getMessage(), e);
+            return null;
+        }
+    }
+
     private void dbPut( byte[] k, byte[] v )
     {
-        final Timer.Context timerContext = writeTimer.time();
-        try
+        try (Timer.Context ignored = writeTimer.time())
         {
             db.put( k, v );
         }
@@ -191,16 +201,11 @@ class IndexStoreRocksDB<K, R extends Record<K>>
         {
             throw new RuntimeException( e );
         }
-        finally
-        {
-            timerContext.stop();
-        }
     }
 
     private byte[] dbGet( byte[] k )
     {
-        final Timer.Context timerContext = readTimer.time();
-        try
+        try (Timer.Context ignored = readTimer.time())
         {
             return db.get( k );
         }
@@ -208,26 +213,17 @@ class IndexStoreRocksDB<K, R extends Record<K>>
         {
             throw new RuntimeException( e );
         }
-        finally
-        {
-            timerContext.stop();
-        }
     }
 
     private void dbDelete( byte[] keyBytes )
     {
-        final Timer.Context timerContext = delTimer.time();
-        try
+        try (Timer.Context ignored = delTimer.time())
         {
             db.delete( keyBytes );
         }
         catch ( RocksDBException e )
         {
             throw new RuntimeException( e );
-        }
-        finally
-        {
-            timerContext.stop();
         }
     }
 
