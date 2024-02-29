@@ -20,7 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import com.google.common.base.Throwables;
-import software.amazon.ion.impl.PrivateReaderWriter;
 
 /**
  * Partitions data point stream across destinations defined within group. In other words, each

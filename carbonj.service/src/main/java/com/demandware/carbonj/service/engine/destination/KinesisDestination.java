@@ -9,6 +9,16 @@ package com.demandware.carbonj.service.engine.destination;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceAsyncClientBuilder;
+import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
+import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
+import com.amazonaws.services.securitytoken.model.Credentials;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +97,9 @@ public class KinesisDestination
 
 
         this.maxWaitTimeInSecs = maxWaitTimeInSecs;
-        kinesisClient = AmazonKinesisClientBuilder.standard().withRegion(kinesisRelayRegion).build();
+
+        kinesisClient = AmazonKinesisClientBuilder.standard().withCredentials( buildCredentialsProvider() )
+            .withRegion( "us-east-1" ).build();
 
         this.streamName = streamName;
         this.batchSize = batchSize;
@@ -189,5 +201,23 @@ public class KinesisDestination
         return null;
     }
 
-}
+    private static AWSCredentialsProvider buildCredentialsProvider()
+    {
+        // TBD add config for these
+        String streamName = "umon-stg-v2-cjclient";
+        String region = "us-east-1";
+        String roleArn = "arn:aws:iam::637423471420:role/cc-umon-client-hq14jvf2tstxumz";
+        String roleSessionName = "assumedRole";
 
+        final AWSCredentialsProvider credentialsProvider;
+
+        AWSSecurityTokenService stsClient =
+            AWSSecurityTokenServiceAsyncClientBuilder.standard().withRegion( region ).build();
+
+        credentialsProvider = new STSAssumeRoleSessionCredentialsProvider.Builder( roleArn, roleSessionName )
+            .withStsClient( stsClient ).withRoleSessionDurationSeconds( 3600 ).build();
+
+        return credentialsProvider;
+    }
+
+}
