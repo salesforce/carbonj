@@ -206,7 +206,7 @@ public class KinesisDestination
         // TBD add config for these
         String streamName = "umon-stg-v2-cjclient";
         String region = "us-east-1";
-        String roleArn = "arn:aws:iam::637423471420:role/cc-umon-client-hq14jvf2tstxumz";
+        String roleArn = "arn:aws:iam::545267378833:role/cc-umon-client-stg-v2-role";
         String roleSessionName = "assumedRole";
 
         final AWSCredentialsProvider credentialsProvider;
