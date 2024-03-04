@@ -38,7 +38,7 @@
             <maxHistory>5</maxHistory>
         </rollingPolicy>
     </appender>
-    <root level="INFO">
+    <root level="DEBUG">
         <appender-ref ref="ROLLING-FILE"/>
         <appender-ref ref="CONSOLE"/>
     </root>
@@ -51,11 +51,11 @@ separate kinesis log file
     <logger name="com.amazonaws.services.kinesis" level="DEBUG" additivity="false">
         <appender-ref ref="KINESIS-FILE"/>
     </logger>
-    <logger name="com.demandware" level="INFO" additivity="false">
+    <logger name="com.demandware" level="DEBUG" additivity="false">
         <appender-ref ref="ROLLING-FILE"/>
         <appender-ref ref="CONSOLE"/>
     </logger>
-    <logger name="com.salesforce" level="INFO" additivity="false">
+    <logger name="com.salesforce" level="DEBUG" additivity="false">
         <appender-ref ref="ROLLING-FILE"/>
         <appender-ref ref="CONSOLE"/>
     </logger>
