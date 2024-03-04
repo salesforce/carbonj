@@ -82,6 +82,9 @@ public class RocksDBConfig
     @Value("${rocksdb.bytesPerSync:-1}")
     long bytesPerSync = -1;
 
+    @Value("${rocksdb.readonly:false}")
+    boolean readOnly = false;
+
     @Override
     public String toString()
     {
@@ -93,6 +96,7 @@ public class RocksDBConfig
                         ", levelZeroFileNumCompactionTrigger=" + levelZeroFileNumCompactionTrigger +
                         ", disableWAL=" + disableWAL +
                         ", useBloomFilter=" + useBloomFilter +
+                        ", readOnly=" + readOnly +
                         '}';
     }
 }

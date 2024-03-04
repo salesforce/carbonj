@@ -195,6 +195,8 @@ public class cfgCarbonJ
 
     @Value( "${configServer.backupFilePath:config/config-server-state.json}" ) private String backupFilePath;
 
+    @Value("${rocksdb.readonly:false}") private boolean isRocksDbReadOnly;
+
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
@@ -382,7 +384,9 @@ public class cfgCarbonJ
 
     @Autowired( required = false ) CheckPointMgr<Date> checkPointMgr;
 
-    @Bean Consumers consumer( PointProcessor pointProcessor,
+    @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false")
+    Consumers consumer( PointProcessor pointProcessor,
                               @Qualifier( "recoveryPointProcessor" ) PointProcessor recoveryPointProcessor,
                               ScheduledExecutorService s, KinesisConfig kinesisConfig )
     {

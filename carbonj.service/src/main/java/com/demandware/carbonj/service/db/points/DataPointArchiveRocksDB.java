@@ -37,7 +37,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 class DataPointArchiveRocksDB
     implements DataPointArchive
 {
-    private static Logger log = LoggerFactory.getLogger( DataPointArchiveRocksDB.class );
+    private static final Logger log = LoggerFactory.getLogger( DataPointArchiveRocksDB.class );
 
     final private File dbDir;
 
@@ -45,31 +45,31 @@ class DataPointArchiveRocksDB
 
     final private RetentionPolicy policy;
 
-    private TtlDB db;
+    private RocksDB db;
 
-    private Timer writeTimer;
+    private final Timer writeTimer;
 
-    private Timer batchWriteTimer;
+    private final Timer batchWriteTimer;
 
-    private Meter savedRecordsMeter;
+    private final Meter savedRecordsMeter;
 
-    private Timer readTimer;
+    private final Timer readTimer;
 
-    private Timer deleteTimer;
+    private final Timer deleteTimer;
 
     private ReadOptions readOptions;
 
     private WriteOptions writeOptions;
 
-    private RocksDBConfig rocksdbConfig;
+    private final RocksDBConfig rocksdbConfig;
 
-    private Timer emptyReadTimer;
+    private final Timer emptyReadTimer;
 
-    private TimeSource timeSource = TimeSource.defaultTimeSource();
+    private final TimeSource timeSource = TimeSource.defaultTimeSource();
 
-    private boolean longId;
+    private final boolean longId;
 
-    private ThreadPoolExecutor cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
+    private final ThreadPoolExecutor cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
         100000 ), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
     {
         @Override
@@ -115,7 +115,7 @@ class DataPointArchiveRocksDB
         }
         catch ( Throwable t )
         {
-            Throwables.propagate( t );
+            Throwables.throwIfUnchecked(t);
         }
 
     }
@@ -135,6 +135,9 @@ class DataPointArchiveRocksDB
     @Override
     public void deleteMetric( long metricId, int from, int until )
     {
+        if (rocksdbConfig.readOnly) {
+            throw new UnsupportedOperationException("Method deleteMetric is not supported for readonly mode");
+        }
         RocksIterator iter = null;
         try
         {
@@ -167,6 +170,9 @@ class DataPointArchiveRocksDB
     @Override
     public long delete( int ts )
     {
+        if (rocksdbConfig.readOnly) {
+            throw new UnsupportedOperationException("Method delete is not supported for readonly mode");
+        }
         final Timer.Context timerContext = deleteTimer.time();
         long c = 0;
         long i = 0;
@@ -185,7 +191,7 @@ class DataPointArchiveRocksDB
                     }
                     catch ( RocksDBException e )
                     {
-                        Throwables.propagate( e );
+                        Throwables.throwIfUnchecked(e);
                     }
                     c++;
                 }
@@ -215,6 +221,9 @@ class DataPointArchiveRocksDB
 
     private void dbDelete( byte[] key )
     {
+        if (rocksdbConfig.readOnly) {
+            throw new UnsupportedOperationException("Method dbDelete is not supported for readonly mode");
+        }
         try
         {
             db.delete( key );
@@ -239,6 +248,9 @@ class DataPointArchiveRocksDB
     @Override
     public int put( DataPoints points )
     {
+        if (rocksdbConfig.readOnly) {
+            throw new UnsupportedOperationException("Method put is not supported for readonly mode");
+        }
         WriteBatch batch = new WriteBatch();
         int now = timeSource.getEpochSecond();
         try {
@@ -283,7 +295,7 @@ class DataPointArchiveRocksDB
         }
         catch ( RocksDBException e )
         {
-            Throwables.propagate( e );
+            Throwables.throwIfUnchecked(e);
         }
         finally
         {
@@ -299,6 +311,9 @@ class DataPointArchiveRocksDB
     @Override
     public void put( long metricId, int interval, double v )
     {
+        if (rocksdbConfig.readOnly) {
+            throw new UnsupportedOperationException("Method put is not supported for readonly mode");
+        }
         byte[] key = DataPointRecord.toKeyBytes( metricId, interval, longId );
         byte[] value = DataPointRecord.toValueBytes( v );
         final Timer.Context timerContext = writeTimer.time();
@@ -308,7 +323,7 @@ class DataPointArchiveRocksDB
         }
         catch ( RocksDBException e )
         {
-            Throwables.propagate( e );
+            Throwables.throwIfUnchecked(e);
         }
         finally
         {
@@ -362,7 +377,7 @@ class DataPointArchiveRocksDB
         if ( o != null )
         {
             // contains global lock. Dispose in a separate thread to avoid contention.
-            cleaner.execute( ( ) -> o.close() );
+            cleaner.execute(o::close);
         }
     }
 
@@ -444,72 +459,74 @@ class DataPointArchiveRocksDB
     public void open()
     {
         log.info( "Opening rocksdb '" + dbName + "'. Config options: " + rocksdbConfig );
-        // TODO: these are just baseline options to get started. Revisit as part of tuning.
 
-        Env env = Env.getDefault();
-        env.setBackgroundThreads( rocksdbConfig.compactionThreadPoolSize, Priority.LOW );
-        env.setBackgroundThreads( rocksdbConfig.flushThreadPoolSize, Priority.HIGH );
+        Options options = new Options().setMaxOpenFiles( -1 );
+        if (rocksdbConfig.readOnly) {
+            options.setCreateIfMissing(false);
+        } else {
+            // TODO: these are just baseline options to get started. Revisit as part of tuning.
+            Env env = Env.getDefault();
+            env.setBackgroundThreads( rocksdbConfig.compactionThreadPoolSize, Priority.LOW );
+            env.setBackgroundThreads( rocksdbConfig.flushThreadPoolSize, Priority.HIGH );
 
-        Options options =
-            new Options()
-                .setCreateIfMissing( true )
-                .setMaxOpenFiles( -1 )
-                // also check OS config will support this setting
-                .setIncreaseParallelism( rocksdbConfig.increaseParallelism )
-                .setMaxBackgroundCompactions( rocksdbConfig.maxBackgroundCompactions )
-                .setMaxBackgroundFlushes( rocksdbConfig.maxBackgroundFlushes )
-                // .setTableFormatConfig( cfg )
-                // .setArenaBlockSize( )
-                .setMaxWriteBufferNumber( rocksdbConfig.maxWriteBufferNumber )
-                .setWriteBufferSize( rocksdbConfig.writeBufferSize )
-                .setTargetFileSizeBase( rocksdbConfig.targetFileSizeBase )
-                .setTargetFileSizeMultiplier( rocksdbConfig.targetFileSizeMultiplier )
-                .setNumLevels( rocksdbConfig.numLevels ).setMaxBytesForLevelBase( rocksdbConfig.maxBytesForLevelBase )
-                .setMaxBytesForLevelMultiplier( rocksdbConfig.maxBytesForLevelMultiplier )
-                .setLevelZeroFileNumCompactionTrigger( rocksdbConfig.levelZeroFileNumCompactionTrigger )
-                .setLevelZeroSlowdownWritesTrigger( rocksdbConfig.levelZeroSlowDownWritesTrigger )
-                .setLevelZeroStopWritesTrigger( rocksdbConfig.levelZeroStopWritesTrigger ).setEnv( env )
-                .setMinWriteBufferNumberToMerge( rocksdbConfig.minWriteBufferNumberToMerge )
-                .optimizeLevelStyleCompaction()
-                .setCompactionPriority(CompactionPriority.MinOverlappingRatio)
-                .setLevelCompactionDynamicLevelBytes(true)
-                .setCompressionType( CompressionType.ZSTD_COMPRESSION );
+            options
+                    .setCreateIfMissing(true)
+                    // also check OS config will support this setting
+                    .setIncreaseParallelism(rocksdbConfig.increaseParallelism)
+                    .setMaxBackgroundCompactions(rocksdbConfig.maxBackgroundCompactions)
+                    .setMaxBackgroundFlushes(rocksdbConfig.maxBackgroundFlushes)
+                    // .setTableFormatConfig( cfg )
+                    // .setArenaBlockSize( )
+                    .setMaxWriteBufferNumber(rocksdbConfig.maxWriteBufferNumber)
+                    .setWriteBufferSize(rocksdbConfig.writeBufferSize)
+                    .setTargetFileSizeBase(rocksdbConfig.targetFileSizeBase)
+                    .setTargetFileSizeMultiplier(rocksdbConfig.targetFileSizeMultiplier)
+                    .setNumLevels(rocksdbConfig.numLevels).setMaxBytesForLevelBase(rocksdbConfig.maxBytesForLevelBase)
+                    .setMaxBytesForLevelMultiplier(rocksdbConfig.maxBytesForLevelMultiplier)
+                    .setLevelZeroFileNumCompactionTrigger(rocksdbConfig.levelZeroFileNumCompactionTrigger)
+                    .setLevelZeroSlowdownWritesTrigger(rocksdbConfig.levelZeroSlowDownWritesTrigger)
+                    .setLevelZeroStopWritesTrigger(rocksdbConfig.levelZeroStopWritesTrigger).setEnv(env)
+                    .setMinWriteBufferNumberToMerge(rocksdbConfig.minWriteBufferNumberToMerge)
+                    .optimizeLevelStyleCompaction()
+                    .setCompactionPriority(CompactionPriority.MinOverlappingRatio)
+                    .setLevelCompactionDynamicLevelBytes(true)
+                    .setCompressionType(CompressionType.ZSTD_COMPRESSION);
 
-        if ( rocksdbConfig.bytesPerSync > 0 )
-        {
-            options.setBytesPerSync( 0 );
-        }
-
-        if ( rocksdbConfig.useBlockBasedTableConfig )
-        {
-            BlockBasedTableConfig cfg = new BlockBasedTableConfig();
-            if ( rocksdbConfig.useBloomFilter )
-            {
-                BloomFilter filter = new BloomFilter( 10 );
-                cfg.setFilterPolicy( filter );
+            if (rocksdbConfig.bytesPerSync > 0) {
+                options.setBytesPerSync(0);
             }
-            cfg.setBlockCache( new LRUCache(rocksdbConfig.blockCacheSize) );
-            cfg.setBlockSize( rocksdbConfig.blockSize );
-            cfg.setCacheIndexAndFilterBlocks(true);
-            cfg.setPinL0FilterAndIndexBlocksInCache(true);
 
-            options.setTableFormatConfig( cfg );
-        }
+            if (rocksdbConfig.useBlockBasedTableConfig) {
+                BlockBasedTableConfig cfg = new BlockBasedTableConfig();
+                if (rocksdbConfig.useBloomFilter) {
+                    BloomFilter filter = new BloomFilter(10);
+                    cfg.setFilterPolicy(filter);
+                }
+                cfg.setBlockCache(new LRUCache(rocksdbConfig.blockCacheSize));
+                cfg.setBlockSize(rocksdbConfig.blockSize);
+                cfg.setCacheIndexAndFilterBlocks(true);
+                cfg.setPinL0FilterAndIndexBlocksInCache(true);
 
-        int ttl = policy.retention;
-        try
-        {
-            db = TtlDB.open( options, dbDir.getAbsolutePath(), ttl, false );
-        }
-        catch ( RocksDBException e )
-        {
-            throw Throwables.propagate( e );
+                options.setTableFormatConfig(cfg);
+            }
         }
 
         readOptions = new ReadOptions();
-
         writeOptions = new WriteOptions();
-        writeOptions.setDisableWAL( rocksdbConfig.disableWAL );
+        int ttl = policy.retention;
+        try
+        {
+            if (rocksdbConfig.readOnly) {
+                db = RocksDB.openReadOnly(options, dbDir.getAbsolutePath(), false);
+            } else {
+                db = TtlDB.open(options, dbDir.getAbsolutePath(), ttl, false);
+                writeOptions.setDisableWAL( rocksdbConfig.disableWAL );
+            }
+        }
+        catch ( RocksDBException e )
+        {
+            Throwables.throwIfUnchecked(e);
+        }
     }
 
     private void closeQuietly( RocksDB db )
