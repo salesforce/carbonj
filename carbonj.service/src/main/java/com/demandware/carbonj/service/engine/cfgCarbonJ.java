@@ -383,7 +383,7 @@ public class cfgCarbonJ
     @Autowired( required = false ) CheckPointMgr<Date> checkPointMgr;
 
     @Bean
-    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false")
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
     Consumers consumer( PointProcessor pointProcessor,
                               @Qualifier( "recoveryPointProcessor" ) PointProcessor recoveryPointProcessor,
                               ScheduledExecutorService s, KinesisConfig kinesisConfig )
@@ -466,7 +466,7 @@ public class cfgCarbonJ
     }
 
     @Bean
-    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false")
+    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false", matchIfMissing = true)
     NettyChannel lineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolTcpPort = ( lineProtocolTcpPort == -1 ) ? jettyPort + 2 : lineProtocolTcpPort;
@@ -485,7 +485,7 @@ public class cfgCarbonJ
     }
 
     @Bean
-    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false")
+    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false", matchIfMissing = true)
     NettyChannel udpLineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolUdpPort = ( lineProtocolUdpPort == -1 ) ? jettyPort + 2 : lineProtocolUdpPort;
@@ -512,7 +512,7 @@ public class cfgCarbonJ
     }
 
     @Bean
-    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false")
+    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false", matchIfMissing = true)
     NettyChannel pickleProtocolChannel( NettyServer netty, InputQueue r )
     {
         return netty.bind( "0.0.0.0", jettyPort + 3, new ChannelInitializer<SocketChannel>()
