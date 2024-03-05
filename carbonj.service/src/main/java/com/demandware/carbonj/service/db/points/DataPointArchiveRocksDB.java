@@ -517,8 +517,10 @@ class DataPointArchiveRocksDB
         try
         {
             if (rocksdbConfig.readOnly) {
+                log.info("Rocks DB {} open in readonly mode", dbName);
                 db = RocksDB.openReadOnly(options, dbDir.getAbsolutePath(), false);
             } else {
+                log.info("Rocks DB {} open in normal mode", dbName);
                 db = TtlDB.open(options, dbDir.getAbsolutePath(), ttl, false);
                 writeOptions.setDisableWAL( rocksdbConfig.disableWAL );
             }

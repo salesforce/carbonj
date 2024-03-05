@@ -195,8 +195,6 @@ public class cfgCarbonJ
 
     @Value( "${configServer.backupFilePath:config/config-server-state.json}" ) private String backupFilePath;
 
-    @Value("${rocksdb.readonly:false}") private boolean isRocksDbReadOnly;
-
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
@@ -467,7 +465,9 @@ public class cfgCarbonJ
         return new NettyServer( metricRegistry, nettyIOThreads, nettyWorkerThreads );
     }
 
-    @Bean NettyChannel lineProtocolChannel( NettyServer netty, InputQueue r )
+    @Bean
+    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false")
+    NettyChannel lineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolTcpPort = ( lineProtocolTcpPort == -1 ) ? jettyPort + 2 : lineProtocolTcpPort;
         return netty.bind( lineProtocolTcpHost, lineProtocolTcpPort, new ChannelInitializer<SocketChannel>()
@@ -484,7 +484,9 @@ public class cfgCarbonJ
         } );
     }
 
-    @Bean NettyChannel udpLineProtocolChannel( NettyServer netty, InputQueue r )
+    @Bean
+    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false")
+    NettyChannel udpLineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolUdpPort = ( lineProtocolUdpPort == -1 ) ? jettyPort + 2 : lineProtocolUdpPort;
         NettyChannel channel = netty.udpBind( lineProtocolUdpHost, lineProtocolUdpPort, udpBuff, udpMsgBuff,
@@ -509,7 +511,9 @@ public class cfgCarbonJ
         return channel;
     }
 
-    @Bean NettyChannel pickleProtocolChannel( NettyServer netty, InputQueue r )
+    @Bean
+    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false")
+    NettyChannel pickleProtocolChannel( NettyServer netty, InputQueue r )
     {
         return netty.bind( "0.0.0.0", jettyPort + 3, new ChannelInitializer<SocketChannel>()
         {
