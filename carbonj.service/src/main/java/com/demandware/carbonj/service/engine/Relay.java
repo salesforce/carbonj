@@ -46,12 +46,19 @@ public class Relay
 
     volatile RelayRouter router;
 
+    private final Boolean kinesisRelayRbacEnabled;
+
     private final String kinesisRelayRegion;
+
+    private final String kinesisRelayAccount;
+
+    private final String kinesisRelayRole;
 
     private final boolean relayCacheEnabled;
 
     Relay(MetricRegistry metricRegistry, String type, File rulesFile, int queueSize, int batchSize, int refreshIntervalInMillis, String destConfigDir,
-          int maxWaitTimeInMillis, String kinesisRelayRegion, String relayRulesSrc, boolean relayCacheEnabled, ConfigServerUtil configServerUtil )
+          int maxWaitTimeInMillis, String kinesisRelayRegion, String relayRulesSrc, boolean relayCacheEnabled, ConfigServerUtil configServerUtil,
+          boolean kinesisRelayRbacEnabled, String kinesisRelayAccount, String kinesisRelayRole)
     {
         this.metricRegistry = metricRegistry;
         this.type = type;
@@ -65,7 +72,10 @@ public class Relay
         this.rulesFile = Preconditions.checkNotNull( rulesFile );
         this.queueSize = queueSize;
         this.batchSize = batchSize;
+        this.kinesisRelayRbacEnabled = kinesisRelayRbacEnabled;
         this.kinesisRelayRegion = kinesisRelayRegion;
+        this.kinesisRelayAccount = kinesisRelayAccount;
+        this.kinesisRelayRole = kinesisRelayRole;
         // empty relay router.
         this.router = new RelayRouter(metricRegistry, type);
         // load initial configuration if available.
@@ -178,7 +188,7 @@ public class Relay
         for(String destAsTxt : newIDs)
         {
             log.info( String.format("[%s] Creating new destination group: %s", type, destAsTxt) );
-            DestinationGroup dg = new DestinationGroup(metricRegistry, type, destAsTxt, queueSize, batchSize, refreshIntervalInMillis, destConfigDir, maxWaitTimeInMillis, kinesisRelayRegion);
+            DestinationGroup dg = new DestinationGroup(metricRegistry, type, destAsTxt, queueSize, batchSize, refreshIntervalInMillis, destConfigDir, maxWaitTimeInMillis, kinesisRelayRegion, kinesisRelayRbacEnabled, kinesisRelayAccount, kinesisRelayRole);
             newDGs.add( dg );
         }
 

@@ -6,6 +6,16 @@
  */
 package com.demandware.carbonj.service.engine.destination;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceAsyncClientBuilder;
+import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
+import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
+import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import java.util.ArrayList;
@@ -59,8 +69,17 @@ public class KinesisDestination
 
     private final Timer producerTimer;
 
+    private final Boolean kinesisRelayRbacEnabled;
+
+    private final String kinesisRelayAccount;
+
+    private final String kinesisRelayRegion;
+
+    private final String kinesisRelayRole;
+
     public KinesisDestination(MetricRegistry metricRegistry, String type, int queueSize,
-                              String streamName, int batchSize, int threadCount, int maxWaitTimeInSecs, String kinesisRelayRegion)
+                              String streamName, int batchSize, int threadCount, int maxWaitTimeInSecs, String kinesisRelayRegion,
+                              Boolean kinesisRelayRbacEnabled, String kinesisRelayAccount, String kinesisRelayRole)
     {
         super(metricRegistry,"dest." + type + "." + streamName);
 
@@ -87,16 +106,48 @@ public class KinesisDestination
 
 
         this.maxWaitTimeInSecs = maxWaitTimeInSecs;
-        kinesisClient = AmazonKinesisClientBuilder.standard().withRegion(kinesisRelayRegion).build();
+
+        this.kinesisRelayRbacEnabled = kinesisRelayRbacEnabled;
+        this.kinesisRelayRegion = kinesisRelayRegion;
+        this.kinesisRelayAccount = kinesisRelayAccount;
+        this.kinesisRelayRole = kinesisRelayRole;
+
+        if ( kinesisRelayRbacEnabled )
+        {
+            kinesisClient = AmazonKinesisClientBuilder.standard().withCredentials( buildCredentialsProvider(kinesisRelayRegion, kinesisRelayAccount, kinesisRelayRole ) )
+                    .withRegion( kinesisRelayRegion ).build();
+        }
+        else
+        {
+            kinesisClient = AmazonKinesisClientBuilder.standard().withRegion(kinesisRelayRegion).build();
+        }
 
         this.streamName = streamName;
         this.batchSize = batchSize;
+
         q = new ArrayBlockingQueue<>( queueSize );
         ex = new ThreadPoolExecutor(threadCount, threadCount,24,
                 TimeUnit.HOURS,new ArrayBlockingQueue<>(5 * threadCount),
                 new InputQueueThreadFactory( "kinesis-producer-task-" ), new BlockingPolicy(blockingTimer) );
         this.start();
     }
+
+    private static AWSCredentialsProvider buildCredentialsProvider(String kinesisRelayRegion, String kinesisRelayAccount, String kinesisRelayRole)
+    {
+        String roleArn = "arn:aws:iam::" + kinesisRelayAccount + ":role/" + kinesisRelayRole;
+        String roleSessionName = "assumedRole";
+
+        final AWSCredentialsProvider credentialsProvider;
+
+        AWSSecurityTokenService stsClient =
+                AWSSecurityTokenServiceAsyncClientBuilder.standard().withRegion( kinesisRelayRegion ).build();
+
+        credentialsProvider = new STSAssumeRoleSessionCredentialsProvider.Builder( roleArn, roleSessionName )
+                .withStsClient( stsClient ).withRoleSessionDurationSeconds( 3600 ).build();
+
+        return credentialsProvider;
+    }
+
 
     @Override
     public void accept(DataPoint dataPoint)
