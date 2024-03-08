@@ -39,7 +39,7 @@ if [ -d /data ]; then
 	  ln -s $SERVICEDIR/work/log $SERVICEDIR/log
 	else
 	  mkdir $SERVICEDIR/work/log-readonly
-    ln -s $SERVICEDIR/work/log $SERVICEDIR/log-readonly
+    ln -s $SERVICEDIR/work/log-readonly $SERVICEDIR/log
 	fi
 fi
 
