@@ -40,7 +40,7 @@ public class cfgEventBus {
     private MetricRegistry metricRegistry;
 
     @Bean
-    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false", matchIfMissing = true)
     NettyChannel eventBus(NettyServer netty, @Qualifier("KinesisEventsLogger") EventsLogger<byte[]> eventsLogger)
     {
         NettyChannel channel = netty.udpBind( eventsHost, eventsPort, udpBuff, udpMsgBuff,

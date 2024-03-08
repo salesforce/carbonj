@@ -466,7 +466,6 @@ public class cfgCarbonJ
     }
 
     @Bean
-    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false", matchIfMissing = true)
     NettyChannel lineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolTcpPort = ( lineProtocolTcpPort == -1 ) ? jettyPort + 2 : lineProtocolTcpPort;

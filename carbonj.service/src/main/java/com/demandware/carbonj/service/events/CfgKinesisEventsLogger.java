@@ -38,7 +38,7 @@ public class CfgKinesisEventsLogger {
     MetricRegistry metricRegistry;
 
     @Bean(name = "KinesisEventsLogger")
-    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false", matchIfMissing = true)
     public EventsLogger getKinesisEventsLogger()  {
         return new KinesisEventsLogger(metricRegistry, streamName, queueSize, emptyQueuePauseMillis, noOfThreads, batchSize, maxWaitTimeMillis);
     }
