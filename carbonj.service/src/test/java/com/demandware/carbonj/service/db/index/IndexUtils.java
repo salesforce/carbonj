@@ -23,12 +23,12 @@ public class IndexUtils
     static MetricRegistry metricRegistry = new MetricRegistry();
     private static IndexStore<String, NameRecord> metricNameIndexStore( File dbDir, boolean longId )
     {
-        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dir( dbDir, "index-name" ), new NameRecordSerializer(longId) );
+        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dir( dbDir, "index-name" ), new NameRecordSerializer(longId), false);
     }
 
     private static IndexStore<Long, IdRecord> metricIdIndexStore( File dbDir, boolean longId )
     {
-        return new IndexStoreRocksDB<>(metricRegistry, "index-id", dir( dbDir, "index-id" ), new IdRecordSerializer(longId) );
+        return new IndexStoreRocksDB<>(metricRegistry, "index-id", dir( dbDir, "index-id" ), new IdRecordSerializer(longId), false);
     }
 
     public static MetricIndex metricIndex( File dbDir, boolean longId )

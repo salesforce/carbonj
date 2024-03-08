@@ -69,6 +69,9 @@ public class cfgMetricIndex
     @Value( "${metrics.store:config/application.properties}" )
     private String metricStoreConfigFile = "config/application.properties";
 
+    @Value("${rocksdb.readonly:false}")
+    private boolean rocksdbReadonly;
+
 
     // TODO duplicated in different cfg beans
     @Value( "${app.servicedir:}" )
@@ -81,14 +84,14 @@ public class cfgMetricIndex
     IndexStore<String, NameRecord> metricNameIndexStore()
     {
         File dbDir = dbDir( "index-name" );
-        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dbDir, new NameRecordSerializer(longId));
+        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dbDir, new NameRecordSerializer(longId), rocksdbReadonly);
     }
 
     @Bean( name = "metricIdIndexStore" )
     IndexStore<Long, IdRecord> metricIdIndexStore()
     {
         File dbDir = dbDir( "index-id" );
-        return new IndexStoreRocksDB<>( metricRegistry,"index-id", dbDir, new IdRecordSerializer(longId));
+        return new IndexStoreRocksDB<>( metricRegistry,"index-id", dbDir, new IdRecordSerializer(longId), rocksdbReadonly);
     }
 
     @Bean

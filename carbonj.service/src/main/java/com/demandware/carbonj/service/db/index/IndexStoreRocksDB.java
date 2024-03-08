@@ -11,7 +11,13 @@ import com.codahale.metrics.Timer;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.primitives.SignedBytes;
-import org.rocksdb.*;
+import org.rocksdb.CompressionType;
+import org.rocksdb.Options;
+import org.rocksdb.ReadOptions;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
+import org.rocksdb.RocksIterator;
+import org.rocksdb.TtlDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +44,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private final Timer delTimer;
 
-    public IndexStoreRocksDB(MetricRegistry metricRegistry, String dbName, File dbDir, RecordSerializer<K, R> recSerializer )
+    private final boolean rocksdbReadonly;
+
+    public IndexStoreRocksDB(MetricRegistry metricRegistry, String dbName, File dbDir, RecordSerializer<K, R> recSerializer, boolean rocksdbReadonly)
     {
         this.dbName = Preconditions.checkNotNull( dbName );
         this.dbDir = Preconditions.checkNotNull( dbDir );
@@ -46,6 +54,7 @@ class IndexStoreRocksDB<K, R extends Record<K>>
         this.writeTimer = metricRegistry.timer( dbWriteTimerName( dbName ) );
         this.readTimer = metricRegistry.timer( dbReadTimerName( dbName ) );
         this.delTimer = metricRegistry.timer( dbDeleteTimerName( dbName ) );
+        this.rocksdbReadonly = rocksdbReadonly;
     }
 
     @Override
@@ -56,16 +65,23 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     @Override
     public void open()
     {
-        log.info( "Opening RocksDB metric index store in [" + dbDir + "]" );
+        log.info("Opening RocksDB metric index store in [{}]", dbDir);
 
         TtlDB.loadLibrary();
 
-        Options options =
-            new Options().setCreateIfMissing( true ).setCompressionType( CompressionType.SNAPPY_COMPRESSION );
+        Options options = new Options().setCompressionType( CompressionType.SNAPPY_COMPRESSION );
 
         try
         {
-            this.db = RocksDB.open( options, dbDir.getAbsolutePath() );
+            if (rocksdbReadonly) {
+                options.setCreateIfMissing(false);
+                this.db = RocksDB.openReadOnly(options, dbDir.getAbsolutePath(), false);
+                log.info("RocksDB metric index store in [{}] opened in readonly mode", dbDir);
+            } else {
+                options.setCreateIfMissing(true);
+                this.db = RocksDB.open(options, dbDir.getAbsolutePath());
+                log.info("RocksDB metric index store in [{}] opened in normal mode", dbDir);
+            }
         }
         catch ( RocksDBException e )
         {
@@ -168,6 +184,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     @Override
     public void dbDelete( K key )
     {
+        if (rocksdbReadonly) {
+            throw new UnsupportedOperationException("Method dbDelete is not supported for readonly mode");
+        }
         byte[] keyBytes = recSerializer.keyBytes( key );
         dbDelete( keyBytes );
     }
@@ -175,6 +194,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     @Override
     public void dbPut( R e )
     {
+        if (rocksdbReadonly) {
+            throw new UnsupportedOperationException("Method dbPut is not supported for readonly mode");
+        }
         byte[] key = recSerializer.keyBytes( e.key() );
         byte[] value = recSerializer.valueBytes( e );
 
@@ -193,6 +215,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private void dbPut( byte[] k, byte[] v )
     {
+        if (rocksdbReadonly) {
+            throw new UnsupportedOperationException("Method dbPut is not supported for readonly mode");
+        }
         try (Timer.Context ignored = writeTimer.time())
         {
             db.put( k, v );
@@ -217,6 +242,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private void dbDelete( byte[] keyBytes )
     {
+        if (rocksdbReadonly) {
+            throw new UnsupportedOperationException("Method dbDelete is not supported for readonly mode");
+        }
         try (Timer.Context ignored = delTimer.time())
         {
             db.delete( keyBytes );
