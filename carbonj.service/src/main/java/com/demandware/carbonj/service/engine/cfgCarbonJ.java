@@ -466,6 +466,7 @@ public class cfgCarbonJ
     }
 
     @Bean
+    @ConditionalOnProperty(name = "carbonj.relay", havingValue = "false", matchIfMissing = true)
     NettyChannel lineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolTcpPort = ( lineProtocolTcpPort == -1 ) ? jettyPort + 2 : lineProtocolTcpPort;
@@ -484,7 +485,7 @@ public class cfgCarbonJ
     }
 
     @Bean
-    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false", matchIfMissing = true)
+    @ConditionalOnProperty(name = "carbonj.relay", havingValue = "false", matchIfMissing = true)
     NettyChannel udpLineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolUdpPort = ( lineProtocolUdpPort == -1 ) ? jettyPort + 2 : lineProtocolUdpPort;
@@ -511,7 +512,7 @@ public class cfgCarbonJ
     }
 
     @Bean
-    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false", matchIfMissing = true)
+    @ConditionalOnProperty(name = "carbonj.relay", havingValue = "false", matchIfMissing = true)
     NettyChannel pickleProtocolChannel( NettyServer netty, InputQueue r )
     {
         return netty.bind( "0.0.0.0", jettyPort + 3, new ChannelInitializer<SocketChannel>()
