@@ -9,7 +9,6 @@ package com.demandware.carbonj.service.events;
 import com.codahale.metrics.MetricRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -38,7 +37,6 @@ public class CfgKinesisEventsLogger {
     MetricRegistry metricRegistry;
 
     @Bean(name = "KinesisEventsLogger")
-    @ConditionalOnProperty(name = "carbonj.writeonly", havingValue = "false", matchIfMissing = true)
     public EventsLogger getKinesisEventsLogger()  {
         return new KinesisEventsLogger(metricRegistry, streamName, queueSize, emptyQueuePauseMillis, noOfThreads, batchSize, maxWaitTimeMillis);
     }
