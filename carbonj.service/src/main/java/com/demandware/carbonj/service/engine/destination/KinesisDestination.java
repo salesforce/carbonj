@@ -114,11 +114,14 @@ public class KinesisDestination
 
         if ( kinesisRelayRbacEnabled )
         {
+            log.info( "Rbac enabled.  Building kinesis client and credentials provider with region: " + kinesisRelayRegion +
+                    ", account: " + kinesisRelayAccount + ", role: " + kinesisRelayRole);
             kinesisClient = AmazonKinesisClientBuilder.standard().withCredentials( buildCredentialsProvider(kinesisRelayRegion, kinesisRelayAccount, kinesisRelayRole ) )
                     .withRegion( kinesisRelayRegion ).build();
         }
         else
         {
+            log.info( "Rbac not enabled.  Building kinesis client.");
             kinesisClient = AmazonKinesisClientBuilder.standard().withRegion(kinesisRelayRegion).build();
         }
 
@@ -135,7 +138,7 @@ public class KinesisDestination
     private static AWSCredentialsProvider buildCredentialsProvider(String kinesisRelayRegion, String kinesisRelayAccount, String kinesisRelayRole)
     {
         String roleArn = "arn:aws:iam::" + kinesisRelayAccount + ":role/" + kinesisRelayRole;
-        String roleSessionName = "assumedRole";
+        String roleSessionName = "cc-umon-client-session";
 
         final AWSCredentialsProvider credentialsProvider;
 
