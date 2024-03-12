@@ -23,6 +23,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.PrintWriter;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 class IndexStoreRocksDB<K, R extends Record<K>>
@@ -33,6 +36,8 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     final private String dbName;
 
     final private File dbDir;
+
+    private final File secondaryDbDir;
 
     private RocksDB db;
 
@@ -46,10 +51,13 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private final boolean rocksdbReadonly;
 
+    private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+
     public IndexStoreRocksDB(MetricRegistry metricRegistry, String dbName, File dbDir, RecordSerializer<K, R> recSerializer, boolean rocksdbReadonly)
     {
         this.dbName = Preconditions.checkNotNull( dbName );
         this.dbDir = Preconditions.checkNotNull( dbDir );
+        this.secondaryDbDir = new File(dbDir.getParentFile(), dbName + "-secondary");
         this.recSerializer = recSerializer;
         this.writeTimer = metricRegistry.timer( dbWriteTimerName( dbName ) );
         this.readTimer = metricRegistry.timer( dbReadTimerName( dbName ) );
@@ -75,8 +83,10 @@ class IndexStoreRocksDB<K, R extends Record<K>>
         {
             if (rocksdbReadonly) {
                 options.setCreateIfMissing(false);
-                this.db = RocksDB.openReadOnly(options, dbDir.getAbsolutePath(), false);
+                options.setMaxOpenFiles(-1);
+                this.db = RocksDB.openAsSecondary(options, dbDir.getAbsolutePath(), secondaryDbDir.getAbsolutePath());
                 log.info("RocksDB metric index store in [{}] opened in readonly mode", dbDir);
+                scheduledExecutorService.scheduleAtFixedRate(new SyncPrimaryDbTask(db, dbDir), 60, 60, TimeUnit.SECONDS);
             } else {
                 options.setCreateIfMissing(true);
                 this.db = RocksDB.open(options, dbDir.getAbsolutePath());
@@ -257,6 +267,10 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private void closeQuietly( RocksDB db )
     {
+        if (rocksdbReadonly) {
+            scheduledExecutorService.shutdownNow();
+        }
+
         if ( db != null )
         {
             try
@@ -283,5 +297,27 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     private String dbDeleteTimerName( String dbName )
     {
         return "db." + dbName + ".delete.time";
+    }
+
+    private static class SyncPrimaryDbTask implements Runnable {
+        private final RocksDB rocksDB;
+
+        private final File dbDir;
+
+        private SyncPrimaryDbTask(RocksDB rocksDB, File dbDir) {
+            this.rocksDB = rocksDB;
+            this.dbDir = dbDir;
+        }
+
+        @Override
+        public void run() {
+            try {
+                log.info("Start syncing with primary DB {}", dbDir.getAbsolutePath());
+                rocksDB.tryCatchUpWithPrimary();
+                log.info("Completed syncing with primary DB {}", dbDir.getAbsolutePath());
+            } catch (RocksDBException e) {
+                log.error("Failed to sync with primary DB {} - {}", dbDir.getAbsolutePath(), e.getMessage(), e);
+            }
+        }
     }
 }

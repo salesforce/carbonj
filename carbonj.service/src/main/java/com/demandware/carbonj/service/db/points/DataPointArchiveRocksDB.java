@@ -13,14 +13,31 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
+import org.rocksdb.BlockBasedTableConfig;
+import org.rocksdb.BloomFilter;
+import org.rocksdb.CompactionPriority;
+import org.rocksdb.CompressionType;
+import org.rocksdb.Env;
+import org.rocksdb.LRUCache;
+import org.rocksdb.Options;
+import org.rocksdb.Priority;
+import org.rocksdb.ReadOptions;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
+import org.rocksdb.RocksIterator;
+import org.rocksdb.RocksObject;
+import org.rocksdb.TtlDB;
+import org.rocksdb.WriteBatch;
+import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.rocksdb.*;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
@@ -69,6 +86,10 @@ class DataPointArchiveRocksDB
 
     private final boolean longId;
 
+    private final File secondaryDbDir;
+
+    private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+
     private final ThreadPoolExecutor cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
         100000 ), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
     {
@@ -90,6 +111,7 @@ class DataPointArchiveRocksDB
         this.dbName = Preconditions.checkNotNull( dbName );
         this.policy = Preconditions.checkNotNull( policy );
         this.dbDir = Preconditions.checkNotNull( dbDir );
+        this.secondaryDbDir = new File(dbDir.getParentFile(), dbName + "-secondary");
         this.rocksdbConfig = Preconditions.checkNotNull( rocksdbConfig );
         this.savedRecordsMeter = metricRegistry.meter( dbSavedRecordsMeterName( dbName ) );
         this.writeTimer = metricRegistry.timer( dbWriteTimerName( dbName ) );
@@ -99,7 +121,6 @@ class DataPointArchiveRocksDB
         this.deleteTimer = metricRegistry.timer( dbDeleteTimerName( dbName ) );
         this.longId = longId;
         TtlDB.loadLibrary();
-
     }
 
     @Override
@@ -517,8 +538,9 @@ class DataPointArchiveRocksDB
         try
         {
             if (rocksdbConfig.readOnly) {
-                db = RocksDB.openReadOnly(options, dbDir.getAbsolutePath(), false);
+                db = RocksDB.openAsSecondary(options, dbDir.getAbsolutePath(), secondaryDbDir.getAbsolutePath());
                 log.info("Rocks DB {} opened in readonly mode", dbName);
+                scheduledExecutorService.scheduleAtFixedRate(new SyncPrimaryDbTask(db, dbDir), 60, 60, TimeUnit.SECONDS);
             } else {
                 db = TtlDB.open(options, dbDir.getAbsolutePath(), ttl, false);
                 writeOptions.setDisableWAL( rocksdbConfig.disableWAL );
@@ -533,6 +555,9 @@ class DataPointArchiveRocksDB
 
     private void closeQuietly( RocksDB db )
     {
+        if (rocksdbConfig.readOnly) {
+            scheduledExecutorService.shutdownNow();
+        }
 
         if ( db != null )
         {
@@ -592,4 +617,25 @@ class DataPointArchiveRocksDB
         return r.isEmpty() ? null : r.get( 0 );
     }
 
+    private static class SyncPrimaryDbTask implements Runnable {
+        private final RocksDB rocksDB;
+
+        private final File dbDir;
+
+        private SyncPrimaryDbTask(RocksDB rocksDB, File dbDir) {
+            this.rocksDB = rocksDB;
+            this.dbDir = dbDir;
+        }
+
+        @Override
+        public void run() {
+            try {
+                log.info("Start syncing with primary DB {}", dbDir.getAbsolutePath());
+                rocksDB.tryCatchUpWithPrimary();
+                log.info("Completed syncing with primary DB {}", dbDir.getAbsolutePath());
+            } catch (RocksDBException e) {
+                log.error("Failed to sync with primary DB {} - {}", dbDir.getAbsolutePath(), e.getMessage(), e);
+            }
+        }
+    }
 }
