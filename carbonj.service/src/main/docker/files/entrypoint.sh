@@ -59,6 +59,10 @@ for SVC_PROP in `compgen -A variable | grep "^SVC_PROP_"` ; do
 	printf '%s=%s\n' "$var_lowercase" "${!SVC_PROP}" >> $SERVICEDIR/config/overrides.properties
 done
 
+if [ "${ROCKSDB_READONLY}" == "true" ] && [ "${DISABLE_NAMESPACE_COUNTER_CHECK}" == "true" ]; then
+  printf '%s=%s\n' "metrics.store.query.disableNameSpaceCounterCheck" "true" >> $SERVICEDIR/config/overrides.properties
+fi
+
 YOURKIT_PROFILER_OPTS=
 YOURKIT_PROFILER_AGENT_FILE=/app/lib/libyjpagent.so
 
