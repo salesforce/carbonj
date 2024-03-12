@@ -20,6 +20,8 @@ metrics:
       offset:
         default:
           mins: 5
+    query:
+      disableNameSpaceCounterCheck: ${DISABLE_NAMESPACE_COUNTER_CHECK:false}
 kinesis:
   consumer:
     region: us-east-1
