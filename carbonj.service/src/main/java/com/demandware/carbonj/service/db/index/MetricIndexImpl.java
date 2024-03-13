@@ -124,6 +124,8 @@ public class MetricIndexImpl implements MetricIndex {
 
     private final Counter longIdMetricCounter;
 
+    private final boolean rocksdbReadonly;
+
     private static class DeleteResult extends DeleteAPIResult
     {
         public List<Metric> metrics = new ArrayList<>();
@@ -137,6 +139,19 @@ public class MetricIndexImpl implements MetricIndex {
                             int nameIndexQueryCacheMaxSize, int expireAfterWriteQueryCacheInSeconds,
                             boolean idCacheEnabled,
                             boolean longId) {
+        this(metricRegistry, metricsStoreConfigFile, nameIndex, idIndex, dbMetrics, nameIndexMaxCacheSize,
+                expireAfterAccessInMinutes, nameUtils, aggrPolicySource, nameIndexQueryCacheMaxSize,
+                expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId, false);
+    }
+
+    public MetricIndexImpl( MetricRegistry metricRegistry, String metricsStoreConfigFile,
+                            IndexStore<String, NameRecord> nameIndex, IndexStore<Long, IdRecord> idIndex,
+                            DatabaseMetrics dbMetrics, int nameIndexMaxCacheSize, int expireAfterAccessInMinutes,
+                            NameUtils nameUtils, StorageAggregationPolicySource aggrPolicySource,
+                            int nameIndexQueryCacheMaxSize, int expireAfterWriteQueryCacheInSeconds,
+                            boolean idCacheEnabled,
+                            boolean longId,
+                            boolean rocksdbReadonly) {
         this.metricRegistry = metricRegistry;
         this.metricsStoreConfigFile = metricsStoreConfigFile;
         this.nameUtils = Preconditions.checkNotNull(nameUtils);
@@ -149,6 +164,7 @@ public class MetricIndexImpl implements MetricIndex {
         this.longIdMetricCounter = metricRegistry.counter("metrics.store.longId");
         loadFromConfigFile(metricsStoreConfigFile, metricRegistry);
         this.retentionPolicyConf = new RetentionPolicyConf(retentions);
+        this.rocksdbReadonly = rocksdbReadonly;
 
         this.metricCache =
                 CacheBuilder.newBuilder().initialCapacity(nameIndexMaxCacheSize).maximumSize(nameIndexMaxCacheSize)
@@ -322,7 +338,15 @@ public class MetricIndexImpl implements MetricIndex {
         {
             try {
                 Metric m = metricIdCache.get(metricId);
-                return m == Metric.METRIC_NULL ? null : m;
+                if ( m == Metric.METRIC_NULL)
+                {
+                    if (rocksdbReadonly) {
+                        // For secondary, don't cache METRIC_NULL
+                        metricIdCache.invalidate(metricId);
+                    }
+                    return null;
+                }
+                return m;
             } catch (ExecutionException e) {
                 Throwables.throwIfUnchecked(e);
                 return null;
@@ -441,6 +465,10 @@ public class MetricIndexImpl implements MetricIndex {
             {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Metric is null for the id [%s]", key));
+                }
+                if (rocksdbReadonly) {
+                    // For secondary, don't cache METRIC_NULL
+                    metricCache.invalidate(key);
                 }
                 return null;
             }
