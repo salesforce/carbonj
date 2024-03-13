@@ -45,8 +45,6 @@ RUN chmod ugo+x /app/bin/*
 COPY ${DEPENDENCY}/service.args ${DEPENDENCY}/audit-rules.conf ${DEPENDENCY}/blacklist.conf \
   ${DEPENDENCY}/query-blacklist.conf ${DEPENDENCY}/relay-rules.conf ${DEPENDENCY}/storage-aggregation.conf /app/config/
 
-VOLUME /data
-
 ENV TERM=xterm
 ENV USE_JAVA_ARCH_64=true
 ENV SVC_PROP_JETTY_PORT=2001
