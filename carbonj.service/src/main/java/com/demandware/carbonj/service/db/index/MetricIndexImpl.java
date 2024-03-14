@@ -255,10 +255,10 @@ public class MetricIndexImpl implements MetricIndex {
 
         if (syncSecondaryDb) {
             scheduledExecutorService.scheduleAtFixedRate(
-                    new SyncSecondaryDbTask(nameIndexQueue, nameIndex.getDbDir()), 60, 30, TimeUnit.SECONDS);
+                    new SyncSecondaryDbTask(nameIndex.getDbDir()), 60, 30, TimeUnit.SECONDS);
         } else if (rocksdbReadonly) {
             scheduledExecutorService.scheduleAtFixedRate(
-                    new SyncNameIndexCacheTask(metricCache, nameIndex.getDbDir()), 60, 30, TimeUnit.SECONDS);
+                    new SyncNameIndexCacheTask(nameIndex.getDbDir()), 60, 30, TimeUnit.SECONDS);
         }
     }
 
@@ -470,7 +470,7 @@ public class MetricIndexImpl implements MetricIndex {
             metricIdCacheStatsReporter.close();
         }
         queryCacheStatsReporter.close();
-        if (syncSecondaryDb) {
+        if (syncSecondaryDb || rocksdbReadonly) {
             scheduledExecutorService.shutdownNow();
         }
     }
@@ -1175,12 +1175,10 @@ public class MetricIndexImpl implements MetricIndex {
         loadFromConfigFile(metricsStoreConfigFile, metricRegistry);
     }
 
-    private static class SyncSecondaryDbTask implements Runnable {
-        private final ConcurrentLinkedQueue<String> nameIndexQueue;
+    private class SyncSecondaryDbTask implements Runnable {
         private final File syncSecondaryDbDir;
 
-        private SyncSecondaryDbTask(ConcurrentLinkedQueue<String> nameIndexQueue, File dbDir) {
-            this.nameIndexQueue = nameIndexQueue;
+        private SyncSecondaryDbTask(File dbDir) {
             this.syncSecondaryDbDir = new File(dbDir.getParentFile(), dbDir.getName() + "-sync");
         }
 
@@ -1224,13 +1222,10 @@ public class MetricIndexImpl implements MetricIndex {
         }
     }
 
-    private static class SyncNameIndexCacheTask implements Runnable {
-
-        private final LoadingCache<String, Metric> metricCache;
+    private class SyncNameIndexCacheTask implements Runnable {
         private final File syncSecondaryDbDir;
 
-        private SyncNameIndexCacheTask(LoadingCache<String, Metric> metricCache, File dbDir) {
-            this.metricCache = metricCache;
+        private SyncNameIndexCacheTask(File dbDir) {
             this.syncSecondaryDbDir = new File(dbDir.getParentFile(), dbDir.getName() + "-sync");
         }
 
@@ -1248,6 +1243,13 @@ public class MetricIndexImpl implements MetricIndex {
             if (syncFiles == null || syncFiles.length == 0) {
                 log.info("No name index file to sync");
                 return;
+            }
+            int size = nameIndexQueue.size();
+            while (size-- > 0) {
+                String nameIndex = nameIndexQueue.poll();
+                if (nameIndex != null) {
+                    refreshNameIndex(nameIndex);
+                }
             }
             for (File syncFile : syncFiles) {
                 TreeSet<String> nameIndexes = new TreeSet<>();
@@ -1268,10 +1270,20 @@ public class MetricIndexImpl implements MetricIndex {
                     log.error("Failed to sync name indexes from {} - {}", syncFile.getAbsolutePath(), e.getMessage(), e);
                     continue;
                 }
-                for (String nameIndex : nameIndexes) {
-                    log.info("Invalidating cache for name index {}", nameIndex);
-                    metricCache.invalidate(nameIndex);
+                if (!syncFile.delete()) {
+                    log.error("Failed to delete {}", syncFile.getAbsolutePath());
                 }
+                for (String nameIndex : nameIndexes) {
+                    refreshNameIndex(nameIndex);
+                }
+            }
+        }
+
+        private void refreshNameIndex(String nameIndex) {
+            log.info("Refreshing cache for name index {}", nameIndex);
+            metricCache.invalidate(nameIndex);
+            if (getMetric(nameIndex) == null) {
+                nameIndexQueue.offer(nameIndex);
             }
         }
     }
