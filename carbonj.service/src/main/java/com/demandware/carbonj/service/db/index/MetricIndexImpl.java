@@ -1235,6 +1235,16 @@ public class MetricIndexImpl implements MetricIndex {
 
         @Override
         public void run() {
+            int size = nameIndexQueue.size();
+            while (size-- > 0) {
+                String nameIndex = nameIndexQueue.poll();
+                if (nameIndex != null) {
+                    refreshNameIndex(nameIndex);
+                }
+            }
+            // Always refresh root
+            refreshNameIndex("root");
+
             if (!syncSecondaryDbDir.exists()) {
                 log.error("Directory {} does not exist", syncSecondaryDbDir.getAbsolutePath());
                 return;
@@ -1243,17 +1253,11 @@ public class MetricIndexImpl implements MetricIndex {
                 log.error("Cannot read from directory {}", syncSecondaryDbDir.getAbsolutePath());
                 return;
             }
+
             File[] syncFiles = syncSecondaryDbDir.listFiles((dir, name) -> name.startsWith("sync-"));
             if (syncFiles == null || syncFiles.length == 0) {
                 log.info("No name index file to sync");
                 return;
-            }
-            int size = nameIndexQueue.size();
-            while (size-- > 0) {
-                String nameIndex = nameIndexQueue.poll();
-                if (nameIndex != null) {
-                    refreshNameIndex(nameIndex);
-                }
             }
             for (File syncFile : syncFiles) {
                 TreeSet<String> nameIndexes = new TreeSet<>();
@@ -1281,8 +1285,6 @@ public class MetricIndexImpl implements MetricIndex {
                     refreshNameIndex(nameIndex);
                 }
             }
-            // Always refresh root
-            refreshNameIndex("root");
         }
 
         private void refreshNameIndex(String nameIndex) {
