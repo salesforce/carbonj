@@ -1281,6 +1281,8 @@ public class MetricIndexImpl implements MetricIndex {
                     refreshNameIndex(nameIndex);
                 }
             }
+            // Always refresh root
+            refreshNameIndex("root");
         }
 
         private void refreshNameIndex(String nameIndex) {
