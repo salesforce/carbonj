@@ -676,7 +676,11 @@ public class MetricIndexImpl implements MetricIndex {
         {
             try
             {
-                return queryCache.get(pattern);
+                List<Metric> metrics = queryCache.get(pattern);
+                if (rocksdbReadonly && metrics.isEmpty()) {
+                    queryCache.invalidate(pattern);
+                }
+                return metrics;
             }
             catch(ExecutionException e)
             {
