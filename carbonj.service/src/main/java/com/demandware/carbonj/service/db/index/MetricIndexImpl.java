@@ -32,10 +32,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,8 +51,12 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -126,6 +135,12 @@ public class MetricIndexImpl implements MetricIndex {
 
     private final boolean rocksdbReadonly;
 
+    private final boolean syncSecondaryDb;
+
+    private final ConcurrentLinkedQueue<String> nameIndexQueue = new ConcurrentLinkedQueue<>();
+
+    private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+
     private static class DeleteResult extends DeleteAPIResult
     {
         public List<Metric> metrics = new ArrayList<>();
@@ -141,7 +156,7 @@ public class MetricIndexImpl implements MetricIndex {
                             boolean longId) {
         this(metricRegistry, metricsStoreConfigFile, nameIndex, idIndex, dbMetrics, nameIndexMaxCacheSize,
                 expireAfterAccessInMinutes, nameUtils, aggrPolicySource, nameIndexQueryCacheMaxSize,
-                expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId, false);
+                expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId, false, false);
     }
 
     public MetricIndexImpl( MetricRegistry metricRegistry, String metricsStoreConfigFile,
@@ -151,7 +166,8 @@ public class MetricIndexImpl implements MetricIndex {
                             int nameIndexQueryCacheMaxSize, int expireAfterWriteQueryCacheInSeconds,
                             boolean idCacheEnabled,
                             boolean longId,
-                            boolean rocksdbReadonly) {
+                            boolean rocksdbReadonly,
+                            boolean syncSecondaryDb) {
         this.metricRegistry = metricRegistry;
         this.metricsStoreConfigFile = metricsStoreConfigFile;
         this.nameUtils = Preconditions.checkNotNull(nameUtils);
@@ -165,6 +181,7 @@ public class MetricIndexImpl implements MetricIndex {
         loadFromConfigFile(metricsStoreConfigFile, metricRegistry);
         this.retentionPolicyConf = new RetentionPolicyConf(retentions);
         this.rocksdbReadonly = rocksdbReadonly;
+        this.syncSecondaryDb = syncSecondaryDb;
 
         this.metricCache =
                 CacheBuilder.newBuilder().initialCapacity(nameIndexMaxCacheSize).maximumSize(nameIndexMaxCacheSize)
@@ -235,6 +252,14 @@ public class MetricIndexImpl implements MetricIndex {
         this.queryCacheStatsReporter = new CacheStatsReporter( metricRegistry, "MetricsQueryCache", nameIndexQueryCacheMaxSize, queryCache );
 
         this.aggrPolicySource = Preconditions.checkNotNull( aggrPolicySource );
+
+        if (syncSecondaryDb) {
+            scheduledExecutorService.scheduleAtFixedRate(
+                    new SyncSecondaryDbTask(nameIndexQueue, nameIndex.getDbDir()), 60, 30, TimeUnit.SECONDS);
+        } else if (rocksdbReadonly) {
+            scheduledExecutorService.scheduleAtFixedRate(
+                    new SyncNameIndexCacheTask(metricCache, nameIndex.getDbDir()), 60, 30, TimeUnit.SECONDS);
+        }
     }
 
     private void loadFromConfigFile(String metricsStoreConfigFileName, MetricRegistry metricRegistry) {
@@ -338,15 +363,7 @@ public class MetricIndexImpl implements MetricIndex {
         {
             try {
                 Metric m = metricIdCache.get(metricId);
-                if ( m == Metric.METRIC_NULL)
-                {
-                    if (rocksdbReadonly) {
-                        // For secondary, don't cache METRIC_NULL
-                        metricIdCache.invalidate(metricId);
-                    }
-                    return null;
-                }
-                return m;
+                return m == Metric.METRIC_NULL ? null : m;
             } catch (ExecutionException e) {
                 Throwables.throwIfUnchecked(e);
                 return null;
@@ -453,6 +470,9 @@ public class MetricIndexImpl implements MetricIndex {
             metricIdCacheStatsReporter.close();
         }
         queryCacheStatsReporter.close();
+        if (syncSecondaryDb) {
+            scheduledExecutorService.shutdownNow();
+        }
     }
 
     @Override
@@ -465,10 +485,6 @@ public class MetricIndexImpl implements MetricIndex {
             {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Metric is null for the id [%s]", key));
-                }
-                if (rocksdbReadonly) {
-                    // For secondary, don't cache METRIC_NULL
-                    metricCache.invalidate(key);
                 }
                 return null;
             }
@@ -483,7 +499,6 @@ public class MetricIndexImpl implements MetricIndex {
 
     private void createRootIfMissing()
     {
-
         Metric root = getMetric( rootKey );
         if ( root == null )
         {
@@ -1004,6 +1019,9 @@ public class MetricIndexImpl implements MetricIndex {
         {
             metricIdCache.put(m.id, m);
         }
+        if (syncSecondaryDb) {
+            nameIndexQueue.offer(m.name);
+        }
         return m;
     }
 
@@ -1155,5 +1173,106 @@ public class MetricIndexImpl implements MetricIndex {
 
     public void reload() {
         loadFromConfigFile(metricsStoreConfigFile, metricRegistry);
+    }
+
+    private static class SyncSecondaryDbTask implements Runnable {
+        private final ConcurrentLinkedQueue<String> nameIndexQueue;
+        private final File syncSecondaryDbDir;
+
+        private SyncSecondaryDbTask(ConcurrentLinkedQueue<String> nameIndexQueue, File dbDir) {
+            this.nameIndexQueue = nameIndexQueue;
+            this.syncSecondaryDbDir = new File(dbDir.getParentFile(), dbDir.getName() + "-sync");
+        }
+
+        @Override
+        public void run() {
+            if (nameIndexQueue.isEmpty()) {
+                return;
+            }
+            int size = nameIndexQueue.size();
+            List<String> nameIndexes = new ArrayList<>();
+            while (size-- > 0) {
+                nameIndexes.add(nameIndexQueue.poll());
+            }
+            if (!syncSecondaryDbDir.exists()) {
+                log.info("Creating directory {}", syncSecondaryDbDir.getAbsolutePath());
+                if (!syncSecondaryDbDir.mkdir()) {
+                    log.error("Failed to create directory {}", syncSecondaryDbDir.getAbsolutePath());
+                    logError(nameIndexes);
+                    return;
+                }
+            }
+            if (!syncSecondaryDbDir.canWrite()) {
+                log.error("Cannot write to directory {}", syncSecondaryDbDir.getAbsolutePath());
+                logError(nameIndexes);
+                return;
+            }
+            File syncFile = new File(syncSecondaryDbDir, "sync-" + Clock.systemUTC().millis());
+            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(syncFile, StandardCharsets.UTF_8))) {
+                for (String nameIndex : nameIndexes) {
+                    bufferedWriter.write(nameIndex);
+                    bufferedWriter.newLine();
+                }
+            } catch (IOException e) {
+                log.error("Failed to sync name indexes to {} - {}", syncFile.getAbsolutePath(), e.getMessage(), e);
+                logError(nameIndexes);
+            }
+        }
+
+        private void logError(List<String> nameIndexes) {
+            log.error("Unable to update name indexes {}", StringUtils.join(nameIndexes, ','));
+        }
+    }
+
+    private static class SyncNameIndexCacheTask implements Runnable {
+
+        private final LoadingCache<String, Metric> metricCache;
+        private final File syncSecondaryDbDir;
+
+        private SyncNameIndexCacheTask(LoadingCache<String, Metric> metricCache, File dbDir) {
+            this.metricCache = metricCache;
+            this.syncSecondaryDbDir = new File(dbDir.getParentFile(), dbDir.getName() + "-sync");
+        }
+
+        @Override
+        public void run() {
+            if (!syncSecondaryDbDir.exists()) {
+                log.error("Directory {} does not exist", syncSecondaryDbDir.getAbsolutePath());
+                return;
+            }
+            if (!syncSecondaryDbDir.canWrite()) {
+                log.error("Cannot read from directory {}", syncSecondaryDbDir.getAbsolutePath());
+                return;
+            }
+            File[] syncFiles = syncSecondaryDbDir.listFiles((dir, name) -> name.startsWith("sync-"));
+            if (syncFiles == null || syncFiles.length == 0) {
+                log.info("No name index file to sync");
+                return;
+            }
+            for (File syncFile : syncFiles) {
+                TreeSet<String> nameIndexes = new TreeSet<>();
+                try (BufferedReader bufferedReader = new BufferedReader(new FileReader(syncFile))) {
+                    log.info("Syncing name indexes from {}", syncFile.getAbsolutePath());
+                    String nameIndex;
+                    while ((nameIndex = bufferedReader.readLine()) != null) {
+                        nameIndex = nameIndex.trim();
+                        int index = nameIndex.lastIndexOf('.');
+                        while (index > 0) {
+                            nameIndexes.add(nameIndex);
+                            nameIndex = nameIndex.substring(0, index);
+                            index = nameIndex.lastIndexOf('.');
+                        }
+                        nameIndexes.add(nameIndex);
+                    }
+                } catch (IOException e) {
+                    log.error("Failed to sync name indexes from {} - {}", syncFile.getAbsolutePath(), e.getMessage(), e);
+                    continue;
+                }
+                for (String nameIndex : nameIndexes) {
+                    log.info("Invalidating cache for name index {}", nameIndex);
+                    metricCache.invalidate(nameIndex);
+                }
+            }
+        }
     }
 }

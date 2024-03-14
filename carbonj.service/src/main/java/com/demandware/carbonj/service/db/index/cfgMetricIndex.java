@@ -11,7 +11,6 @@ import com.demandware.carbonj.service.db.model.MetricIndex;
 import com.demandware.carbonj.service.db.model.StorageAggregationPolicySource;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.FileUtils;
-import com.demandware.carbonj.service.db.util.Quota;
 import com.demandware.carbonj.service.engine.StorageAggregationRulesLoader;
 import com.demandware.core.config.cfgMetric;
 import com.google.common.base.Preconditions;
@@ -72,6 +71,8 @@ public class cfgMetricIndex
     @Value("${rocksdb.readonly:false}")
     private boolean rocksdbReadonly;
 
+    @Value("${metrics.store.sync.secondary.db:false}")
+    private boolean syncSecondaryDb;
 
     // TODO duplicated in different cfg beans
     @Value( "${app.servicedir:}" )
@@ -116,7 +117,8 @@ public class cfgMetricIndex
     {
         MetricIndexImpl metricIndex = new MetricIndexImpl(metricRegistry, metricStoreConfigFile, nameIndex, idIndex, dbMetrics,
                 nameIndexMaxCacheSize, metricCacheExpireAfterAccessInMinutes, nameUtils, policySource,
-                nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache, longId, rocksdbReadonly);
+                nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache, longId,
+                rocksdbReadonly, syncSecondaryDb);
         s.scheduleWithFixedDelay(metricIndex::reload, 300, 300, TimeUnit.SECONDS );
         return metricIndex;
     }

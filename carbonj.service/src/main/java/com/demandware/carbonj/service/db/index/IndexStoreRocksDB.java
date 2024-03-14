@@ -177,6 +177,11 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     }
 
     @Override
+    public File getDbDir() {
+        return dbDir;
+    }
+
+    @Override
     public R dbGet( K key )
     {
         byte[] keyBytes = recSerializer.keyBytes( key );
