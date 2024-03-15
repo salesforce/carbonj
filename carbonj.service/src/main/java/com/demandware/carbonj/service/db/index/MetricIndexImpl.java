@@ -51,7 +51,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
@@ -1235,16 +1234,25 @@ public class MetricIndexImpl implements MetricIndex {
 
         @Override
         public void run() {
+            Set<String> unresolvedNameIndexes = new HashSet<>();
+            getAllNameIndexFromSyncFiles(unresolvedNameIndexes);
+
             int size = nameIndexQueue.size();
             while (size-- > 0) {
                 String nameIndex = nameIndexQueue.poll();
                 if (nameIndex != null) {
-                    refreshNameIndex(nameIndex);
+                    unresolvedNameIndexes.add(nameIndex);
                 }
             }
             // Always refresh root
-            refreshNameIndex("root");
+            unresolvedNameIndexes.add("root");
+            Set<String> newUnresolvedNameIndexes = refreshNameIndex(unresolvedNameIndexes);
+            for (String nameIndex : newUnresolvedNameIndexes) {
+                nameIndexQueue.offer(nameIndex);
+            }
+        }
 
+        private void getAllNameIndexFromSyncFiles(Set<String> unresolvedNameIndexes) {
             if (!syncSecondaryDbDir.exists()) {
                 log.error("Directory {} does not exist", syncSecondaryDbDir.getAbsolutePath());
                 return;
@@ -1260,19 +1268,12 @@ public class MetricIndexImpl implements MetricIndex {
                 return;
             }
             for (File syncFile : syncFiles) {
-                TreeSet<String> nameIndexes = new TreeSet<>();
                 try (BufferedReader bufferedReader = new BufferedReader(new FileReader(syncFile))) {
                     log.info("Syncing name indexes from {}", syncFile.getAbsolutePath());
                     String nameIndex;
                     while ((nameIndex = bufferedReader.readLine()) != null) {
                         nameIndex = nameIndex.trim();
-                        int index = nameIndex.lastIndexOf('.');
-                        while (index > 0) {
-                            nameIndexes.add(nameIndex);
-                            nameIndex = nameIndex.substring(0, index);
-                            index = nameIndex.lastIndexOf('.');
-                        }
-                        nameIndexes.add(nameIndex);
+                        unresolvedNameIndexes.addAll(getAllNameIndexPrefixes(nameIndex));
                     }
                 } catch (IOException e) {
                     log.error("Failed to sync name indexes from {} - {}", syncFile.getAbsolutePath(), e.getMessage(), e);
@@ -1281,18 +1282,43 @@ public class MetricIndexImpl implements MetricIndex {
                 if (!syncFile.delete()) {
                     log.error("Failed to delete {}", syncFile.getAbsolutePath());
                 }
-                for (String nameIndex : nameIndexes) {
-                    refreshNameIndex(nameIndex);
+            }
+        }
+
+        private Set<String> refreshNameIndex(Set<String> unresolvedNameIndexes) {
+            Set<String> newUnresolvedNameIndexes = new HashSet<>();
+            for (String nameIndex : unresolvedNameIndexes) {
+                processNameIndex(nameIndex, "", newUnresolvedNameIndexes);
+            }
+            return newUnresolvedNameIndexes;
+        }
+
+        private void processNameIndex(String nameIndex, String child, Set<String> newUnresolvedNameIndexes) {
+            log.info("Refreshing cache for name index {}", nameIndex);
+            metricCache.invalidate(nameIndex);
+            Metric metric = getMetric(nameIndex);
+            if (metric == null) {
+                newUnresolvedNameIndexes.addAll(getAllNameIndexPrefixes(nameIndex));
+            } else if (!StringUtils.isEmpty(child) && !metric.children().contains(child)) {
+                newUnresolvedNameIndexes.addAll(getAllNameIndexPrefixes(nameIndex));
+            } else {
+                int index = nameIndex.lastIndexOf('.');
+                if (index > 0) {
+                    processNameIndex(nameIndex.substring(0, index), nameIndex.substring(index + 1), newUnresolvedNameIndexes);
                 }
             }
         }
 
-        private void refreshNameIndex(String nameIndex) {
-            log.info("Refreshing cache for name index {}", nameIndex);
-            metricCache.invalidate(nameIndex);
-            if (getMetric(nameIndex) == null) {
-                nameIndexQueue.offer(nameIndex);
+        private Set<String> getAllNameIndexPrefixes(String nameIndex) {
+            Set<String> nameIndexPrefixes = new HashSet<>();
+            int index = nameIndex.lastIndexOf('.');
+            while (index > 0) {
+                nameIndexPrefixes.add(nameIndex);
+                nameIndex = nameIndex.substring(0, index);
+                index = nameIndex.lastIndexOf('.');
             }
+            nameIndexPrefixes.add(nameIndex);
+            return nameIndexPrefixes;
         }
     }
 }
