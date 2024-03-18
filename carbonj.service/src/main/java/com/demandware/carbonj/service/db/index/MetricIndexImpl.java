@@ -1285,14 +1285,20 @@ public class MetricIndexImpl implements MetricIndex {
 
         private Set<String> refreshNameIndex(Set<String> unresolvedNameIndexes) {
             Set<String> newUnresolvedNameIndexes = new HashSet<>();
+            Set<String> processedNameIndexes = new HashSet<>();
             for (String nameIndex : unresolvedNameIndexes) {
-                processNameIndex(nameIndex, "", newUnresolvedNameIndexes);
+                processNameIndex(nameIndex, "", newUnresolvedNameIndexes, processedNameIndexes);
             }
             return newUnresolvedNameIndexes;
         }
 
-        private void processNameIndex(String nameIndex, String child, Set<String> newUnresolvedNameIndexes) {
-            log.info("Refreshing cache for name index {}", nameIndex);
+        private void processNameIndex(String nameIndex, String child, Set<String> newUnresolvedNameIndexes,
+                                      Set<String> processedNameIndexes) {
+            if (processedNameIndexes.contains(nameIndex)) {
+                return;
+            }
+            log.info("Refreshing cache for name index {} with child {}", nameIndex, child);
+            processedNameIndexes.add(nameIndex);
             metricCache.invalidate(nameIndex);
             Metric metric = getMetric(nameIndex);
             if (metric == null) {
@@ -1303,9 +1309,10 @@ public class MetricIndexImpl implements MetricIndex {
             } else {
                 int index = nameIndex.lastIndexOf('.');
                 if (index > 0) {
-                    processNameIndex(nameIndex.substring(0, index), nameIndex.substring(index + 1), newUnresolvedNameIndexes);
+                    processNameIndex(nameIndex.substring(0, index), nameIndex.substring(index + 1),
+                            newUnresolvedNameIndexes, processedNameIndexes);
                 } else {
-                    processNameIndex("root", nameIndex, newUnresolvedNameIndexes);
+                    processNameIndex("root", nameIndex, newUnresolvedNameIndexes, processedNameIndexes);
                 }
             }
         }
