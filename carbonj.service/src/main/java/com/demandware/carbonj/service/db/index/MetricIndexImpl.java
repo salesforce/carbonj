@@ -1244,8 +1244,6 @@ public class MetricIndexImpl implements MetricIndex {
                     unresolvedNameIndexes.add(nameIndex);
                 }
             }
-            // Always refresh root
-            unresolvedNameIndexes.add("root");
             Set<String> newUnresolvedNameIndexes = refreshNameIndex(unresolvedNameIndexes);
             for (String nameIndex : newUnresolvedNameIndexes) {
                 nameIndexQueue.offer(nameIndex);
@@ -1299,12 +1297,15 @@ public class MetricIndexImpl implements MetricIndex {
             Metric metric = getMetric(nameIndex);
             if (metric == null) {
                 newUnresolvedNameIndexes.addAll(getAllNameIndexPrefixes(nameIndex));
+                newUnresolvedNameIndexes.add("root");
             } else if (!StringUtils.isEmpty(child) && !metric.children().contains(child)) {
                 newUnresolvedNameIndexes.addAll(getAllNameIndexPrefixes(nameIndex));
             } else {
                 int index = nameIndex.lastIndexOf('.');
                 if (index > 0) {
                     processNameIndex(nameIndex.substring(0, index), nameIndex.substring(index + 1), newUnresolvedNameIndexes);
+                } else {
+                    processNameIndex("root", nameIndex, newUnresolvedNameIndexes);
                 }
             }
         }
