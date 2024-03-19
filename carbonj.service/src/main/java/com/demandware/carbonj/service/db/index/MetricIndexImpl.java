@@ -254,10 +254,10 @@ public class MetricIndexImpl implements MetricIndex {
 
         if (syncSecondaryDb) {
             scheduledExecutorService.scheduleAtFixedRate(
-                    new SyncSecondaryDbTask(nameIndex.getDbDir()), 60, 30, TimeUnit.SECONDS);
+                    new SyncSecondaryDbTask(nameIndex.getDbDir()), 60, 60, TimeUnit.SECONDS);
         } else if (rocksdbReadonly) {
             scheduledExecutorService.scheduleAtFixedRate(
-                    new SyncNameIndexCacheTask(nameIndex.getDbDir()), 60, 30, TimeUnit.SECONDS);
+                    new SyncNameIndexCacheTask(nameIndex.getDbDir()), 60, 60, TimeUnit.SECONDS);
         }
     }
 
