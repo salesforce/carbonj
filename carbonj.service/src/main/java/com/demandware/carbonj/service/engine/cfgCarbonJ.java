@@ -428,7 +428,9 @@ public class cfgCarbonJ
         return null;
     }
 
-    @Bean Void checkExpiredNamespaces( ScheduledExecutorService s, NamespaceCounter ns )
+    @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    Void checkExpiredNamespaces( ScheduledExecutorService s, NamespaceCounter ns )
     {
         if ( runInactiveNamespaceCheckEverySeconds > 0 )
         {
