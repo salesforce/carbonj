@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
 import static org.mockito.Mockito.any;
@@ -59,7 +60,7 @@ public class TestPointProcessorTask {
 
     private PointProcessorTask getTask(MetricList blocked, MetricList allowOnly, boolean expectPointsValid) {
         return new PointProcessorTask(new MetricRegistry(), TEST_POINT, blocked, allowOnly, null, false,
-                getAcceptAllFilter(), validatingConsumer(expectPointsValid), mockRelay(), mockNsCounter());
+                getAcceptAllFilter(), validatingConsumer(expectPointsValid), mockRelay(), mockNsCounter(), false, new ConcurrentLinkedQueue<>());
     }
 
     private MetricList getMetricList(boolean matchesTestSeries) {

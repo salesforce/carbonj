@@ -56,16 +56,19 @@ public class NamespaceCounter
 
     }
 
-    public void count(String name)
+    public boolean count(String name)
     {
         String ns = namespace(name);
 
         Meter m = namespaceMeters.get( ns );
+        boolean added = false;
         if( m == null )
         {
             m = namespaceMeters.computeIfAbsent( ns, key ->  addNamespace(key, name));
+            added = true;
         }
         m.mark();
+        return added;
     }
 
     private Meter addNamespace(String ns, String name)

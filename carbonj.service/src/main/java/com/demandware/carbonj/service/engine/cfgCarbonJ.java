@@ -7,6 +7,7 @@
 package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.db.util.FileUtils;
 import com.demandware.carbonj.service.engine.kinesis.cfgCheckPointMgr;
 import com.demandware.carbonj.service.events.cfgEventBus;
 import com.demandware.carbonj.service.accumulator.Accumulator;
@@ -55,6 +56,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -172,6 +174,9 @@ public class cfgCarbonJ
 
     @Value( "${app.servicedir:}" ) private String serviceDir;
 
+    @Value( "${metrics.store.dataDir:data}" )
+    private String dataDir = null;
+
     @Value( "${kinesis.consumer.region:us-east-1}" )
     private String kinesisConsumerRegion = "us-east-1";
 
@@ -194,6 +199,11 @@ public class cfgCarbonJ
     @Value( "${configServer.processInstance:unknownProcessInstance}" ) private String configServerProcessInstance;
 
     @Value( "${configServer.backupFilePath:config/config-server-state.json}" ) private String backupFilePath;
+
+    @Value("${metrics.store.sync.secondary.db:false}")
+    private boolean syncSecondaryDb;
+
+    private final ConcurrentLinkedQueue<String> namespaceQueue = new ConcurrentLinkedQueue<>();
 
     @Bean
     public RestTemplate restTemplate() {
@@ -292,7 +302,7 @@ public class cfgCarbonJ
 
         PointProcessorTaskBuilder taskBuilder =
                         new PointProcessorTaskBuilder( metricRegistry, sink, blacklist, allowOnly, auditLog,
-                                aggregationEnabled, pointFilter, accumulator, nsCounter );
+                                aggregationEnabled, pointFilter, accumulator, nsCounter, syncSecondaryDb, namespaceQueue );
 
         PointProcessor pointProcessor =
                         new PointProcessorImpl( metricRegistry, "pointProcessor", aggregatorThreads, taskBuilder );
@@ -344,7 +354,7 @@ public class cfgCarbonJ
 
         PointProcessorTaskBuilder taskBuilder =
                         new PointProcessorTaskBuilder( metricRegistry, sink, blacklist, allowOnly, auditLog,
-                                aggregationEnabled, pointFilter, accumulator, nsCounter );
+                                aggregationEnabled, pointFilter, accumulator, nsCounter, syncSecondaryDb, namespaceQueue);
 
         PointProcessor pointProcessor = new PointProcessorImpl( metricRegistry, "pointProcessorRecovery",
                         kinesisConfig.recoveryThreads(), taskBuilder );
@@ -392,8 +402,12 @@ public class cfgCarbonJ
         {
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
             Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
-                            kinesisConfig, checkPointMgr, kinesisConsumerRegion );
+                    kinesisConfig, checkPointMgr, kinesisConsumerRegion,
+                    namespaceQueue, dataDir == null ? null : FileUtils.getSyncDirFromDbDir(new File(dataDir)));
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
+            if (syncSecondaryDb) {
+                s.scheduleWithFixedDelay( consumer::syncSecondaryDb, 60, 60, TimeUnit.SECONDS );
+            }
             return consumer;
         }
         else

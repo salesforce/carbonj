@@ -12,12 +12,14 @@ import com.demandware.carbonj.service.db.model.StorageAggregationPolicySource;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.FileUtils;
 import com.demandware.carbonj.service.engine.StorageAggregationRulesLoader;
+import com.demandware.carbonj.service.ns.NamespaceCounter;
 import com.demandware.core.config.cfgMetric;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -81,6 +83,12 @@ public class cfgMetricIndex
     @Autowired
     MetricRegistry metricRegistry;
 
+    @Bean
+    @ConditionalOnProperty(name = "metrics.store.sync.secondary.db", havingValue = "true")
+    File indexNameDbDir() {
+        return dbDir("index-name");
+    }
+
     @Bean( name = "metricNameIndexStore" )
     IndexStore<String, NameRecord> metricNameIndexStore()
     {
@@ -110,16 +118,17 @@ public class cfgMetricIndex
 
 
     @Bean
-    MetricIndex metricIndex( @Qualifier( "metricNameIndexStore" ) IndexStore<String, NameRecord> nameIndex,
-                             @Qualifier( "metricIdIndexStore" ) IndexStore<Long, IdRecord> idIndex,
-                             DatabaseMetrics dbMetrics, NameUtils nameUtils,
-                             StorageAggregationPolicySource policySource, ScheduledExecutorService s )
+    MetricIndex metricIndex(@Qualifier( "metricNameIndexStore" ) IndexStore<String, NameRecord> nameIndex,
+                            @Qualifier( "metricIdIndexStore" ) IndexStore<Long, IdRecord> idIndex,
+                            DatabaseMetrics dbMetrics, NameUtils nameUtils,
+                            StorageAggregationPolicySource policySource, ScheduledExecutorService s,
+                            NamespaceCounter namespaceCounter)
     {
         MetricIndexImpl metricIndex = new MetricIndexImpl(metricRegistry, metricStoreConfigFile, nameIndex, idIndex, dbMetrics,
                 nameIndexMaxCacheSize, metricCacheExpireAfterAccessInMinutes, nameUtils, policySource,
                 nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache, longId,
-                rocksdbReadonly, syncSecondaryDb);
-        s.scheduleWithFixedDelay(metricIndex::reload, 300, 300, TimeUnit.SECONDS );
+                namespaceCounter, rocksdbReadonly, syncSecondaryDb);
+        s.scheduleWithFixedDelay(metricIndex::reload, 300, 300, TimeUnit.SECONDS);
         return metricIndex;
     }
 

@@ -8,13 +8,16 @@ package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.db.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.*;
+import java.time.Clock;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Consumers {
 
@@ -31,12 +34,17 @@ public class Consumers {
 
     private final Map<String, KinesisConsumer> consumers;
 
-    private String kinesisConsumerRegion;
+    private final String kinesisConsumerRegion;
 
-    private PointProcessor recoveryPointProcessor;
+    private final PointProcessor recoveryPointProcessor;
+
+    private final ConcurrentLinkedQueue<String> namespaceQueue;
+
+    private final File syncSecondaryDbDir;
 
     Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor, File rulesFile,
-              KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion) {
+              KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion,
+              ConcurrentLinkedQueue<String> namespaceQueue, File syncSecondaryDbDir) {
 
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
@@ -44,6 +52,8 @@ public class Consumers {
         this.kinesisConfig = kinesisConfig;
         this.checkPointMgr = checkPointMgr;
         this.kinesisConsumerRegion = kinesisConsumerRegion;
+        this.namespaceQueue = namespaceQueue;
+        this.syncSecondaryDbDir = syncSecondaryDbDir;
         consumers = new ConcurrentHashMap<>();
         consumerRules = new ConsumerRules(rulesFile);
         reload();
@@ -170,6 +180,15 @@ public class Consumers {
         Set<String> currentRules = consumerRules.getCurrentRules();
         for (String consumer : currentRules) {
             consumers.get(consumer).dumpStats();
+        }
+    }
+
+    public void syncSecondaryDb() {
+        File file = new File(syncSecondaryDbDir, "namespace-" + Clock.systemUTC().millis());
+        try {
+            FileUtils.dumpQueueToFile(namespaceQueue, file);
+        } catch (IOException e) {
+            log.error("Failed to dump namespace into file {} - {}", file.getAbsolutePath(), e.getMessage(), e);
         }
     }
 }

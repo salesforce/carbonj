@@ -7,6 +7,7 @@
 package com.demandware.carbonj.service.engine;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -24,16 +25,16 @@ public class PointProcessorTask implements Runnable
 {
     private static final Logger log = LoggerFactory.getLogger( PointProcessorTask.class );
 
-    private static Meter failedPoints;
+    private final Meter failedPoints;
 
 
     private final Timer taskTimer;
 
 
-    private List<DataPoint> points;
-    private MetricList blacklist;
+    private final List<DataPoint> points;
+    private final MetricList blacklist;
 
-    private MetricList allowOnly;
+    private final MetricList allowOnly;
 
     final Accumulator accumulator;
 
@@ -47,8 +48,12 @@ public class PointProcessorTask implements Runnable
 
     private final NamespaceCounter nsCounter;
 
+    private final boolean syncSecondaryDb;
+
+    private final ConcurrentLinkedQueue<String> namespaceQueue;
+
     public PointProcessorTask(MetricRegistry metricRegistry, List<DataPoint> points, MetricList blacklist, MetricList allowOnly, Accumulator accumulator, boolean aggregationEnabled,
-                              PointFilter pointFilter, Consumer<DataPoints> out, Relay auditLog, NamespaceCounter nsCounter)
+                              PointFilter pointFilter, Consumer<DataPoints> out, Relay auditLog, NamespaceCounter nsCounter, boolean syncSecondaryDb, ConcurrentLinkedQueue<String> namespaceQueue)
     {
         this.points = points;
         this.blacklist = blacklist;
@@ -59,6 +64,8 @@ public class PointProcessorTask implements Runnable
         this.out = out;
         this.auditLog = auditLog;
         this.nsCounter = Preconditions.checkNotNull(nsCounter);
+        this.syncSecondaryDb = syncSecondaryDb;
+        this.namespaceQueue = namespaceQueue;
 
         this.failedPoints = metricRegistry.meter(
                 MetricRegistry.name( "aggregator", "failedPoints" ) );
@@ -112,7 +119,7 @@ public class PointProcessorTask implements Runnable
         {
             log.trace( "->" + t );
         }
-        nsCounter.count( t.name );
+        boolean added = nsCounter.count( t.name );
 
         auditLog.accept( t );
 
@@ -138,6 +145,10 @@ public class PointProcessorTask implements Runnable
             }
             t.drop();
             return;
+        }
+
+        if (syncSecondaryDb && added && t.isValid()) {
+            namespaceQueue.offer(t.name);
         }
 
         if ( aggregationEnabled )
