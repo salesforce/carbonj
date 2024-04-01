@@ -7,7 +7,6 @@
 package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.MetricRegistry;
-import com.demandware.carbonj.service.db.util.FileUtils;
 import com.demandware.carbonj.service.engine.kinesis.cfgCheckPointMgr;
 import com.demandware.carbonj.service.events.cfgEventBus;
 import com.demandware.carbonj.service.accumulator.Accumulator;
@@ -403,10 +402,10 @@ public class cfgCarbonJ
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
             Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
                     kinesisConfig, checkPointMgr, kinesisConsumerRegion,
-                    namespaceQueue, dataDir == null ? null : FileUtils.getSyncDirFromDbDir(new File(dataDir)));
+                    namespaceQueue, dataDir == null ? null : new File(dataDir, "index-name-sync"));
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
             if (syncSecondaryDb) {
-                s.scheduleWithFixedDelay( consumer::syncSecondaryDb, 60, 60, TimeUnit.SECONDS );
+                s.scheduleWithFixedDelay( consumer::syncNamespace, 60, 60, TimeUnit.SECONDS );
             }
             return consumer;
         }

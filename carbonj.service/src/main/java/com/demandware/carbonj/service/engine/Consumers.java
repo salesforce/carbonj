@@ -40,11 +40,11 @@ public class Consumers {
 
     private final ConcurrentLinkedQueue<String> namespaceQueue;
 
-    private final File syncSecondaryDbDir;
+    private final File indexNameSyncDir;
 
     Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor, File rulesFile,
               KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion,
-              ConcurrentLinkedQueue<String> namespaceQueue, File syncSecondaryDbDir) {
+              ConcurrentLinkedQueue<String> namespaceQueue, File indexNameSyncDir) {
 
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
@@ -53,7 +53,7 @@ public class Consumers {
         this.checkPointMgr = checkPointMgr;
         this.kinesisConsumerRegion = kinesisConsumerRegion;
         this.namespaceQueue = namespaceQueue;
-        this.syncSecondaryDbDir = syncSecondaryDbDir;
+        this.indexNameSyncDir = indexNameSyncDir;
         consumers = new ConcurrentHashMap<>();
         consumerRules = new ConsumerRules(rulesFile);
         reload();
@@ -183,8 +183,8 @@ public class Consumers {
         }
     }
 
-    public void syncSecondaryDb() {
-        File file = new File(syncSecondaryDbDir, "namespace-" + Clock.systemUTC().millis());
+    public void syncNamespace() {
+        File file = new File(indexNameSyncDir, "namespace-" + Clock.systemUTC().millis());
         try {
             FileUtils.dumpQueueToFile(namespaceQueue, file);
         } catch (IOException e) {
