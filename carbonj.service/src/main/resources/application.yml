@@ -20,7 +20,6 @@ metrics:
       offset:
         default:
           mins: 5
-
 kinesis:
   consumer:
     region: us-east-1
