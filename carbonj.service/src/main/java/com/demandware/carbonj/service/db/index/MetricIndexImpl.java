@@ -679,11 +679,7 @@ public class MetricIndexImpl implements MetricIndex {
         {
             try
             {
-                List<Metric> metrics = queryCache.get(pattern);
-                if (rocksdbReadonly && metrics.isEmpty()) {
-                    queryCache.invalidate(pattern);
-                }
-                return metrics;
+                return queryCache.get(pattern);
             }
             catch(ExecutionException e)
             {
@@ -1215,7 +1211,7 @@ public class MetricIndexImpl implements MetricIndex {
 
         private Set<String> applyNamespace(String namespace) {
             if (namespaceCounter.count(namespace)) {
-                log.info("Added namespace {}", namespace);
+                log.info("Added namespace {}", namespaceCounter.namespace(namespace));
             }
             return null;
         }
@@ -1250,12 +1246,12 @@ public class MetricIndexImpl implements MetricIndex {
 
             File[] syncFiles = syncSecondaryDbDir.listFiles((dir, name) -> name.startsWith(prefix));
             if (syncFiles == null || syncFiles.length == 0) {
-                log.info("No name index file to sync");
+                log.info("No file with prefix {} to sync", prefix);
                 return;
             }
             for (File syncFile : syncFiles) {
                 try (BufferedReader bufferedReader = new BufferedReader(new FileReader(syncFile))) {
-                    log.info("Syncing name indexes from {}", syncFile.getAbsolutePath());
+                    log.info("Syncing file from {}", syncFile.getAbsolutePath());
                     String nameIndex;
                     while ((nameIndex = bufferedReader.readLine()) != null) {
                         nameIndex = nameIndex.trim();
@@ -1265,11 +1261,11 @@ public class MetricIndexImpl implements MetricIndex {
                         }
                     }
                 } catch (IOException e) {
-                    log.error("Failed to sync name indexes from {} - {}", syncFile.getAbsolutePath(), e.getMessage(), e);
+                    log.error("Failed to sync file from {} - {}", syncFile.getAbsolutePath(), e.getMessage(), e);
                     continue;
                 }
                 if (!syncFile.delete()) {
-                    log.error("Failed to delete {}", syncFile.getAbsolutePath());
+                    log.error("Failed to delete file {}", syncFile.getAbsolutePath());
                 }
             }
         }
@@ -1292,7 +1288,7 @@ public class MetricIndexImpl implements MetricIndex {
             if (processedNameIndexes.contains(nameIndex)) {
                 return;
             }
-            log.info("Refreshing cache for name index {} with child {}", nameIndex, child);
+            log.debug("Refreshing cache for name index {} with child {}", nameIndex, child);
             processedNameIndexes.add(nameIndex);
             metricCache.invalidate(nameIndex);
             Metric metric = getMetric(nameIndex);

@@ -20,7 +20,6 @@ server:
     port: 2001
     dataport: 2003
     host: localhost
-
 kinesis:
   consumer:
     enabled: false

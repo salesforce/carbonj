@@ -84,7 +84,7 @@ public class NamespaceCounter
         return namespaceMeters.containsKey( namespace(name) );
     }
 
-    private String namespace(String name)
+    public String namespace(String name)
     {
         int i = name.indexOf( '.' );
         return i > 0 ? name.substring( 0, i) : name;

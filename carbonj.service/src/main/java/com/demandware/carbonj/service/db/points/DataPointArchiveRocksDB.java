@@ -539,7 +539,7 @@ class DataPointArchiveRocksDB
         {
             if (rocksdbConfig.readOnly) {
                 db = RocksDB.openAsSecondary(options, dbDir.getAbsolutePath(), secondaryDbDir.getAbsolutePath());
-                log.info("Rocks DB {} opened in readonly mode", dbName);
+                log.info("Rocks DB {} opened in secondary mode", dbName);
                 scheduledExecutorService.scheduleAtFixedRate(new SyncPrimaryDbTask(db, dbDir), 60, 60, TimeUnit.SECONDS);
             } else {
                 db = TtlDB.open(options, dbDir.getAbsolutePath(), ttl, false);

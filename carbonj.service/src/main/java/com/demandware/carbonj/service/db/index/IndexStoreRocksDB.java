@@ -85,7 +85,7 @@ class IndexStoreRocksDB<K, R extends Record<K>>
                 options.setCreateIfMissing(false);
                 options.setMaxOpenFiles(-1);
                 this.db = RocksDB.openAsSecondary(options, dbDir.getAbsolutePath(), secondaryDbDir.getAbsolutePath());
-                log.info("RocksDB metric index store in [{}] opened in readonly mode", dbDir);
+                log.info("RocksDB metric index store in [{}] opened in secondary mode", dbDir);
                 scheduledExecutorService.scheduleAtFixedRate(new SyncPrimaryDbTask(db, dbDir), 60, 60, TimeUnit.SECONDS);
             } else {
                 options.setCreateIfMissing(true);
