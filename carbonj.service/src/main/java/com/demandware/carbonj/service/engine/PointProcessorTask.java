@@ -7,7 +7,6 @@
 package com.demandware.carbonj.service.engine;
 
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -48,12 +47,8 @@ public class PointProcessorTask implements Runnable
 
     private final NamespaceCounter nsCounter;
 
-    private final boolean syncSecondaryDb;
-
-    private final ConcurrentLinkedQueue<String> namespaceQueue;
-
     public PointProcessorTask(MetricRegistry metricRegistry, List<DataPoint> points, MetricList blacklist, MetricList allowOnly, Accumulator accumulator, boolean aggregationEnabled,
-                              PointFilter pointFilter, Consumer<DataPoints> out, Relay auditLog, NamespaceCounter nsCounter, boolean syncSecondaryDb, ConcurrentLinkedQueue<String> namespaceQueue)
+                              PointFilter pointFilter, Consumer<DataPoints> out, Relay auditLog, NamespaceCounter nsCounter)
     {
         this.points = points;
         this.blacklist = blacklist;
@@ -64,8 +59,6 @@ public class PointProcessorTask implements Runnable
         this.out = out;
         this.auditLog = auditLog;
         this.nsCounter = Preconditions.checkNotNull(nsCounter);
-        this.syncSecondaryDb = syncSecondaryDb;
-        this.namespaceQueue = namespaceQueue;
 
         this.failedPoints = metricRegistry.meter(
                 MetricRegistry.name( "aggregator", "failedPoints" ) );
@@ -119,7 +112,7 @@ public class PointProcessorTask implements Runnable
         {
             log.trace( "->" + t );
         }
-        boolean added = nsCounter.count( t.name );
+        nsCounter.count( t.name );
 
         auditLog.accept( t );
 
@@ -145,10 +138,6 @@ public class PointProcessorTask implements Runnable
             }
             t.drop();
             return;
-        }
-
-        if (syncSecondaryDb && added && t.isValid()) {
-            namespaceQueue.offer(t.name);
         }
 
         if ( aggregationEnabled )

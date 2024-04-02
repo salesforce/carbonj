@@ -309,7 +309,7 @@ public class cfgCarbonJ
 
         PointProcessorTaskBuilder taskBuilder =
                         new PointProcessorTaskBuilder( metricRegistry, sink, blacklist, allowOnly, auditLog,
-                                aggregationEnabled, pointFilter, accumulator, nsCounter, syncSecondaryDb, namespaceQueue );
+                                aggregationEnabled, pointFilter, accumulator, nsCounter );
 
         PointProcessor pointProcessor =
                         new PointProcessorImpl( metricRegistry, "pointProcessor", aggregatorThreads, taskBuilder );
@@ -361,7 +361,7 @@ public class cfgCarbonJ
 
         PointProcessorTaskBuilder taskBuilder =
                         new PointProcessorTaskBuilder( metricRegistry, sink, blacklist, allowOnly, auditLog,
-                                aggregationEnabled, pointFilter, accumulator, nsCounter, syncSecondaryDb, namespaceQueue);
+                                aggregationEnabled, pointFilter, accumulator, nsCounter );
 
         PointProcessor pointProcessor = new PointProcessorImpl( metricRegistry, "pointProcessorRecovery",
                         kinesisConfig.recoveryThreads(), taskBuilder );
@@ -403,17 +403,17 @@ public class cfgCarbonJ
     @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
     Consumers consumer( PointProcessor pointProcessor,
                               @Qualifier( "recoveryPointProcessor" ) PointProcessor recoveryPointProcessor,
-                              ScheduledExecutorService s, KinesisConfig kinesisConfig )
+                              ScheduledExecutorService s, KinesisConfig kinesisConfig, NamespaceCounter nsCounter )
     {
         if ( kinesisConfig.isKinesisConsumerEnabled() )
         {
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
             Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
                     kinesisConfig, checkPointMgr, kinesisConsumerRegion,
-                    namespaceQueue, dataDir == null ? null : new File(dataDir, "index-name-sync"));
+                    nsCounter, dataDir == null ? null : new File(dataDir, "index-name-sync"));
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
             if (syncSecondaryDb) {
-                s.scheduleWithFixedDelay( consumer::syncNamespace, 60, 60, TimeUnit.SECONDS );
+                s.scheduleWithFixedDelay( consumer::syncNamespaces, 60, 60, TimeUnit.SECONDS );
             }
             return consumer;
         }

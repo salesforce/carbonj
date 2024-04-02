@@ -260,8 +260,9 @@ public class MetricIndexImpl implements MetricIndex {
             scheduledExecutorService.scheduleAtFixedRate(
                     new SyncSecondaryDbTask(), 60, 60, TimeUnit.SECONDS);
         } else if (rocksdbReadonly) {
-            scheduledExecutorService.scheduleAtFixedRate(
-                    new SyncNameIndexCacheTask(), 60, 60, TimeUnit.SECONDS);
+            SyncNameIndexCacheTask syncNameIndexCacheTask = new SyncNameIndexCacheTask();
+            syncNameIndexCacheTask.syncNameCounters();
+            scheduledExecutorService.scheduleAtFixedRate(syncNameIndexCacheTask, 60, 60, TimeUnit.SECONDS);
         }
     }
 
@@ -1206,19 +1207,17 @@ public class MetricIndexImpl implements MetricIndex {
         }
 
         private void syncNameCounters() {
-            syncFiles(this::applyNamespace, new HashSet<>(), "namespace-");
+            syncFiles(this::applyNamespace, new HashSet<>(), "namespaces", false);
         }
 
         private Set<String> applyNamespace(String namespace) {
-            if (namespaceCounter.count(namespace)) {
-                log.info("Added namespace {}", namespaceCounter.namespace(namespace));
-            }
+            namespaceCounter.count(namespace);
             return null;
         }
 
         private void syncNameIndexes() {
             Set<String> unresolvedNameIndexes = new HashSet<>();
-            syncFiles(this::applyNameIndex, unresolvedNameIndexes, "sync-");
+            syncFiles(this::applyNameIndex, unresolvedNameIndexes, "sync-", true);
 
             int size = nameIndexQueue.size();
             while (size-- > 0) {
@@ -1233,7 +1232,7 @@ public class MetricIndexImpl implements MetricIndex {
             }
         }
 
-        private void syncFiles(Function<String, Set<String>> function, Set<String> nameIndices, String prefix) {
+        private void syncFiles(Function<String, Set<String>> function, Set<String> nameIndices, String prefix, boolean delete) {
             File syncSecondaryDbDir = FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir());
             if (!syncSecondaryDbDir.exists()) {
                 log.error("Directory {} does not exist", syncSecondaryDbDir.getAbsolutePath());
@@ -1264,8 +1263,10 @@ public class MetricIndexImpl implements MetricIndex {
                     log.error("Failed to sync file from {} - {}", syncFile.getAbsolutePath(), e.getMessage(), e);
                     continue;
                 }
-                if (!syncFile.delete()) {
-                    log.error("Failed to delete file {}", syncFile.getAbsolutePath());
+                if (delete) {
+                    if (!syncFile.delete()) {
+                        log.error("Failed to delete file {}", syncFile.getAbsolutePath());
+                    }
                 }
             }
         }

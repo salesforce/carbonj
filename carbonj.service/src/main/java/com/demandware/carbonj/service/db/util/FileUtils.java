@@ -45,6 +45,13 @@ public class FileUtils
         while (size-- > 0) {
             lines.add(queue.poll());
         }
+        dumpQueueToFile(lines, file);
+    }
+
+    public static void dumpQueueToFile(Set<String> lines, File file) throws IOException {
+        if (lines.isEmpty()) {
+            return;
+        }
         File parent = file.getParentFile();
         if (!parent.exists()) {
             log.info("Creating directory {}", parent.getAbsolutePath());
