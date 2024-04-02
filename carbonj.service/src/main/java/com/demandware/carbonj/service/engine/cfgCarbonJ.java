@@ -182,6 +182,12 @@ public class cfgCarbonJ
     @Value( "${kinesis.relay.region:us-east-1}" )
     private String kinesisRelayRegion = "us-east-1";
 
+    @Value( "${kinesis.relay.rbacEnabled:false}" ) private Boolean kinesisRelayRbacEnabled = false;
+
+    @Value( "${kinesis.relay.account:}" ) private String kinesisRelayAccount;
+
+    @Value( "${kinesis.relay.role:}" ) private String kinesisRelayRole;
+
     /**
      * Config server properties
      */
@@ -230,7 +236,8 @@ public class cfgCarbonJ
     {
         File rulesFile = locateConfigFile( serviceDir, relayRulesFile );
         Relay r = new Relay( metricRegistry, "relay", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, relayRulesSrc, relayCacheEnabled, configServerUtil);
+                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, relayRulesSrc, relayCacheEnabled, configServerUtil,
+                        kinesisRelayRbacEnabled, kinesisRelayAccount, kinesisRelayRole);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
@@ -240,7 +247,8 @@ public class cfgCarbonJ
     {
         File rulesFile = locateConfigFile( serviceDir, auditRulesFile );
         Relay r = new Relay( metricRegistry, "audit", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
-                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, auditRulesSrc, false, configServerUtil);
+                        destConfigDir, maxWaitTimeInSecs, kinesisRelayRegion, auditRulesSrc, false, configServerUtil,
+                        kinesisRelayRbacEnabled, kinesisRelayAccount, kinesisRelayRole);
         s.scheduleWithFixedDelay( r::reload, 15, 30, TimeUnit.SECONDS );
         return r;
     }
