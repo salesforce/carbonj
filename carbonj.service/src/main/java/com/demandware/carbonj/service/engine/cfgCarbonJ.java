@@ -55,7 +55,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -207,8 +206,6 @@ public class cfgCarbonJ
 
     @Value("${metrics.store.sync.secondary.db:false}")
     private boolean syncSecondaryDb;
-
-    private final ConcurrentLinkedQueue<String> namespaceQueue = new ConcurrentLinkedQueue<>();
 
     @Bean
     public RestTemplate restTemplate() {

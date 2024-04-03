@@ -194,7 +194,7 @@ public class Consumers {
     public void syncNamespaces() {
         File file = new File(indexNameSyncDir, "namespaces");
         try {
-            FileUtils.dumpQueueToFile(namespaceCounter.getLiveNamespaces(), file);
+            FileUtils.dumpSetToFile(namespaceCounter.getLiveNamespaces(), file);
         } catch (IOException e) {
             log.error("Failed to dump namespace into file {} - {}", file.getAbsolutePath(), e.getMessage(), e);
         }

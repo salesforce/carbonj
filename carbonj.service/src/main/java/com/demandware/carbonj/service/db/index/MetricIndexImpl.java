@@ -1188,7 +1188,7 @@ public class MetricIndexImpl implements MetricIndex {
         public void run() {
             File file = new File(FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir()), "sync-" + Clock.systemUTC().millis());
             try {
-                FileUtils.dumpQueueToFile(nameIndexQueue, file);
+                FileUtils.dumpSetToFile(nameIndexQueue, file);
             } catch (IOException e) {
                 log.error("Failed to dump name index into file {} - {}", file.getAbsolutePath(), e.getMessage(), e);
             }
@@ -1289,7 +1289,7 @@ public class MetricIndexImpl implements MetricIndex {
             if (processedNameIndexes.contains(nameIndex)) {
                 return;
             }
-            log.debug("Refreshing cache for name index {} with child {}", nameIndex, child);
+            log.info("Refreshing cache for name index {} with child {}", nameIndex, child);
             processedNameIndexes.add(nameIndex);
             metricCache.invalidate(nameIndex);
             Metric metric = getMetric(nameIndex);

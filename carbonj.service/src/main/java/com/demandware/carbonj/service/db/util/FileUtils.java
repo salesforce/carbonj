@@ -36,7 +36,7 @@ public class FileUtils
         return new File(dbDir.getParentFile(), dbDir.getName() + "-sync");
     }
 
-    public static void dumpQueueToFile(Queue<String> queue, File file) throws IOException {
+    public static void dumpSetToFile(Queue<String> queue, File file) throws IOException {
         if (queue.isEmpty()) {
             return;
         }
@@ -45,10 +45,10 @@ public class FileUtils
         while (size-- > 0) {
             lines.add(queue.poll());
         }
-        dumpQueueToFile(lines, file);
+        dumpSetToFile(lines, file);
     }
 
-    public static void dumpQueueToFile(Set<String> lines, File file) throws IOException {
+    public static void dumpSetToFile(Set<String> lines, File file) throws IOException {
         if (lines.isEmpty()) {
             return;
         }
