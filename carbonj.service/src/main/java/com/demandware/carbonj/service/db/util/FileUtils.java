@@ -36,7 +36,7 @@ public class FileUtils
         return new File(dbDir.getParentFile(), dbDir.getName() + "-sync");
     }
 
-    public static void dumpSetToFile(Queue<String> queue, File file) throws IOException {
+    public static void dumpQueueToFile(Queue<String> queue, File file) throws IOException {
         if (queue.isEmpty()) {
             return;
         }

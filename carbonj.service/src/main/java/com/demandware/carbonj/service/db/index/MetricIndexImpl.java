@@ -1188,7 +1188,7 @@ public class MetricIndexImpl implements MetricIndex {
         public void run() {
             File file = new File(FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir()), "sync-" + Clock.systemUTC().millis());
             try {
-                FileUtils.dumpSetToFile(nameIndexQueue, file);
+                FileUtils.dumpQueueToFile(nameIndexQueue, file);
             } catch (IOException e) {
                 log.error("Failed to dump name index into file {} - {}", file.getAbsolutePath(), e.getMessage(), e);
             }
