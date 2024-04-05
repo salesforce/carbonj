@@ -27,7 +27,7 @@ public class IndexUtils
 
     private static IndexStore<String, NameRecord> metricNameIndexStore( File dbDir, boolean longId, boolean rocksdbReadonly )
     {
-        return new IndexStoreRocksDB<>(metricRegistry, "index-name", dir( dbDir, "index-name" ), new NameRecordSerializer(longId), rocksdbReadonly);
+        return new IndexStoreRocksDB<>(metricRegistry, "index-name", dir( dbDir, "index-name" ), new NameRecordSerializer(longId), rocksdbReadonly, 1);
     }
 
     private static IndexStore<Long, IdRecord> metricIdIndexStore( File dbDir, boolean longId ) {
@@ -35,7 +35,7 @@ public class IndexUtils
     }
 
     private static IndexStore<Long, IdRecord> metricIdIndexStore( File dbDir, boolean longId, boolean rocksdbReadonly ) {
-        return new IndexStoreRocksDB<>(metricRegistry, "index-id", dir( dbDir, "index-id" ), new IdRecordSerializer(longId), rocksdbReadonly);
+        return new IndexStoreRocksDB<>(metricRegistry, "index-id", dir( dbDir, "index-id" ), new IdRecordSerializer(longId), rocksdbReadonly, 1);
     }
 
     public static MetricIndex metricIndex( File dbDir, boolean longId )

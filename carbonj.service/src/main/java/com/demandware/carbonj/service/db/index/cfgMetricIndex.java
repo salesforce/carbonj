@@ -76,6 +76,9 @@ public class cfgMetricIndex
     @Value("${metrics.store.sync.secondary.db:false}")
     private boolean syncSecondaryDb;
 
+    @Value("${rocksdb.catchup.retry:3}")
+    private int catchupRetry = 3;
+
     // TODO duplicated in different cfg beans
     @Value( "${app.servicedir:}" )
     private String serviceDir;
@@ -93,14 +96,14 @@ public class cfgMetricIndex
     IndexStore<String, NameRecord> metricNameIndexStore()
     {
         File dbDir = dbDir( "index-name" );
-        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dbDir, new NameRecordSerializer(longId), rocksdbReadonly);
+        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dbDir, new NameRecordSerializer(longId), rocksdbReadonly, catchupRetry);
     }
 
     @Bean( name = "metricIdIndexStore" )
     IndexStore<Long, IdRecord> metricIdIndexStore()
     {
         File dbDir = dbDir( "index-id" );
-        return new IndexStoreRocksDB<>( metricRegistry,"index-id", dbDir, new IdRecordSerializer(longId), rocksdbReadonly);
+        return new IndexStoreRocksDB<>( metricRegistry,"index-id", dbDir, new IdRecordSerializer(longId), rocksdbReadonly, catchupRetry);
     }
 
     @Bean

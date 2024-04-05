@@ -6,12 +6,15 @@
  */
 package com.demandware.carbonj.service.db.util;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TreeSet;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
@@ -68,5 +71,41 @@ public class FileUtils
         }
         log.info("Dumping queue with {} elements into file {}", lines.size(), file.getAbsoluteFile());
         org.apache.commons.io.FileUtils.writeLines(file, StandardCharsets.UTF_8.name(), lines, false);
+    }
+
+    public static Set<String> readFilesToSet(File syncSecondaryDbDir, String prefix, boolean delete) {
+        Set<String> results = new TreeSet<>();
+        if (!syncSecondaryDbDir.exists()) {
+            log.error("Directory {} does not exist", syncSecondaryDbDir.getAbsolutePath());
+            return results;
+        }
+        if (!syncSecondaryDbDir.canRead()) {
+            log.error("Cannot read from directory {}", syncSecondaryDbDir.getAbsolutePath());
+            return results;
+        }
+
+        File[] syncFiles = syncSecondaryDbDir.listFiles((dir, name) -> name.startsWith(prefix));
+        if (syncFiles == null || syncFiles.length == 0) {
+            log.info("No file with prefix {} to sync", prefix);
+            return results;
+        }
+        for (File syncFile : syncFiles) {
+            try (BufferedReader bufferedReader = new BufferedReader(new FileReader(syncFile))) {
+                log.info("Syncing file from {}", syncFile.getAbsolutePath());
+                String nameIndex;
+                while ((nameIndex = bufferedReader.readLine()) != null) {
+                    results.add(nameIndex.trim());
+                }
+            } catch (IOException e) {
+                log.error("Failed to sync file from {} - {}", syncFile.getAbsolutePath(), e.getMessage(), e);
+                continue;
+            }
+            if (delete) {
+                if (!syncFile.delete()) {
+                    log.error("Failed to delete file {}", syncFile.getAbsolutePath());
+                }
+            }
+        }
+        return results;
     }
 }

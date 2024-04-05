@@ -6,8 +6,11 @@
  */
 package com.demandware.carbonj.service.db.index;
 
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.demandware.carbonj.service.db.SyncPrimaryDbTask;
+import com.demandware.carbonj.service.db.util.MetricUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.primitives.SignedBytes;
@@ -51,21 +54,27 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private final Timer catchUpTimer;
 
+    private final Meter catchUpTimerError;
+
     private final boolean rocksdbReadonly;
+
+    private final int catchupRetry;
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
-    public IndexStoreRocksDB(MetricRegistry metricRegistry, String dbName, File dbDir, RecordSerializer<K, R> recSerializer, boolean rocksdbReadonly)
+    public IndexStoreRocksDB(MetricRegistry metricRegistry, String dbName, File dbDir, RecordSerializer<K, R> recSerializer, boolean rocksdbReadonly, int catchupRetry)
     {
         this.dbName = Preconditions.checkNotNull( dbName );
         this.dbDir = Preconditions.checkNotNull( dbDir );
         this.secondaryDbDir = new File(dbDir.getParentFile(), dbName + "-secondary");
         this.recSerializer = recSerializer;
-        this.writeTimer = metricRegistry.timer( dbWriteTimerName( dbName ) );
-        this.readTimer = metricRegistry.timer( dbReadTimerName( dbName ) );
-        this.delTimer = metricRegistry.timer( dbDeleteTimerName( dbName ) );
-        this.catchUpTimer = metricRegistry.timer(dbCatchUpTimerName(dbName));
+        this.writeTimer = metricRegistry.timer(MetricUtils.dbWriteTimerName(dbName));
+        this.readTimer = metricRegistry.timer(MetricUtils.dbReadTimerName(dbName));
+        this.delTimer = metricRegistry.timer(MetricUtils.dbDeleteTimerName(dbName));
+        this.catchUpTimer = metricRegistry.timer(MetricUtils.dbCatchUpTimerName(dbName));
+        this.catchUpTimerError = metricRegistry.meter(MetricUtils.dbCatchUpTimerErrorName(dbName));
         this.rocksdbReadonly = rocksdbReadonly;
+        this.catchupRetry = catchupRetry;
     }
 
     @Override
@@ -89,7 +98,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
                 options.setMaxOpenFiles(-1);
                 this.db = RocksDB.openAsSecondary(options, dbDir.getAbsolutePath(), secondaryDbDir.getAbsolutePath());
                 log.info("RocksDB metric index store in [{}] opened in secondary mode", dbDir);
-                scheduledExecutorService.scheduleAtFixedRate(new SyncPrimaryDbTask(db, dbDir, catchUpTimer), 60, 60, TimeUnit.SECONDS);
+                scheduledExecutorService.scheduleAtFixedRate(
+                        new SyncPrimaryDbTask(db, dbDir, catchUpTimer, catchUpTimerError, catchupRetry),
+                        60, 60, TimeUnit.SECONDS);
             } else {
                 options.setCreateIfMissing(true);
                 this.db = RocksDB.open(options, dbDir.getAbsolutePath());
@@ -289,48 +300,6 @@ class IndexStoreRocksDB<K, R extends Record<K>>
             {
                 log.error( "Error while closing database [" + dbName + "].", e );
             }
-        }
-    }
-
-    private String dbWriteTimerName( String dbName )
-    {
-        return "db." + dbName + ".write.time";
-    }
-
-    private String dbReadTimerName( String dbName )
-    {
-        return "db." + dbName + ".read.time";
-    }
-
-    private String dbDeleteTimerName( String dbName )
-    {
-        return "db." + dbName + ".delete.time";
-    }
-
-    private String dbCatchUpTimerName(String dbName) {
-        return "db." + dbName + ".catchup.time";
-    }
-
-    private static class SyncPrimaryDbTask implements Runnable {
-        private final RocksDB rocksDB;
-        private final File dbDir;
-        private final Timer catchUpTimer;
-
-        private SyncPrimaryDbTask(RocksDB rocksDB, File dbDir, Timer catchUpTimer) {
-            this.rocksDB = rocksDB;
-            this.dbDir = dbDir;
-            this.catchUpTimer = catchUpTimer;
-        }
-
-        @Override
-        public void run() {
-            log.info("Start syncing with primary DB {}", dbDir.getAbsolutePath());
-            try (Timer.Context ignored = catchUpTimer.time()) {
-                rocksDB.tryCatchUpWithPrimary();
-            } catch (RocksDBException e) {
-                log.error("Failed to sync with primary DB {} - {}", dbDir.getAbsolutePath(), e.getMessage(), e);
-            }
-            log.info("Completed syncing with primary DB {}", dbDir.getAbsolutePath());
         }
     }
 }

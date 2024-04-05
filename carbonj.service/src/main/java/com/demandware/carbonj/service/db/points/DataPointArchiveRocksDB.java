@@ -19,6 +19,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.db.SyncPrimaryDbTask;
+import com.demandware.carbonj.service.db.util.MetricUtils;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
@@ -90,6 +92,8 @@ class DataPointArchiveRocksDB
 
     private final Timer catchUpTimer;
 
+    private final Meter catchUpTimerError;
+
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
     private final ThreadPoolExecutor cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
@@ -115,13 +119,14 @@ class DataPointArchiveRocksDB
         this.dbDir = Preconditions.checkNotNull( dbDir );
         this.secondaryDbDir = new File(dbDir.getParentFile(), dbName + "-secondary");
         this.rocksdbConfig = Preconditions.checkNotNull( rocksdbConfig );
-        this.savedRecordsMeter = metricRegistry.meter( dbSavedRecordsMeterName( dbName ) );
-        this.writeTimer = metricRegistry.timer( dbWriteTimerName( dbName ) );
-        this.batchWriteTimer = metricRegistry.timer( dbBatchWriteTimerName( dbName ) );
-        this.readTimer = metricRegistry.timer( dbReadTimerName( dbName ) );
-        this.emptyReadTimer = metricRegistry.timer( dbEmptyReadTimerName( dbName ) );
-        this.deleteTimer = metricRegistry.timer( dbDeleteTimerName( dbName ) );
-        this.catchUpTimer = metricRegistry.timer(dbCatchUpTimerName(dbName));
+        this.savedRecordsMeter = metricRegistry.meter(MetricUtils.dbSavedRecordsMeterName(dbName));
+        this.writeTimer = metricRegistry.timer(MetricUtils.dbWriteTimerName(dbName));
+        this.batchWriteTimer = metricRegistry.timer(MetricUtils.dbBatchWriteTimerName(dbName));
+        this.readTimer = metricRegistry.timer(MetricUtils.dbReadTimerName(dbName));
+        this.emptyReadTimer = metricRegistry.timer(MetricUtils. dbEmptyReadTimerName(dbName));
+        this.deleteTimer = metricRegistry.timer(MetricUtils.dbDeleteTimerName(dbName));
+        this.catchUpTimer = metricRegistry.timer(MetricUtils.dbCatchUpTimerName(dbName));
+        this.catchUpTimerError = metricRegistry.meter(MetricUtils.dbCatchUpTimerErrorName(dbName));
         this.longId = longId;
         TtlDB.loadLibrary();
     }
@@ -543,7 +548,9 @@ class DataPointArchiveRocksDB
             if (rocksdbConfig.readOnly) {
                 db = RocksDB.openAsSecondary(options, dbDir.getAbsolutePath(), secondaryDbDir.getAbsolutePath());
                 log.info("Rocks DB {} opened in secondary mode", dbName);
-                scheduledExecutorService.scheduleAtFixedRate(new SyncPrimaryDbTask(db, dbDir, catchUpTimer), 60, 60, TimeUnit.SECONDS);
+                scheduledExecutorService.scheduleAtFixedRate(
+                        new SyncPrimaryDbTask(db, dbDir, catchUpTimer, catchUpTimerError, rocksdbConfig.catchupRetry),
+                        60, 60, TimeUnit.SECONDS);
             } else {
                 db = TtlDB.open(options, dbDir.getAbsolutePath(), ttl, false);
                 writeOptions.setDisableWAL( rocksdbConfig.disableWAL );
@@ -583,68 +590,10 @@ class DataPointArchiveRocksDB
         log.info( "closed data point archive database [" + dbName + "]." );
     }
 
-    private String dbWriteTimerName( String dbName )
-    {
-        return "db." + dbName + ".write.time";
-    }
-
-    private String dbBatchWriteTimerName( String dbName )
-    {
-        return "db." + dbName + ".batchWrite.time";
-    }
-
-    private String dbSavedRecordsMeterName( String dbName )
-    {
-        return "db." + dbName + ".records.saved";
-    }
-
-    private String dbReadTimerName( String dbName )
-    {
-        return "db." + dbName + ".read.time";
-    }
-
-    private String dbEmptyReadTimerName( String dbName )
-    {
-        return "db." + dbName + ".emptyRead.time";
-    }
-
-    private String dbDeleteTimerName( String dbName )
-    {
-        return "db." + dbName + ".delete.time";
-    }
-
-    private String dbCatchUpTimerName( String dbName )
-    {
-        return "db." + dbName + ".catchup.time";
-    }
-
     @Override
     public DataPointValue getFirst( long metricId, int from, int to )
     {
         List<DataPointValue> r = getDataPointsWithLimit( metricId, from, to, 1 );
         return r.isEmpty() ? null : r.get( 0 );
-    }
-
-    private static class SyncPrimaryDbTask implements Runnable {
-        private final RocksDB rocksDB;
-        private final File dbDir;
-        private final Timer catchUpTimer;
-
-        private SyncPrimaryDbTask(RocksDB rocksDB, File dbDir, Timer catchUpTimer) {
-            this.rocksDB = rocksDB;
-            this.dbDir = dbDir;
-            this.catchUpTimer = catchUpTimer;
-        }
-
-        @Override
-        public void run() {
-            log.info("Start syncing with primary DB {}", dbDir.getAbsolutePath());
-            try (Timer.Context ignored = catchUpTimer.time()) {
-                rocksDB.tryCatchUpWithPrimary();
-            } catch (RocksDBException e) {
-                log.error("Failed to sync with primary DB {} - {}", dbDir.getAbsolutePath(), e.getMessage(), e);
-            }
-            log.info("Completed syncing with primary DB {}", dbDir.getAbsolutePath());
-        }
     }
 }

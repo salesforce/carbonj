@@ -85,6 +85,9 @@ public class RocksDBConfig
     @Value("${rocksdb.readonly:false}")
     boolean readOnly = false;
 
+    @Value("${rocksdb.catchup.retry:3}")
+    int catchupRetry = 3;
+
     @Override
     public String toString()
     {
@@ -97,6 +100,7 @@ public class RocksDBConfig
                         ", disableWAL=" + disableWAL +
                         ", useBloomFilter=" + useBloomFilter +
                         ", readOnly=" + readOnly +
+                        ", catchupRetry=" + catchupRetry +
                         '}';
     }
 }

@@ -34,7 +34,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -58,7 +57,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.demandware.carbonj.service.db.index.QueryUtils.filter;
@@ -784,7 +782,6 @@ public class MetricIndexImpl implements MetricIndex {
 
     }
 
-
     private List<String> findMetricWithSegment(String parentKey, int queryPartIdx, String[] queryParts)
     {
         Metric parent = getMetric( parentKey );
@@ -815,6 +812,7 @@ public class MetricIndexImpl implements MetricIndex {
         }
         return matched;
     }
+
     private List<String> findAllMetricsWithSegment( String parentKey, int queryPartIdx, String[] queryParts )
     {
         return new ArrayList<>(findMetricWithSegment(parentKey, queryPartIdx, queryParts));
@@ -1207,18 +1205,14 @@ public class MetricIndexImpl implements MetricIndex {
         }
 
         private void syncNameCounters() {
-            syncFiles(this::applyNamespace, new HashSet<>(), "namespaces", false);
-        }
-
-        private Set<String> applyNamespace(String namespace) {
-            namespaceCounter.count(namespace);
-            return null;
+            Set<String> namespaces = FileUtils.readFilesToSet(nameIndex.getDbDir(), "namespaces", false);
+            for (String namespace : namespaces) {
+                namespaceCounter.count(namespace);
+            }
         }
 
         private void syncNameIndexes() {
-            Set<String> unresolvedNameIndexes = new HashSet<>();
-            syncFiles(this::applyNameIndex, unresolvedNameIndexes, "sync-", true);
-
+            Set<String> unresolvedNameIndexes = FileUtils.readFilesToSet(nameIndex.getDbDir(), "sync-", true);
             int size = nameIndexQueue.size();
             while (size-- > 0) {
                 String nameIndex = nameIndexQueue.poll();
@@ -1232,93 +1226,29 @@ public class MetricIndexImpl implements MetricIndex {
             }
         }
 
-        private void syncFiles(Function<String, Set<String>> function, Set<String> nameIndices, String prefix, boolean delete) {
-            File syncSecondaryDbDir = FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir());
-            if (!syncSecondaryDbDir.exists()) {
-                log.error("Directory {} does not exist", syncSecondaryDbDir.getAbsolutePath());
-                return;
-            }
-            if (!syncSecondaryDbDir.canRead()) {
-                log.error("Cannot read from directory {}", syncSecondaryDbDir.getAbsolutePath());
-                return;
-            }
-
-            File[] syncFiles = syncSecondaryDbDir.listFiles((dir, name) -> name.startsWith(prefix));
-            if (syncFiles == null || syncFiles.length == 0) {
-                log.info("No file with prefix {} to sync", prefix);
-                return;
-            }
-            for (File syncFile : syncFiles) {
-                try (BufferedReader bufferedReader = new BufferedReader(new FileReader(syncFile))) {
-                    log.info("Syncing file from {}", syncFile.getAbsolutePath());
-                    String nameIndex;
-                    while ((nameIndex = bufferedReader.readLine()) != null) {
-                        nameIndex = nameIndex.trim();
-                        Set<String> result = function.apply(nameIndex);
-                        if (nameIndices != null && result != null) {
-                            nameIndices.addAll(result);
-                        }
-                    }
-                } catch (IOException e) {
-                    log.error("Failed to sync file from {} - {}", syncFile.getAbsolutePath(), e.getMessage(), e);
-                    continue;
-                }
-                if (delete) {
-                    if (!syncFile.delete()) {
-                        log.error("Failed to delete file {}", syncFile.getAbsolutePath());
-                    }
-                }
-            }
-        }
-
-        private Set<String> applyNameIndex(String nameIndex) {
-            return getAllNameIndexPrefixes(nameIndex);
-        }
 
         private Set<String> refreshNameIndex(Set<String> unresolvedNameIndexes) {
             Set<String> newUnresolvedNameIndexes = new HashSet<>();
-            Set<String> processedNameIndexes = new HashSet<>();
+            boolean isRootRefreshed = false;
             for (String nameIndex : unresolvedNameIndexes) {
-                processNameIndex(nameIndex, "", newUnresolvedNameIndexes, processedNameIndexes);
+                isRootRefreshed = processNameIndex(nameIndex, newUnresolvedNameIndexes, isRootRefreshed);
             }
             return newUnresolvedNameIndexes;
         }
 
-        private void processNameIndex(String nameIndex, String child, Set<String> newUnresolvedNameIndexes,
-                                      Set<String> processedNameIndexes) {
-            if (processedNameIndexes.contains(nameIndex)) {
-                return;
+        private boolean processNameIndex(String nameIndex, Set<String> newUnresolvedNameIndexes, boolean isRootRefreshed) {
+            log.info("Refreshing cache for name index {}", nameIndex);
+            if (nameIndex.indexOf('.') < 0 && !isRootRefreshed) {
+                metricCache.invalidate(InternalConfig.getRootEntryKey());
+                getMetric(InternalConfig.getRootEntryKey());
+                isRootRefreshed = true;
             }
-            log.info("Refreshing cache for name index {} with child {}", nameIndex, child);
-            processedNameIndexes.add(nameIndex);
             metricCache.invalidate(nameIndex);
             Metric metric = getMetric(nameIndex);
             if (metric == null) {
-                newUnresolvedNameIndexes.addAll(getAllNameIndexPrefixes(nameIndex));
-                newUnresolvedNameIndexes.add("root");
-            } else if (!StringUtils.isEmpty(child) && !metric.children().contains(child)) {
-                newUnresolvedNameIndexes.addAll(getAllNameIndexPrefixes(nameIndex));
-            } else {
-                int index = nameIndex.lastIndexOf('.');
-                if (index > 0) {
-                    processNameIndex(nameIndex.substring(0, index), nameIndex.substring(index + 1),
-                            newUnresolvedNameIndexes, processedNameIndexes);
-                } else {
-                    processNameIndex("root", nameIndex, newUnresolvedNameIndexes, processedNameIndexes);
-                }
+                newUnresolvedNameIndexes.add(nameIndex);
             }
-        }
-
-        private Set<String> getAllNameIndexPrefixes(String nameIndex) {
-            Set<String> nameIndexPrefixes = new HashSet<>();
-            int index = nameIndex.lastIndexOf('.');
-            while (index > 0) {
-                nameIndexPrefixes.add(nameIndex);
-                nameIndex = nameIndex.substring(0, index);
-                index = nameIndex.lastIndexOf('.');
-            }
-            nameIndexPrefixes.add(nameIndex);
-            return nameIndexPrefixes;
+            return isRootRefreshed;
         }
     }
 }
