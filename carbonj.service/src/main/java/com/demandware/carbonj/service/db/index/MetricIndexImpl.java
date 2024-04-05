@@ -1268,6 +1268,7 @@ public class MetricIndexImpl implements MetricIndex {
                 // 1. Parent metric does not exist
                 // 2. Parent metric does not have the child
                 // 3. The metric does not exist
+                metricCache.invalidate(nameIndex);
                 newUnresolvedNameIndexes.add(nameIndex);
             }
             return isRootRefreshed;
