@@ -73,20 +73,20 @@ public class FileUtils
         org.apache.commons.io.FileUtils.writeLines(file, StandardCharsets.UTF_8.name(), lines, false);
     }
 
-    public static Set<String> readFilesToSet(File syncSecondaryDbDir, String prefix, boolean delete) {
+    public static Set<String> readFilesToSet(File syncDir, String prefix, boolean delete) {
         Set<String> results = new TreeSet<>();
-        if (!syncSecondaryDbDir.exists()) {
-            log.error("Directory {} does not exist", syncSecondaryDbDir.getAbsolutePath());
+        if (!syncDir.exists()) {
+            log.error("Directory {} does not exist", syncDir.getAbsolutePath());
             return results;
         }
-        if (!syncSecondaryDbDir.canRead()) {
-            log.error("Cannot read from directory {}", syncSecondaryDbDir.getAbsolutePath());
+        if (!syncDir.canRead()) {
+            log.error("Cannot read from directory {}", syncDir.getAbsolutePath());
             return results;
         }
 
-        File[] syncFiles = syncSecondaryDbDir.listFiles((dir, name) -> name.startsWith(prefix));
+        File[] syncFiles = syncDir.listFiles((dir, name) -> name.startsWith(prefix));
         if (syncFiles == null || syncFiles.length == 0) {
-            log.info("No file with prefix {} to sync", prefix);
+            log.info("No file with prefix {} to sync under directory {}", prefix, syncDir);
             return results;
         }
         for (File syncFile : syncFiles) {

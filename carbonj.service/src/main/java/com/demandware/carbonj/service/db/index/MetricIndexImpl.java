@@ -1205,14 +1205,16 @@ public class MetricIndexImpl implements MetricIndex {
         }
 
         private void syncNameCounters() {
-            Set<String> namespaces = FileUtils.readFilesToSet(nameIndex.getDbDir(), "namespaces", false);
+            Set<String> namespaces = FileUtils.readFilesToSet(
+                    FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir()), "namespaces", false);
             for (String namespace : namespaces) {
                 namespaceCounter.count(namespace);
             }
         }
 
         private void syncNameIndexes() {
-            Set<String> unresolvedNameIndexes = FileUtils.readFilesToSet(nameIndex.getDbDir(), "sync-", true);
+            Set<String> unresolvedNameIndexes = FileUtils.readFilesToSet(
+                    FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir()), "sync-", true);
             int size = nameIndexQueue.size();
             while (size-- > 0) {
                 String nameIndex = nameIndexQueue.poll();
