@@ -1240,7 +1240,8 @@ public class MetricIndexImpl implements MetricIndex {
 
         private boolean processNameIndex(String nameIndex, Set<String> newUnresolvedNameIndexes, boolean isRootRefreshed) {
             log.info("Refreshing cache for name index {}", nameIndex);
-            if (nameIndex.indexOf('.') < 0 && !isRootRefreshed) {
+            boolean isTopLevel = nameIndex.indexOf('.') < 0;
+            if (isTopLevel && !isRootRefreshed && !InternalConfig.getRootEntryKey().equals(nameIndex)) {
                 metricCache.invalidate(InternalConfig.getRootEntryKey());
                 getMetric(InternalConfig.getRootEntryKey());
                 isRootRefreshed = true;
@@ -1249,6 +1250,20 @@ public class MetricIndexImpl implements MetricIndex {
             Metric metric = getMetric(nameIndex);
             if (metric == null) {
                 newUnresolvedNameIndexes.add(nameIndex);
+            } else if (!InternalConfig.getRootEntryKey().equals(nameIndex)) {
+                Metric parent;
+                String child;
+                if (isTopLevel) {
+                    parent = getMetric(InternalConfig.getRootEntryKey());
+                    child = nameIndex;
+                } else {
+                    int lastDot = nameIndex.lastIndexOf('.');
+                    parent = getMetric(nameIndex.substring(0, lastDot));
+                    child = nameIndex.substring(lastDot + 1);
+                }
+                if (!parent.children().contains(child)) {
+                    newUnresolvedNameIndexes.add(nameIndex);
+                }
             }
             return isRootRefreshed;
         }
