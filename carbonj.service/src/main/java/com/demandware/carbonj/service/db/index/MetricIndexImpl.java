@@ -49,6 +49,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
@@ -1205,7 +1206,7 @@ public class MetricIndexImpl implements MetricIndex {
         }
 
         private void syncNameCounters() {
-            Set<String> namespaces = FileUtils.readFilesToSet(
+            TreeSet<String> namespaces = FileUtils.readFilesToSet(
                     FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir()), "namespaces", false);
             for (String namespace : namespaces) {
                 namespaceCounter.count(namespace);
@@ -1213,7 +1214,7 @@ public class MetricIndexImpl implements MetricIndex {
         }
 
         private void syncNameIndexes() {
-            Set<String> unresolvedNameIndexes = FileUtils.readFilesToSet(
+            TreeSet<String> unresolvedNameIndexes = FileUtils.readFilesToSet(
                     FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir()), "sync-", true);
             int size = nameIndexQueue.size();
             while (size-- > 0) {
@@ -1232,6 +1233,12 @@ public class MetricIndexImpl implements MetricIndex {
         private Set<String> refreshNameIndex(Set<String> unresolvedNameIndexes) {
             Set<String> newUnresolvedNameIndexes = new HashSet<>();
             boolean isRootRefreshed = false;
+            if (unresolvedNameIndexes.contains(rootKey)) {
+                metricCache.invalidate(rootKey);
+                getMetric(rootKey);
+                unresolvedNameIndexes.remove(rootKey);
+                isRootRefreshed = true;
+            }
             for (String nameIndex : unresolvedNameIndexes) {
                 isRootRefreshed = processNameIndex(nameIndex, newUnresolvedNameIndexes, isRootRefreshed);
             }
@@ -1240,30 +1247,28 @@ public class MetricIndexImpl implements MetricIndex {
 
         private boolean processNameIndex(String nameIndex, Set<String> newUnresolvedNameIndexes, boolean isRootRefreshed) {
             log.info("Refreshing cache for name index {}", nameIndex);
-            boolean isTopLevel = nameIndex.indexOf('.') < 0;
-            if (isTopLevel && !isRootRefreshed && !InternalConfig.getRootEntryKey().equals(nameIndex)) {
-                metricCache.invalidate(InternalConfig.getRootEntryKey());
-                getMetric(InternalConfig.getRootEntryKey());
-                isRootRefreshed = true;
+            String parent;
+            String child;
+            if (nameIndex.indexOf('.') < 0) {
+                parent = rootKey;
+                child = nameIndex;
+                if (!isRootRefreshed) {
+                    metricCache.invalidate(rootKey);
+                    isRootRefreshed = true;
+                }
+            } else {
+                int lastDot = nameIndex.lastIndexOf('.');
+                parent = nameIndex.substring(0, lastDot);
+                child = nameIndex.substring(lastDot + 1);
+                metricCache.invalidate(parent);
             }
-            metricCache.invalidate(nameIndex);
-            Metric metric = getMetric(nameIndex);
-            if (metric == null) {
+            Metric parentMetric = getMetric(parent);
+            if (parentMetric == null || !parentMetric.children().contains(child) || getMetric(nameIndex) == null) {
+                // Retry if any of the following is true
+                // 1. Parent metric does not exist
+                // 2. Parent metric does not have the child
+                // 3. The metric does not exist
                 newUnresolvedNameIndexes.add(nameIndex);
-            } else if (!InternalConfig.getRootEntryKey().equals(nameIndex)) {
-                Metric parent;
-                String child;
-                if (isTopLevel) {
-                    parent = getMetric(InternalConfig.getRootEntryKey());
-                    child = nameIndex;
-                } else {
-                    int lastDot = nameIndex.lastIndexOf('.');
-                    parent = getMetric(nameIndex.substring(0, lastDot));
-                    child = nameIndex.substring(lastDot + 1);
-                }
-                if (!parent.children().contains(child)) {
-                    newUnresolvedNameIndexes.add(nameIndex);
-                }
             }
             return isRootRefreshed;
         }

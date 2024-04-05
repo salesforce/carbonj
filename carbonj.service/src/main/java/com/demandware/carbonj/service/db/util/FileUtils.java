@@ -73,8 +73,8 @@ public class FileUtils
         org.apache.commons.io.FileUtils.writeLines(file, StandardCharsets.UTF_8.name(), lines, false);
     }
 
-    public static Set<String> readFilesToSet(File syncDir, String prefix, boolean delete) {
-        Set<String> results = new TreeSet<>();
+    public static TreeSet<String> readFilesToSet(File syncDir, String prefix, boolean delete) {
+        TreeSet<String> results = new TreeSet<>();
         if (!syncDir.exists()) {
             log.error("Directory {} does not exist", syncDir.getAbsolutePath());
             return results;
