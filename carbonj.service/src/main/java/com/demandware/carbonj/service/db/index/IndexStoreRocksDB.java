@@ -23,6 +23,9 @@ import org.rocksdb.RocksIterator;
 import org.rocksdb.TtlDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -31,6 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+@Component
 class IndexStoreRocksDB<K, R extends Record<K>>
     implements IndexStore<K, R>
 {
@@ -61,6 +65,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     private final int catchupRetry;
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+
+    @Autowired
+    private ApplicationEventPublisher applicationEventPublisher;
 
     public IndexStoreRocksDB(MetricRegistry metricRegistry, String dbName, File dbDir, RecordSerializer<K, R> recSerializer, boolean rocksdbReadonly, int catchupRetry)
     {
@@ -99,7 +106,8 @@ class IndexStoreRocksDB<K, R extends Record<K>>
                 this.db = RocksDB.openAsSecondary(options, dbDir.getAbsolutePath(), secondaryDbDir.getAbsolutePath());
                 log.info("RocksDB metric index store in [{}] opened in secondary mode", dbDir);
                 scheduledExecutorService.scheduleAtFixedRate(
-                        new SyncPrimaryDbTask(db, dbDir, catchUpTimer, catchUpTimerError, catchupRetry),
+                        new SyncPrimaryDbTask(db, dbDir, catchUpTimer, catchUpTimerError, catchupRetry,
+                                "index-name".equals(dbName) ? applicationEventPublisher : null),
                         60, 60, TimeUnit.SECONDS);
             } else {
                 options.setCreateIfMissing(true);

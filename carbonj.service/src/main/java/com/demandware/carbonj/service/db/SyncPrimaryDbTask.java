@@ -8,10 +8,12 @@ package com.demandware.carbonj.service.db;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
+import com.demandware.carbonj.service.db.index.NameIndexSyncEvent;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.io.File;
 
@@ -23,12 +25,19 @@ public class SyncPrimaryDbTask implements Runnable {
     private final Meter catchUpTimerError;
     private final int catchupRetry;
 
+    private final ApplicationEventPublisher applicationEventPublisher;
+
     public SyncPrimaryDbTask(RocksDB rocksDB, File dbDir, Timer catchUpTimer, Meter catchUpTimerError, int catchupRetry) {
+        this(rocksDB, dbDir, catchUpTimer, catchUpTimerError, catchupRetry, null);
+    }
+
+    public SyncPrimaryDbTask(RocksDB rocksDB, File dbDir, Timer catchUpTimer, Meter catchUpTimerError, int catchupRetry, ApplicationEventPublisher applicationEventPublisher) {
         this.rocksDB = rocksDB;
         this.dbDir = dbDir;
         this.catchUpTimer = catchUpTimer;
         this.catchUpTimerError = catchUpTimerError;
         this.catchupRetry = catchupRetry;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Override
@@ -47,7 +56,16 @@ public class SyncPrimaryDbTask implements Runnable {
         if (retry > catchupRetry) {
             catchUpTimerError.mark();
         } else {
+            if (applicationEventPublisher != null) {
+                log.info("{}: Publishing NameIndexSyncEvent for primary DB {}", retry, dbDir.getName());
+                applicationEventPublisher.publishEvent(new NameIndexSyncEvent(this));
+            }
             log.info("{}: Completed syncing with primary DB {}", retry, dbDir.getAbsolutePath());
         }
+    }
+
+    @Override
+    public String toString() {
+        return "SyncPrimaryDbTask for primary DB " + dbDir.getName();
     }
 }
