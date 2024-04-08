@@ -79,6 +79,9 @@ public class cfgMetricIndex
     @Value("${rocksdb.catchup.retry:3}")
     private int catchupRetry = 3;
 
+    @Value("${metrics.store.sync.queue.size.limit:10000}")
+    private int nameIndexQueueSizeLimit = 10000;
+
     // TODO duplicated in different cfg beans
     @Value( "${app.servicedir:}" )
     private String serviceDir;
@@ -130,7 +133,7 @@ public class cfgMetricIndex
         MetricIndexImpl metricIndex = new MetricIndexImpl(metricRegistry, metricStoreConfigFile, nameIndex, idIndex, dbMetrics,
                 nameIndexMaxCacheSize, metricCacheExpireAfterAccessInMinutes, nameUtils, policySource,
                 nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache, longId,
-                namespaceCounter, rocksdbReadonly, syncSecondaryDb);
+                namespaceCounter, rocksdbReadonly, syncSecondaryDb, nameIndexQueueSizeLimit);
         s.scheduleWithFixedDelay(metricIndex::reload, 300, 300, TimeUnit.SECONDS);
         return metricIndex;
     }

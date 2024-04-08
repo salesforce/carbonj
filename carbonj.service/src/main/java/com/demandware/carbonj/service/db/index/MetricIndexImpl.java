@@ -33,8 +33,6 @@ import com.google.common.collect.ObjectArrays;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
@@ -143,6 +141,8 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
 
     private final boolean syncSecondaryDb;
 
+    private final int nameIndexQueueSizeLimit;
+
     private final ConcurrentLinkedQueue<String> nameIndexQueue = new ConcurrentLinkedQueue<>();
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
@@ -164,7 +164,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                             boolean longId) {
         this(metricRegistry, metricsStoreConfigFile, nameIndex, idIndex, dbMetrics, nameIndexMaxCacheSize,
                 expireAfterAccessInMinutes, nameUtils, aggrPolicySource, nameIndexQueryCacheMaxSize,
-                expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId, new NamespaceCounter(metricRegistry, 7200), false, false);
+                expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId, new NamespaceCounter(metricRegistry, 7200), false, false, 1);
     }
 
     public MetricIndexImpl( MetricRegistry metricRegistry, String metricsStoreConfigFile,
@@ -176,7 +176,8 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                             boolean longId,
                             NamespaceCounter namespaceCounter,
                             boolean rocksdbReadonly,
-                            boolean syncSecondaryDb) {
+                            boolean syncSecondaryDb,
+                            int nameIndexQueueSizeLimit) {
         this.metricRegistry = metricRegistry;
         this.metricsStoreConfigFile = metricsStoreConfigFile;
         this.nameUtils = Preconditions.checkNotNull(nameUtils);
@@ -192,6 +193,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         this.namespaceCounter = namespaceCounter;
         this.rocksdbReadonly = rocksdbReadonly;
         this.syncSecondaryDb = syncSecondaryDb;
+        this.nameIndexQueueSizeLimit = nameIndexQueueSizeLimit;
 
         this.metricCache =
                 CacheBuilder.newBuilder().initialCapacity(nameIndexMaxCacheSize).maximumSize(nameIndexMaxCacheSize)
@@ -267,9 +269,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
             scheduledExecutorService.scheduleAtFixedRate(
                     new SyncSecondaryDbTask(), 60, 60, TimeUnit.SECONDS);
         } else if (rocksdbReadonly) {
-            SyncNameIndexCacheTask syncNameIndexCacheTask = new SyncNameIndexCacheTask();
-            syncNameIndexCacheTask.syncNameCounters();
-//            scheduledExecutorService.scheduleAtFixedRate(syncNameIndexCacheTask, 60, 60, TimeUnit.SECONDS);
+            new SyncNameIndexCacheTask().syncNameCounters();
         }
     }
 
@@ -483,6 +483,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         queryCacheStatsReporter.close();
         if (syncSecondaryDb || rocksdbReadonly) {
             scheduledExecutorService.shutdownNow();
+            executorService.shutdownNow();
         }
     }
 
@@ -1032,6 +1033,9 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         }
         if (syncSecondaryDb) {
             nameIndexQueue.offer(m.name);
+            if (nameIndexQueue.size() >= nameIndexQueueSizeLimit) {
+                executorService.execute(new SyncSecondaryDbTask());
+            }
         }
         return m;
     }
