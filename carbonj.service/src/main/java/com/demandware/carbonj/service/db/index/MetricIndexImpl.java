@@ -1188,8 +1188,8 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
 
     @Override
     public void onApplicationEvent(NameIndexSyncEvent event) {
-        log.info("Received NameIndexSyncEvent from {} ...", event.getSource());
-        executorService.submit(new SyncSecondaryDbTask());
+        log.debug("Received NameIndexSyncEvent from {} ...", event.getSource());
+        executorService.submit(new SyncNameIndexCacheTask());
     }
 
     private class SyncSecondaryDbTask implements Runnable {

@@ -44,7 +44,7 @@ public class SyncPrimaryDbTask implements Runnable {
     public void run() {
         int retry = 1;
         while (retry <= catchupRetry) {
-            log.info("{}: Start syncing with primary DB {}", retry, dbDir.getAbsolutePath());
+            log.debug("{}: Start syncing with primary DB {}", retry, dbDir.getAbsolutePath());
             try (Timer.Context ignored = catchUpTimer.time()) {
                 rocksDB.tryCatchUpWithPrimary();
                 break;
@@ -57,10 +57,10 @@ public class SyncPrimaryDbTask implements Runnable {
             catchUpTimerError.mark();
         } else {
             if (applicationEventPublisher != null) {
-                log.info("{}: Publishing NameIndexSyncEvent for primary DB {}", retry, dbDir.getName());
+                log.debug("{}: Publishing NameIndexSyncEvent for primary DB {}", retry, dbDir.getName());
                 applicationEventPublisher.publishEvent(new NameIndexSyncEvent(this));
             }
-            log.info("{}: Completed syncing with primary DB {}", retry, dbDir.getAbsolutePath());
+            log.debug("{}: Completed syncing with primary DB {}", retry, dbDir.getAbsolutePath());
         }
     }
 
