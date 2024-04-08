@@ -21,6 +21,9 @@ import java.io.File;
 public class IndexUtils
 {
     static MetricRegistry metricRegistry = new MetricRegistry();
+
+    static IndexStore<String, NameRecord> nameIndexStore;
+
     private static IndexStore<String, NameRecord> metricNameIndexStore( File dbDir, boolean longId ) {
         return metricNameIndexStore(dbDir, longId, false);
     }
@@ -40,7 +43,8 @@ public class IndexUtils
 
     public static MetricIndex metricIndex( File dbDir, boolean longId )
     {
-        return metricIndex( metricNameIndexStore( dbDir, longId ), metricIdIndexStore( dbDir, longId ), databaseMetrics(), longId, "does-not-exist" );
+        nameIndexStore = metricNameIndexStore( dbDir, longId );
+        return metricIndex( nameIndexStore, metricIdIndexStore( dbDir, longId ), databaseMetrics(), longId, "does-not-exist" );
     }
 
     public static MetricIndex metricIndexReadonly( File dbDir, boolean longId )

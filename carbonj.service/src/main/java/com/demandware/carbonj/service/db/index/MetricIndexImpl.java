@@ -164,7 +164,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                             boolean longId) {
         this(metricRegistry, metricsStoreConfigFile, nameIndex, idIndex, dbMetrics, nameIndexMaxCacheSize,
                 expireAfterAccessInMinutes, nameUtils, aggrPolicySource, nameIndexQueryCacheMaxSize,
-                expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId, new NamespaceCounter(metricRegistry, 7200), false, false, 1);
+                expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId, new NamespaceCounter(metricRegistry, 7200), false, true, 100);
     }
 
     public MetricIndexImpl( MetricRegistry metricRegistry, String metricsStoreConfigFile,
@@ -419,6 +419,11 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         queryCacheStatsReporter.dumpStats();
         dumpDbPropertyStats(nameIndexStorePropertyMetricMap, nameIndex);
         dumpDbPropertyStats(idIndexStorePropertyMetricMap, idIndex);
+    }
+
+    // For unit test only
+    LoadingCache<String, Metric> getMetricCache() {
+        return metricCache;
     }
 
     private <K> void dumpDbPropertyStats(Map<String, Counter> indexStorePropertyMetricMap,
@@ -1196,9 +1201,9 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         executorService.submit(new SyncNameIndexCacheTask());
     }
 
-    private class SyncSecondaryDbTask implements Runnable {
+    class SyncSecondaryDbTask implements Runnable {
 
-        private SyncSecondaryDbTask() {
+        SyncSecondaryDbTask() {
         }
 
         @Override
@@ -1212,9 +1217,9 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         }
     }
 
-    private class SyncNameIndexCacheTask implements Runnable {
+    class SyncNameIndexCacheTask implements Runnable {
 
-        private SyncNameIndexCacheTask() {
+        SyncNameIndexCacheTask() {
         }
 
         @Override
