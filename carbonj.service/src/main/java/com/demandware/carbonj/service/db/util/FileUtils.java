@@ -69,7 +69,7 @@ public class FileUtils
             log.error("Unable to dump {}", StringUtils.join(lines, ','));
             return;
         }
-        log.info("Dumping queue with {} elements into file {}", lines.size(), file.getAbsoluteFile());
+        log.debug("Dumping queue with {} elements into file {}", lines.size(), file.getAbsoluteFile());
         org.apache.commons.io.FileUtils.writeLines(file, StandardCharsets.UTF_8.name(), lines, false);
     }
 

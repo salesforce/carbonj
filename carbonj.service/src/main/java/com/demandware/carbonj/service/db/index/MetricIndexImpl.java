@@ -1277,15 +1277,15 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                 parent = rootKey;
                 child = nameIndex;
                 if (!isRootRefreshed) {
+                    metricCache.invalidate(parent);
                     isRootRefreshed = true;
                 }
             } else {
                 int lastDot = nameIndex.lastIndexOf('.');
                 parent = nameIndex.substring(0, lastDot);
                 child = nameIndex.substring(lastDot + 1);
-
+                metricCache.invalidate(parent);
             }
-            metricCache.invalidate(parent);
             Metric parentMetric = getMetric(parent);
             if (parentMetric == null) {
                 metricCache.invalidate(parent);
