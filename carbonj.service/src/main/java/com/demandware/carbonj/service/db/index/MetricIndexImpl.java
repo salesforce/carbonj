@@ -141,9 +141,9 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
 
     private final boolean syncSecondaryDb;
 
-    private final int nameIndexQueueSizeLimit;
+    private final int nameIndexKeyQueueSizeLimit;
 
-    private final ConcurrentLinkedQueue<String> nameIndexQueue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<String> nameIndexKeyQueue = new ConcurrentLinkedQueue<>();
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
@@ -177,7 +177,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                             NamespaceCounter namespaceCounter,
                             boolean rocksdbReadonly,
                             boolean syncSecondaryDb,
-                            int nameIndexQueueSizeLimit) {
+                            int nameIndexKeyQueueSizeLimit) {
         this.metricRegistry = metricRegistry;
         this.metricsStoreConfigFile = metricsStoreConfigFile;
         this.nameUtils = Preconditions.checkNotNull(nameUtils);
@@ -193,7 +193,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         this.namespaceCounter = namespaceCounter;
         this.rocksdbReadonly = rocksdbReadonly;
         this.syncSecondaryDb = syncSecondaryDb;
-        this.nameIndexQueueSizeLimit = nameIndexQueueSizeLimit;
+        this.nameIndexKeyQueueSizeLimit = nameIndexKeyQueueSizeLimit;
 
         this.metricCache =
                 CacheBuilder.newBuilder().initialCapacity(nameIndexMaxCacheSize).maximumSize(nameIndexMaxCacheSize)
@@ -1037,8 +1037,8 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
             metricIdCache.put(m.id, m);
         }
         if (syncSecondaryDb) {
-            nameIndexQueue.offer(m.name);
-            if (nameIndexQueue.size() >= nameIndexQueueSizeLimit) {
+            nameIndexKeyQueue.offer(m.name);
+            if (nameIndexKeyQueue.size() >= nameIndexKeyQueueSizeLimit) {
                 executorService.execute(new SyncSecondaryDbTask());
             }
         }
@@ -1210,7 +1210,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         public void run() {
             File file = new File(FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir()), "sync-" + Clock.systemUTC().millis());
             try {
-                FileUtils.dumpQueueToFile(nameIndexQueue, file);
+                FileUtils.dumpQueueToFile(nameIndexKeyQueue, file);
             } catch (IOException e) {
                 log.error("Failed to dump name index into file {} - {}", file.getAbsolutePath(), e.getMessage(), e);
             }
@@ -1224,7 +1224,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
 
         @Override
         public void run() {
-            syncNameIndexes();
+            syncNameIndexKeys();
             syncNameCounters();
         }
 
@@ -1236,67 +1236,67 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
             }
         }
 
-        private void syncNameIndexes() {
-            TreeSet<String> unresolvedNameIndexes = FileUtils.readFilesToSet(
+        private void syncNameIndexKeys() {
+            TreeSet<String> unresolvedNameIndexKeys = FileUtils.readFilesToSet(
                     FileUtils.getSyncDirFromDbDir(nameIndex.getDbDir()), "sync-", true);
-            int size = nameIndexQueue.size();
+            int size = nameIndexKeyQueue.size();
             while (size-- > 0) {
-                String nameIndex = nameIndexQueue.poll();
+                String nameIndex = nameIndexKeyQueue.poll();
                 if (nameIndex != null) {
-                    unresolvedNameIndexes.add(nameIndex);
+                    unresolvedNameIndexKeys.add(nameIndex);
                 }
             }
-            Set<String> newUnresolvedNameIndexes = refreshNameIndex(unresolvedNameIndexes);
-            for (String nameIndex : newUnresolvedNameIndexes) {
-                nameIndexQueue.offer(nameIndex);
+            Set<String> newUnresolvedNameIndexKeys = refreshNameIndexKey(unresolvedNameIndexKeys);
+            for (String nameIndexKey : newUnresolvedNameIndexKeys) {
+                nameIndexKeyQueue.offer(nameIndexKey);
             }
         }
 
 
-        private Set<String> refreshNameIndex(Set<String> unresolvedNameIndexes) {
-            Set<String> newUnresolvedNameIndexes = new HashSet<>();
+        private Set<String> refreshNameIndexKey(Set<String> unresolvedNameIndexKeys) {
+            Set<String> newUnresolvedNameIndexKeys = new HashSet<>();
             boolean isRootRefreshed = false;
-            if (unresolvedNameIndexes.contains(rootKey)) {
+            if (unresolvedNameIndexKeys.contains(rootKey)) {
                 log.info("Refreshing cache for name index root");
                 metricCache.invalidate(rootKey);
                 getMetric(rootKey);
-                unresolvedNameIndexes.remove(rootKey);
+                unresolvedNameIndexKeys.remove(rootKey);
                 isRootRefreshed = true;
             }
-            for (String nameIndex : unresolvedNameIndexes) {
-                isRootRefreshed = processNameIndex(nameIndex, newUnresolvedNameIndexes, isRootRefreshed);
+            for (String nameIndexKey : unresolvedNameIndexKeys) {
+                isRootRefreshed = processNameIndexKey(nameIndexKey, newUnresolvedNameIndexKeys, isRootRefreshed);
             }
-            return newUnresolvedNameIndexes;
+            return newUnresolvedNameIndexKeys;
         }
 
-        private boolean processNameIndex(String nameIndex, Set<String> newUnresolvedNameIndexes, boolean isRootRefreshed) {
-            log.info("Refreshing cache for name index {}", nameIndex);
+        private boolean processNameIndexKey(String nameIndexKey, Set<String> newUnresolvedNameIndexKeys, boolean isRootRefreshed) {
+            log.info("Refreshing cache for name index key {}", nameIndexKey);
             String parent;
             String child;
-            if (nameIndex.indexOf('.') < 0) {
+            if (nameIndexKey.indexOf('.') < 0) {
                 parent = rootKey;
-                child = nameIndex;
+                child = nameIndexKey;
                 if (!isRootRefreshed) {
                     metricCache.invalidate(parent);
                     isRootRefreshed = true;
                 }
             } else {
-                int lastDot = nameIndex.lastIndexOf('.');
-                parent = nameIndex.substring(0, lastDot);
-                child = nameIndex.substring(lastDot + 1);
+                int lastDot = nameIndexKey.lastIndexOf('.');
+                parent = nameIndexKey.substring(0, lastDot);
+                child = nameIndexKey.substring(lastDot + 1);
                 metricCache.invalidate(parent);
             }
             Metric parentMetric = getMetric(parent);
             if (parentMetric == null) {
                 metricCache.invalidate(parent);
-                newUnresolvedNameIndexes.add(nameIndex);
+                newUnresolvedNameIndexKeys.add(nameIndexKey);
             } else if (!parentMetric.children().contains(child)) {
-                newUnresolvedNameIndexes.add(nameIndex);
+                newUnresolvedNameIndexKeys.add(nameIndexKey);
             } else {
-                Metric metric = getMetric(nameIndex);
+                Metric metric = getMetric(nameIndexKey);
                 if (metric == null) {
-                    metricCache.invalidate(nameIndex);
-                    newUnresolvedNameIndexes.add(nameIndex);
+                    metricCache.invalidate(nameIndexKey);
+                    newUnresolvedNameIndexKeys.add(nameIndexKey);
                 }
             }
             return isRootRefreshed;
