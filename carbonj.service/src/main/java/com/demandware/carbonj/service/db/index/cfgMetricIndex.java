@@ -11,14 +11,15 @@ import com.demandware.carbonj.service.db.model.MetricIndex;
 import com.demandware.carbonj.service.db.model.StorageAggregationPolicySource;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.FileUtils;
-import com.demandware.carbonj.service.db.util.Quota;
 import com.demandware.carbonj.service.engine.StorageAggregationRulesLoader;
+import com.demandware.carbonj.service.ns.NamespaceCounter;
 import com.demandware.core.config.cfgMetric;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -69,6 +70,17 @@ public class cfgMetricIndex
     @Value( "${metrics.store:config/application.properties}" )
     private String metricStoreConfigFile = "config/application.properties";
 
+    @Value("${rocksdb.readonly:false}")
+    private boolean rocksdbReadonly;
+
+    @Value("${metrics.store.sync.secondary.db:false}")
+    private boolean syncSecondaryDb;
+
+    @Value("${rocksdb.catchup.retry:3}")
+    private int catchupRetry = 3;
+
+    @Value("${metrics.store.sync.queue.size.limit:10000}")
+    private int nameIndexKeyQueueSizeLimit = 10000;
 
     // TODO duplicated in different cfg beans
     @Value( "${app.servicedir:}" )
@@ -77,18 +89,24 @@ public class cfgMetricIndex
     @Autowired
     MetricRegistry metricRegistry;
 
+    @Bean
+    @ConditionalOnProperty(name = "metrics.store.sync.secondary.db", havingValue = "true")
+    File indexNameDbDir() {
+        return dbDir("index-name");
+    }
+
     @Bean( name = "metricNameIndexStore" )
     IndexStore<String, NameRecord> metricNameIndexStore()
     {
         File dbDir = dbDir( "index-name" );
-        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dbDir, new NameRecordSerializer(longId));
+        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dbDir, new NameRecordSerializer(longId), rocksdbReadonly, catchupRetry);
     }
 
     @Bean( name = "metricIdIndexStore" )
     IndexStore<Long, IdRecord> metricIdIndexStore()
     {
         File dbDir = dbDir( "index-id" );
-        return new IndexStoreRocksDB<>( metricRegistry,"index-id", dbDir, new IdRecordSerializer(longId));
+        return new IndexStoreRocksDB<>( metricRegistry,"index-id", dbDir, new IdRecordSerializer(longId), rocksdbReadonly, catchupRetry);
     }
 
     @Bean
@@ -106,15 +124,17 @@ public class cfgMetricIndex
 
 
     @Bean
-    MetricIndex metricIndex( @Qualifier( "metricNameIndexStore" ) IndexStore<String, NameRecord> nameIndex,
-                             @Qualifier( "metricIdIndexStore" ) IndexStore<Long, IdRecord> idIndex,
-                             DatabaseMetrics dbMetrics, NameUtils nameUtils,
-                             StorageAggregationPolicySource policySource, ScheduledExecutorService s )
+    MetricIndex metricIndex(@Qualifier( "metricNameIndexStore" ) IndexStore<String, NameRecord> nameIndex,
+                            @Qualifier( "metricIdIndexStore" ) IndexStore<Long, IdRecord> idIndex,
+                            DatabaseMetrics dbMetrics, NameUtils nameUtils,
+                            StorageAggregationPolicySource policySource, ScheduledExecutorService s,
+                            NamespaceCounter namespaceCounter)
     {
         MetricIndexImpl metricIndex = new MetricIndexImpl(metricRegistry, metricStoreConfigFile, nameIndex, idIndex, dbMetrics,
                 nameIndexMaxCacheSize, metricCacheExpireAfterAccessInMinutes, nameUtils, policySource,
-                nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache, longId);
-        s.scheduleWithFixedDelay(metricIndex::reload, 300, 300, TimeUnit.SECONDS );
+                nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache, longId,
+                namespaceCounter, rocksdbReadonly, syncSecondaryDb, nameIndexKeyQueueSizeLimit);
+        s.scheduleWithFixedDelay(metricIndex::reload, 300, 300, TimeUnit.SECONDS);
         return metricIndex;
     }
 

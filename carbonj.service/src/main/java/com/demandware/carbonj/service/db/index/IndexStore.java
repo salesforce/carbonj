@@ -6,6 +6,7 @@
  */
 package com.demandware.carbonj.service.db.index;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.util.function.Consumer;
 
@@ -18,6 +19,8 @@ public interface IndexStore<K, R extends Record<K>>
     void dbPut( R e );
 
     String getName();
+
+    File getDbDir();
 
     void open();
 

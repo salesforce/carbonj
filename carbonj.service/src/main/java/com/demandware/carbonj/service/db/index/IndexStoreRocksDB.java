@@ -6,19 +6,35 @@
  */
 package com.demandware.carbonj.service.db.index;
 
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.demandware.carbonj.service.db.SyncPrimaryDbTask;
+import com.demandware.carbonj.service.db.util.MetricUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.primitives.SignedBytes;
-import org.rocksdb.*;
+import org.rocksdb.CompressionType;
+import org.rocksdb.Options;
+import org.rocksdb.ReadOptions;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
+import org.rocksdb.RocksIterator;
+import org.rocksdb.TtlDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.PrintWriter;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+@Component
 class IndexStoreRocksDB<K, R extends Record<K>>
     implements IndexStore<K, R>
 {
@@ -27,6 +43,8 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     final private String dbName;
 
     final private File dbDir;
+
+    private final File secondaryDbDir;
 
     private RocksDB db;
 
@@ -38,14 +56,32 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private final Timer delTimer;
 
-    public IndexStoreRocksDB(MetricRegistry metricRegistry, String dbName, File dbDir, RecordSerializer<K, R> recSerializer )
+    private final Timer catchUpTimer;
+
+    private final Meter catchUpTimerError;
+
+    private final boolean rocksdbReadonly;
+
+    private final int catchupRetry;
+
+    private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+
+    @Autowired
+    private ApplicationEventPublisher applicationEventPublisher;
+
+    public IndexStoreRocksDB(MetricRegistry metricRegistry, String dbName, File dbDir, RecordSerializer<K, R> recSerializer, boolean rocksdbReadonly, int catchupRetry)
     {
         this.dbName = Preconditions.checkNotNull( dbName );
         this.dbDir = Preconditions.checkNotNull( dbDir );
+        this.secondaryDbDir = new File(dbDir.getParentFile(), dbName + "-secondary");
         this.recSerializer = recSerializer;
-        this.writeTimer = metricRegistry.timer( dbWriteTimerName( dbName ) );
-        this.readTimer = metricRegistry.timer( dbReadTimerName( dbName ) );
-        this.delTimer = metricRegistry.timer( dbDeleteTimerName( dbName ) );
+        this.writeTimer = metricRegistry.timer(MetricUtils.dbWriteTimerName(dbName));
+        this.readTimer = metricRegistry.timer(MetricUtils.dbReadTimerName(dbName));
+        this.delTimer = metricRegistry.timer(MetricUtils.dbDeleteTimerName(dbName));
+        this.catchUpTimer = metricRegistry.timer(MetricUtils.dbCatchUpTimerName(dbName));
+        this.catchUpTimerError = metricRegistry.meter(MetricUtils.dbCatchUpTimerErrorName(dbName));
+        this.rocksdbReadonly = rocksdbReadonly;
+        this.catchupRetry = catchupRetry;
     }
 
     @Override
@@ -56,16 +92,28 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     @Override
     public void open()
     {
-        log.info( "Opening RocksDB metric index store in [" + dbDir + "]" );
+        log.info("Opening RocksDB metric index store in [{}]", dbDir);
 
         TtlDB.loadLibrary();
 
-        Options options =
-            new Options().setCreateIfMissing( true ).setCompressionType( CompressionType.SNAPPY_COMPRESSION );
+        Options options = new Options().setCompressionType( CompressionType.SNAPPY_COMPRESSION );
 
         try
         {
-            this.db = RocksDB.open( options, dbDir.getAbsolutePath() );
+            if (rocksdbReadonly) {
+                options.setCreateIfMissing(false);
+                options.setMaxOpenFiles(-1);
+                this.db = RocksDB.openAsSecondary(options, dbDir.getAbsolutePath(), secondaryDbDir.getAbsolutePath());
+                log.info("RocksDB metric index store in [{}] opened in secondary mode", dbDir);
+                scheduledExecutorService.scheduleAtFixedRate(
+                        new SyncPrimaryDbTask(db, dbDir, catchUpTimer, catchUpTimerError, catchupRetry,
+                                "index-name".equals(dbName) ? applicationEventPublisher : null),
+                        60, 60, TimeUnit.SECONDS);
+            } else {
+                options.setCreateIfMissing(true);
+                this.db = RocksDB.open(options, dbDir.getAbsolutePath());
+                log.info("RocksDB metric index store in [{}] opened in normal mode", dbDir);
+            }
         }
         catch ( RocksDBException e )
         {
@@ -151,6 +199,11 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     }
 
     @Override
+    public File getDbDir() {
+        return dbDir;
+    }
+
+    @Override
     public R dbGet( K key )
     {
         byte[] keyBytes = recSerializer.keyBytes( key );
@@ -168,6 +221,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     @Override
     public void dbDelete( K key )
     {
+        if (rocksdbReadonly) {
+            throw new UnsupportedOperationException("Method dbDelete is not supported for readonly mode");
+        }
         byte[] keyBytes = recSerializer.keyBytes( key );
         dbDelete( keyBytes );
     }
@@ -175,6 +231,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
     @Override
     public void dbPut( R e )
     {
+        if (rocksdbReadonly) {
+            throw new UnsupportedOperationException("Method dbPut is not supported for readonly mode");
+        }
         byte[] key = recSerializer.keyBytes( e.key() );
         byte[] value = recSerializer.valueBytes( e );
 
@@ -193,6 +252,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private void dbPut( byte[] k, byte[] v )
     {
+        if (rocksdbReadonly) {
+            throw new UnsupportedOperationException("Method dbPut is not supported for readonly mode");
+        }
         try (Timer.Context ignored = writeTimer.time())
         {
             db.put( k, v );
@@ -217,6 +279,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private void dbDelete( byte[] keyBytes )
     {
+        if (rocksdbReadonly) {
+            throw new UnsupportedOperationException("Method dbDelete is not supported for readonly mode");
+        }
         try (Timer.Context ignored = delTimer.time())
         {
             db.delete( keyBytes );
@@ -229,6 +294,10 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
     private void closeQuietly( RocksDB db )
     {
+        if (rocksdbReadonly) {
+            scheduledExecutorService.shutdownNow();
+        }
+
         if ( db != null )
         {
             try
@@ -240,20 +309,5 @@ class IndexStoreRocksDB<K, R extends Record<K>>
                 log.error( "Error while closing database [" + dbName + "].", e );
             }
         }
-    }
-
-    private String dbWriteTimerName( String dbName )
-    {
-        return "db." + dbName + ".write.time";
-    }
-
-    private String dbReadTimerName( String dbName )
-    {
-        return "db." + dbName + ".read.time";
-    }
-
-    private String dbDeleteTimerName( String dbName )
-    {
-        return "db." + dbName + ".delete.time";
     }
 }

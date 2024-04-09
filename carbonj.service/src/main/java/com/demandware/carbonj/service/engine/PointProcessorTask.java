@@ -24,16 +24,16 @@ public class PointProcessorTask implements Runnable
 {
     private static final Logger log = LoggerFactory.getLogger( PointProcessorTask.class );
 
-    private static Meter failedPoints;
+    private final Meter failedPoints;
 
 
     private final Timer taskTimer;
 
 
-    private List<DataPoint> points;
-    private MetricList blacklist;
+    private final List<DataPoint> points;
+    private final MetricList blacklist;
 
-    private MetricList allowOnly;
+    private final MetricList allowOnly;
 
     final Accumulator accumulator;
 

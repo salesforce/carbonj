@@ -15,6 +15,7 @@ import io.netty.channel.socket.DatagramPacket;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -39,6 +40,7 @@ public class cfgEventBus {
     private MetricRegistry metricRegistry;
 
     @Bean
+    @ConditionalOnProperty(name = "carbonj.relay", havingValue = "true", matchIfMissing = true)
     NettyChannel eventBus(NettyServer netty, @Qualifier("KinesisEventsLogger") EventsLogger<byte[]> eventsLogger)
     {
         NettyChannel channel = netty.udpBind( eventsHost, eventsPort, udpBuff, udpMsgBuff,

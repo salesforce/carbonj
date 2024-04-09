@@ -8,12 +8,23 @@ package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
+import com.demandware.carbonj.service.db.util.FileUtils;
+import com.demandware.carbonj.service.ns.NamespaceCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Consumers {
@@ -31,12 +42,17 @@ public class Consumers {
 
     private final Map<String, KinesisConsumer> consumers;
 
-    private String kinesisConsumerRegion;
+    private final String kinesisConsumerRegion;
 
-    private PointProcessor recoveryPointProcessor;
+    private final PointProcessor recoveryPointProcessor;
+
+    private final NamespaceCounter namespaceCounter;
+
+    private final File indexNameSyncDir;
 
     Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor, File rulesFile,
-              KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion) {
+              KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion,
+              NamespaceCounter namespaceCounter, File indexNameSyncDir) {
 
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
@@ -44,6 +60,8 @@ public class Consumers {
         this.kinesisConfig = kinesisConfig;
         this.checkPointMgr = checkPointMgr;
         this.kinesisConsumerRegion = kinesisConsumerRegion;
+        this.namespaceCounter = namespaceCounter;
+        this.indexNameSyncDir = indexNameSyncDir;
         consumers = new ConcurrentHashMap<>();
         consumerRules = new ConsumerRules(rulesFile);
         reload();
@@ -129,7 +147,7 @@ public class Consumers {
             }
         }
 
-        if (newConsumers.size() == 0) {
+        if (newConsumers.isEmpty()) {
             log.warn( "No kinesis consumers configured." );
         }
         consumerRules.putCurrentRules(newConsumers);
@@ -170,6 +188,15 @@ public class Consumers {
         Set<String> currentRules = consumerRules.getCurrentRules();
         for (String consumer : currentRules) {
             consumers.get(consumer).dumpStats();
+        }
+    }
+
+    public void syncNamespaces() {
+        File file = new File(indexNameSyncDir, "namespaces");
+        try {
+            FileUtils.dumpSetToFile(namespaceCounter.getLiveNamespaces(), file);
+        } catch (IOException e) {
+            log.error("Failed to dump namespace into file {} - {}", file.getAbsolutePath(), e.getMessage(), e);
         }
     }
 }

@@ -56,6 +56,7 @@ ENV SVC_PROP_DW_SVC_VERSION=${VERSION}
 ENV DW_PREFIX=jetty
 ENV SERVICEDIR=/app/
 ENV app_servicedir=/app/
+ENV ROCKSDB_READONLY=false
 
 ENTRYPOINT ["/sbin/tini", "--"]
 

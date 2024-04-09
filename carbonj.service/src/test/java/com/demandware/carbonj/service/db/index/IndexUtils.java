@@ -21,19 +21,35 @@ import java.io.File;
 public class IndexUtils
 {
     static MetricRegistry metricRegistry = new MetricRegistry();
-    private static IndexStore<String, NameRecord> metricNameIndexStore( File dbDir, boolean longId )
-    {
-        return new IndexStoreRocksDB<>( metricRegistry, "index-name", dir( dbDir, "index-name" ), new NameRecordSerializer(longId) );
+
+    static IndexStore<String, NameRecord> nameIndexStore;
+
+    private static IndexStore<String, NameRecord> metricNameIndexStore( File dbDir, boolean longId ) {
+        return metricNameIndexStore(dbDir, longId, false);
     }
 
-    private static IndexStore<Long, IdRecord> metricIdIndexStore( File dbDir, boolean longId )
+    private static IndexStore<String, NameRecord> metricNameIndexStore( File dbDir, boolean longId, boolean rocksdbReadonly )
     {
-        return new IndexStoreRocksDB<>(metricRegistry, "index-id", dir( dbDir, "index-id" ), new IdRecordSerializer(longId) );
+        return new IndexStoreRocksDB<>(metricRegistry, "index-name", dir( dbDir, "index-name" ), new NameRecordSerializer(longId), rocksdbReadonly, 1);
+    }
+
+    private static IndexStore<Long, IdRecord> metricIdIndexStore( File dbDir, boolean longId ) {
+        return metricIdIndexStore(dbDir, longId, false);
+    }
+
+    private static IndexStore<Long, IdRecord> metricIdIndexStore( File dbDir, boolean longId, boolean rocksdbReadonly ) {
+        return new IndexStoreRocksDB<>(metricRegistry, "index-id", dir( dbDir, "index-id" ), new IdRecordSerializer(longId), rocksdbReadonly, 1);
     }
 
     public static MetricIndex metricIndex( File dbDir, boolean longId )
     {
-        return metricIndex( metricNameIndexStore( dbDir, longId ), metricIdIndexStore( dbDir, longId ), databaseMetrics(), longId, "does-not-exist" );
+        nameIndexStore = metricNameIndexStore( dbDir, longId );
+        return metricIndex( nameIndexStore, metricIdIndexStore( dbDir, longId ), databaseMetrics(), longId, "does-not-exist" );
+    }
+
+    public static MetricIndex metricIndexReadonly( File dbDir, boolean longId )
+    {
+        return metricIndex( metricNameIndexStore( dbDir, longId, true ), metricIdIndexStore( dbDir, longId, true ), databaseMetrics(), longId, "does-not-exist" );
     }
 
     public static MetricIndex metricIndex( File dbDir, boolean longId, String metricStoreConfig )
@@ -49,7 +65,7 @@ public class IndexUtils
         StorageAggregationRulesLoader rulesLoader = new StorageAggregationRulesLoader( new File("unknownFile") );
         StorageAggregationPolicySource policySource = new StorageAggregationPolicySource( rulesLoader );
 
-        return new MetricIndexImpl( metricRegistry,metricStoreConfig, nameIndex, idIndex, dbMetrics, 10000, 60,
+        return new MetricIndexImpl(new MetricRegistry(), metricStoreConfig, nameIndex, idIndex, dbMetrics, 10000, 60,
                 new NameUtils(),  policySource, 2000,120, false, longId);
     }
 

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.codahale.metrics.Meter;
@@ -20,9 +21,9 @@ import org.slf4j.LoggerFactory;
 
 public class NamespaceCounter
 {
-    private static Logger log = LoggerFactory.getLogger( NamespaceCounter.class );
+    private static final Logger log = LoggerFactory.getLogger( NamespaceCounter.class );
 
-    private ConcurrentHashMap<String, Meter> namespaceMeters = new ConcurrentHashMap<>(  );
+    private final ConcurrentHashMap<String, Meter> namespaceMeters = new ConcurrentHashMap<>(  );
 
     private final MetricRegistry metricRegistry;
 
@@ -31,7 +32,7 @@ public class NamespaceCounter
     private final Meter addedMeter;
 
     // Entry is <namespace, timestampToRemoveAt>
-    private Map<String, Integer> candidatesForRemoval = new HashMap<>();
+    private final Map<String, Integer> candidatesForRemoval = new HashMap<>();
 
     /*
       Grace period for not receiving any data before the name is removed.
@@ -41,8 +42,6 @@ public class NamespaceCounter
       and typically there will be other metrics that are sent frequently enough.
      */
     private final int removeInactiveAfterSec;
-
-    private final double inactiveThreshold = 0.1;
 
     public NamespaceCounter(MetricRegistry metricRegistry, int removeInactiveAfterSec)
     {
@@ -81,10 +80,18 @@ public class NamespaceCounter
         return namespaceMeters.containsKey( namespace(name) );
     }
 
-    private String namespace(String name)
+    public String namespace(String name)
     {
         int i = name.indexOf( '.' );
         return i > 0 ? name.substring( 0, i) : name;
+    }
+
+    public Set<String> getLiveNamespaces() {
+        Set<String> namespaces = namespaceMeters.keySet();
+        for (String toRemove : candidatesForRemoval.keySet()) {
+            namespaces.remove(toRemove);
+        }
+        return namespaces;
     }
 
     public void removeInactive()
@@ -128,7 +135,7 @@ public class NamespaceCounter
 
     private void removeEntriesWithExpiredValues(int now)
     {
-        List<String> toRemove = new ArrayList();
+        List<String> toRemove = new ArrayList<>();
         candidatesForRemoval.forEach( (k, v) -> {
             if( v <= now )
             {
@@ -150,8 +157,9 @@ public class NamespaceCounter
     private boolean isInactive(String name, Meter m)
     {
         // there shouldn't be too m
+        double inactiveThreshold = 0.1;
         log.info(String.format("namespace: [%s], 15minRate: [%s], threshold: [%s]", name, m.getFifteenMinuteRate(), inactiveThreshold));
-        return m.getFifteenMinuteRate() <  inactiveThreshold;
+        return m.getFifteenMinuteRate() < inactiveThreshold;
     }
 
 }

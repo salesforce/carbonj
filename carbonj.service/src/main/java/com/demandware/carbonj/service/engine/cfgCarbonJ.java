@@ -172,6 +172,9 @@ public class cfgCarbonJ
 
     @Value( "${app.servicedir:}" ) private String serviceDir;
 
+    @Value( "${metrics.store.dataDir:data}" )
+    private String dataDir = null;
+
     @Value( "${kinesis.consumer.region:us-east-1}" )
     private String kinesisConsumerRegion = "us-east-1";
 
@@ -200,6 +203,9 @@ public class cfgCarbonJ
     @Value( "${configServer.processInstance:unknownProcessInstance}" ) private String configServerProcessInstance;
 
     @Value( "${configServer.backupFilePath:config/config-server-state.json}" ) private String backupFilePath;
+
+    @Value("${metrics.store.sync.secondary.db:false}")
+    private boolean syncSecondaryDb;
 
     @Bean
     public RestTemplate restTemplate() {
@@ -390,16 +396,22 @@ public class cfgCarbonJ
 
     @Autowired( required = false ) CheckPointMgr<Date> checkPointMgr;
 
-    @Bean Consumers consumer( PointProcessor pointProcessor,
+    @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    Consumers consumer( PointProcessor pointProcessor,
                               @Qualifier( "recoveryPointProcessor" ) PointProcessor recoveryPointProcessor,
-                              ScheduledExecutorService s, KinesisConfig kinesisConfig )
+                              ScheduledExecutorService s, KinesisConfig kinesisConfig, NamespaceCounter nsCounter )
     {
         if ( kinesisConfig.isKinesisConsumerEnabled() )
         {
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
             Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
-                            kinesisConfig, checkPointMgr, kinesisConsumerRegion );
+                    kinesisConfig, checkPointMgr, kinesisConsumerRegion,
+                    nsCounter, dataDir == null ? null : new File(dataDir, "index-name-sync"));
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
+            if (syncSecondaryDb) {
+                s.scheduleWithFixedDelay( consumer::syncNamespaces, 60, 60, TimeUnit.SECONDS );
+            }
             return consumer;
         }
         else
@@ -434,7 +446,9 @@ public class cfgCarbonJ
         return null;
     }
 
-    @Bean Void checkExpiredNamespaces( ScheduledExecutorService s, NamespaceCounter ns )
+    @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    Void checkExpiredNamespaces( ScheduledExecutorService s, NamespaceCounter ns )
     {
         if ( runInactiveNamespaceCheckEverySeconds > 0 )
         {
@@ -471,7 +485,9 @@ public class cfgCarbonJ
         return new NettyServer( metricRegistry, nettyIOThreads, nettyWorkerThreads );
     }
 
-    @Bean NettyChannel lineProtocolChannel( NettyServer netty, InputQueue r )
+    @Bean
+    @ConditionalOnProperty(name = "carbonj.relay", havingValue = "true", matchIfMissing = true)
+    NettyChannel lineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolTcpPort = ( lineProtocolTcpPort == -1 ) ? jettyPort + 2 : lineProtocolTcpPort;
         return netty.bind( lineProtocolTcpHost, lineProtocolTcpPort, new ChannelInitializer<SocketChannel>()
@@ -488,7 +504,9 @@ public class cfgCarbonJ
         } );
     }
 
-    @Bean NettyChannel udpLineProtocolChannel( NettyServer netty, InputQueue r )
+    @Bean
+    @ConditionalOnProperty(name = "carbonj.relay", havingValue = "true", matchIfMissing = true)
+    NettyChannel udpLineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolUdpPort = ( lineProtocolUdpPort == -1 ) ? jettyPort + 2 : lineProtocolUdpPort;
         NettyChannel channel = netty.udpBind( lineProtocolUdpHost, lineProtocolUdpPort, udpBuff, udpMsgBuff,
@@ -513,7 +531,9 @@ public class cfgCarbonJ
         return channel;
     }
 
-    @Bean NettyChannel pickleProtocolChannel( NettyServer netty, InputQueue r )
+    @Bean
+    @ConditionalOnProperty(name = "carbonj.relay", havingValue = "true", matchIfMissing = true)
+    NettyChannel pickleProtocolChannel( NettyServer netty, InputQueue r )
     {
         return netty.bind( "0.0.0.0", jettyPort + 3, new ChannelInitializer<SocketChannel>()
         {
