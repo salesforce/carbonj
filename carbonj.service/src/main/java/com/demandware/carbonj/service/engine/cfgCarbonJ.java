@@ -397,7 +397,9 @@ public class cfgCarbonJ
                         relayQueueRejectPolicy, batchSize, emptyQueuePauseMillis );
     }
 
-    @Bean( name = "datapoint_sink" ) Consumer<DataPoints> dataPointSink( @Qualifier( "dataPointSinkRelay" ) Relay r )
+    @Bean( name = "datapoint_sink" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    Consumer<DataPoints> dataPointSink( @Qualifier( "dataPointSinkRelay" ) Relay r )
     {
         if ( db != null )
         {
@@ -433,30 +435,29 @@ public class cfgCarbonJ
             return null;
     }
 
-    @Bean Void stats( ScheduledExecutorService s, @Qualifier( "dataPointSinkRelay" ) Relay r, @Autowired(required = false) InputQueue a,
-                      @Qualifier( "pointBlacklist" ) MetricList pbl, @Qualifier( "queryBlacklist" ) MetricList qbl,
-                      @Qualifier( "pointAllowOnlyList" ) MetricList pal,
-                      NettyServer nettyServer, @Qualifier( "auditLogRelay" ) Relay auditLog, StringsCache strCache,
+    @Bean Void stats( ScheduledExecutorService s,
+                      @Autowired(required = false) @Qualifier( "dataPointSinkRelay" ) Relay r,
+                      @Autowired(required = false) InputQueue a,
+                      @Autowired(required = false) @Qualifier( "pointBlacklist" ) MetricList pbl,
+                      @Qualifier( "queryBlacklist" ) MetricList qbl,
+                      @Autowired(required = false) @Qualifier( "pointAllowOnlyList" ) MetricList pal,
+                      NettyServer nettyServer,
+                      @Autowired(required = false) @Qualifier( "auditLogRelay" ) Relay auditLog,
+                      StringsCache strCache,
                       @Qualifier( "accumulator" ) Accumulator accu )
     {
 
         s.scheduleWithFixedDelay( () -> {
             if (a != null) a.dumpStats();
-            pbl.dumpStats();
+            if (pbl != null) pbl.dumpStats();
             qbl.dumpStats();
-            pal.dumpStats();
+            if (pal != null) pal.dumpStats();
             r.dumpStats();
-            auditLog.dumpStats();
-            if ( db != null )
-            {
-                db.dumpStats();
-            }
+            if (auditLog != null) auditLog.dumpStats();
+            if ( db != null ) db.dumpStats();
             nettyServer.dumpStats();
             strCache.dumpStats();
-            if ( accu != null )
-            {
-                accu.dumpStats();
-            }
+            if ( accu != null ) accu.dumpStats();
         }, 60, 60, TimeUnit.SECONDS );
         return null;
     }
