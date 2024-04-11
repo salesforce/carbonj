@@ -73,6 +73,9 @@ public class cfgTimeSeriesStorage
     @Value( "${metrics.store:config/service.properties}" )
     private String metricStoreConfigFile = "config/service.properties";
 
+    @Value("${rocksdb.readonly:false}")
+    private boolean rocksdbReadonly;
+
     @Autowired
     MetricRegistry metricRegistry;
 
