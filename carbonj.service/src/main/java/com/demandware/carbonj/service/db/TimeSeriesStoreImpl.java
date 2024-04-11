@@ -641,7 +641,9 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
     {
         log.info( "closing databases" );
         nameIndex.close();
-        pointStore.close();
+        if (!rocksdbReadonly) {
+            pointStore.close();
+        }
         log.info( "all databases closed" );
     }
 

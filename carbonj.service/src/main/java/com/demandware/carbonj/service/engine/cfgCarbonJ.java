@@ -389,7 +389,9 @@ public class cfgCarbonJ
         return pointProcessor;
     }
 
-    @Bean InputQueue inputQueue( PointProcessor pointProcessor )
+    @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    InputQueue inputQueue( PointProcessor pointProcessor )
     {
         return new InputQueue( metricRegistry, "input-queue-consumer", pointProcessor, aggregatorQueue,
                         relayQueueRejectPolicy, batchSize, emptyQueuePauseMillis );
@@ -431,7 +433,7 @@ public class cfgCarbonJ
             return null;
     }
 
-    @Bean Void stats( ScheduledExecutorService s, @Qualifier( "dataPointSinkRelay" ) Relay r, InputQueue a,
+    @Bean Void stats( ScheduledExecutorService s, @Qualifier( "dataPointSinkRelay" ) Relay r, @Autowired(required = false) InputQueue a,
                       @Qualifier( "pointBlacklist" ) MetricList pbl, @Qualifier( "queryBlacklist" ) MetricList qbl,
                       @Qualifier( "pointAllowOnlyList" ) MetricList pal,
                       NettyServer nettyServer, @Qualifier( "auditLogRelay" ) Relay auditLog, StringsCache strCache,
@@ -439,7 +441,7 @@ public class cfgCarbonJ
     {
 
         s.scheduleWithFixedDelay( () -> {
-            a.dumpStats();
+            if (a != null) a.dumpStats();
             pbl.dumpStats();
             qbl.dumpStats();
             pal.dumpStats();
@@ -477,10 +479,10 @@ public class cfgCarbonJ
         return null;
     }
 
-    @Bean Void refreshStats( ScheduledExecutorService s, InputQueue a, @Qualifier( "accumulator" ) Accumulator accu )
+    @Bean Void refreshStats( ScheduledExecutorService s, @Autowired(required = false) InputQueue a, @Qualifier( "accumulator" ) Accumulator accu )
     {
         s.scheduleWithFixedDelay( () -> {
-            a.refreshStats();
+            if (a != null) a.refreshStats();
             if ( accu != null )
             {
                 accu.refreshStats();
@@ -563,7 +565,7 @@ public class cfgCarbonJ
         } );
     }
 
-    @Bean CarbonjAdmin cjAdmin( InputQueue agg, NameUtils nameUtils )
+    @Bean CarbonjAdmin cjAdmin(@Autowired(required = false) InputQueue agg, NameUtils nameUtils )
     {
         return new CarbonjAdmin( agg, nameUtils, Optional.ofNullable( db ) );
     }

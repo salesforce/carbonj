@@ -26,6 +26,7 @@ import org.apache.commons.io.LineIterator;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -67,9 +68,9 @@ public class CarbonjAdmin
     private Supplier<RuntimeException> notConfigured = ( ) -> new RuntimeException(
         "Time Series Store is not configured." );
 
-    public CarbonjAdmin(InputQueue inputQueue, NameUtils nameUtils, Optional<TimeSeriesStore> tsStore )
+    public CarbonjAdmin(@Autowired(required = false) InputQueue inputQueue, NameUtils nameUtils, Optional<TimeSeriesStore> tsStore )
     {
-        this.inputQueue = Preconditions.checkNotNull(inputQueue);
+        this.inputQueue = inputQueue;
         this.nameUtils = Preconditions.checkNotNull( nameUtils );
         this.tsStore = tsStore;
     }
