@@ -228,8 +228,10 @@ public class cfgCarbonJ
         return configServerUtil;
     }
 
-    @Bean( name = "dataPointSinkRelay" ) Relay relay( ScheduledExecutorService s,
-                                                      @Autowired(required = false) ConfigServerUtil configServerUtil )
+    @Bean( name = "dataPointSinkRelay" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    Relay relay( ScheduledExecutorService s,
+                 @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         File rulesFile = locateConfigFile( serviceDir, relayRulesFile );
         Relay r = new Relay( metricRegistry, "relay", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
@@ -239,8 +241,10 @@ public class cfgCarbonJ
         return r;
     }
 
-    @Bean( name = "auditLogRelay" ) Relay auditLog( ScheduledExecutorService s,
-                                                    @Autowired(required = false) ConfigServerUtil configServerUtil )
+    @Bean( name = "auditLogRelay" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    Relay auditLog( ScheduledExecutorService s,
+                    @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         File rulesFile = locateConfigFile( serviceDir, auditRulesFile );
         Relay r = new Relay( metricRegistry, "audit", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
@@ -250,14 +254,18 @@ public class cfgCarbonJ
         return r;
     }
 
-    @Bean PointFilter pointFilter( NameUtils nameUtils )
+    @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    PointFilter pointFilter( NameUtils nameUtils )
     {
         return new PointFilter( metricRegistry, "pointFilter", maxLen, maxAge, maxFutureAge, nameUtils,
                         dupPointCacheMaxSize, dupPointCacheExpireInMin,
                         new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
     }
 
-    @Bean( name = "pointBlacklist" ) MetricList pointBlacklist( ScheduledExecutorService s,
+    @Bean( name = "pointBlacklist" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    MetricList pointBlacklist( ScheduledExecutorService s,
             @Autowired(required = false) ConfigServerUtil configServerUtil)
     {
         MetricList bs = new MetricList( metricRegistry, "blacklist", locateConfigFile( serviceDir, blacklistConfigFile ),
@@ -275,7 +283,9 @@ public class cfgCarbonJ
         return bs;
     }
 
-    @Bean( name = "pointAllowOnlyList" ) MetricList pointAllowOnlyList( ScheduledExecutorService s,
+    @Bean( name = "pointAllowOnlyList" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    MetricList pointAllowOnlyList( ScheduledExecutorService s,
             @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         MetricList metricList = new MetricList( metricRegistry, "allowOnly",
@@ -284,8 +294,9 @@ public class cfgCarbonJ
         return metricList;
     }
 
-
-    @Bean @DependsOn( "stringsCache" ) PointProcessor pointProcessor(
+    @Bean @DependsOn( "stringsCache" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    PointProcessor pointProcessor(
                     @Qualifier( "datapoint_sink" ) Consumer<DataPoints> sink, ScheduledExecutorService s,
                     @Qualifier( "pointBlacklist" ) MetricList blacklist,
                     @Qualifier( "pointAllowOnlyList" ) MetricList allowOnly,
@@ -324,7 +335,9 @@ public class cfgCarbonJ
         return pointProcessor;
     }
 
-    @Bean( name = "recoveryPointProcessor" ) @DependsOn( "stringsCache" ) PointProcessor recoveryPointProcessor(
+    @Bean( name = "recoveryPointProcessor" ) @DependsOn( "stringsCache" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    PointProcessor recoveryPointProcessor(
                     @Qualifier( "datapoint_sink" ) Consumer<DataPoints> sink, ScheduledExecutorService s,
                     @Qualifier( "pointBlacklist" ) MetricList blacklist,
                     @Qualifier( "pointAllowOnlyList" ) MetricList allowOnly,

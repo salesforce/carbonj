@@ -90,7 +90,7 @@ public class cfgTimeSeriesStorage
                 TimeSeriesStoreImpl.newSerialTaskQueue( serialQueueSize ), pointStore,
             dbMetrics, batchedSeriesRetrieval,
             batchedSeriesSize, dumpIndex, new File( dumpIndexFile ), maxNonLeafPointsLoggedPerMin, metricStoreConfigFile,
-                longId);
+                longId, rocksdbReadonly);
 
         s.scheduleWithFixedDelay(timeSeriesStore::reload, 60, 60, TimeUnit.SECONDS );
         s.scheduleWithFixedDelay(timeSeriesStore::refreshStats, 60, 10, TimeUnit.SECONDS );
