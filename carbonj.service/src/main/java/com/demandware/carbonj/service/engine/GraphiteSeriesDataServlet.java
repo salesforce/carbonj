@@ -112,7 +112,7 @@ public class GraphiteSeriesDataServlet
         }
         else if (msgpack)
         {
-            LOG.info( "carbonapi request: found msgpack request" );
+            //LOG.info( "carbonapi request: found msgpack request." );
             res.setContentType("application/octet-stream");
         }
         else
@@ -171,6 +171,10 @@ public class GraphiteSeriesDataServlet
 
             for ( Series series : seriesList )
             {
+                if (target.contains("gm.prd") && target.contains("jvm.runtime.uptime") && series.values.contains(null))
+                {
+                    LOG.info( "carbonapi request: found null datapoints. target: " + target + " series: " +  series.toString() );
+                }
                 msgPackSeries.add( new MsgPackSeries( series ) );
             }
 
