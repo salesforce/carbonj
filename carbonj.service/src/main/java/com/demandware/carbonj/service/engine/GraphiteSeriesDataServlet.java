@@ -14,6 +14,7 @@ import java.util.List;
 import com.demandware.carbonj.service.db.model.MsgPackSeries;
 import com.demandware.carbonj.service.engine.protobuf.MetricsResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -83,6 +84,7 @@ public class GraphiteSeriesDataServlet
 
         String format = req.getParameter("format");
         String target = req.getParameter( "target" );
+        Preconditions.checkNotNull(target);
         String from = req.getParameter( "from" );
         String until = req.getParameter( "until" );
         String nowText = req.getParameter("now");
@@ -97,10 +99,6 @@ public class GraphiteSeriesDataServlet
         if( nowText != null )
         {
             now = Integer.parseInt( nowText );
-        }
-        else if (msgpack)
-        {
-            now = Integer.parseInt( until );
         }
 
         if( json )
