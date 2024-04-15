@@ -96,16 +96,7 @@ class DataPointArchiveRocksDB
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
-    private final ThreadPoolExecutor cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
-        100000 ), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
-    {
-        @Override
-        public void rejectedExecution( Runnable r, ThreadPoolExecutor e )
-        {
-            log.info( "cleaner queue is full. rejecting (GC should pick this object up eventually)" );
-            super.rejectedExecution( r, e );
-        }
-    } );
+    private final ThreadPoolExecutor cleaner;
 
     DataPointArchiveRocksDB(MetricRegistry metricRegistry,
                                 String dbName,
@@ -128,6 +119,20 @@ class DataPointArchiveRocksDB
         this.catchUpTimer = metricRegistry.timer(MetricUtils.dbCatchUpTimerName(dbName));
         this.catchUpTimerError = metricRegistry.meter(MetricUtils.dbCatchUpTimerErrorName(dbName));
         this.longId = longId;
+        if (rocksdbConfig.readOnly) {
+            this.cleaner = null;
+        } else {
+            this.cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
+                    100000 ), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
+            {
+                @Override
+                public void rejectedExecution( Runnable r, ThreadPoolExecutor e )
+                {
+                    log.info( "cleaner queue is full. rejecting (GC should pick this object up eventually)" );
+                    super.rejectedExecution( r, e );
+                }
+            } );
+        }
         TtlDB.loadLibrary();
     }
 
@@ -191,7 +196,9 @@ class DataPointArchiveRocksDB
             {
                 final RocksIterator iterToDispose = iter;
                 // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute( ( ) -> dispose( iterToDispose ) );
+                if (cleaner != null) {
+                    cleaner.execute( ( ) -> dispose( iterToDispose ) );
+                }
             }
         }
     }
@@ -240,7 +247,9 @@ class DataPointArchiveRocksDB
             {
                 final RocksIterator iterToDispose = iter;
                 // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute( ( ) -> dispose( iterToDispose ) );
+                if (cleaner != null) {
+                    cleaner.execute(() -> dispose(iterToDispose));
+                }
             }
         }
 
@@ -345,18 +354,13 @@ class DataPointArchiveRocksDB
         }
         byte[] key = DataPointRecord.toKeyBytes( metricId, interval, longId );
         byte[] value = DataPointRecord.toValueBytes( v );
-        final Timer.Context timerContext = writeTimer.time();
-        try
+        try (Timer.Context ignored = writeTimer.time())
         {
             db.put( writeOptions, key, value );
         }
         catch ( RocksDBException e )
         {
             Throwables.throwIfUnchecked(e);
-        }
-        finally
-        {
-            timerContext.stop();
         }
     }
 
@@ -406,7 +410,9 @@ class DataPointArchiveRocksDB
         if ( o != null )
         {
             // contains global lock. Dispose in a separate thread to avoid contention.
-            cleaner.execute(o::close);
+            if (cleaner != null) {
+                cleaner.execute(o::close);
+            }
         }
     }
 
@@ -472,7 +478,9 @@ class DataPointArchiveRocksDB
             {
                 final RocksIterator iterToDispose = iter;
                 // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute( ( ) -> dispose( iterToDispose ) );
+                if (cleaner != null) {
+                    cleaner.execute(() -> dispose(iterToDispose));
+                }
             }
         }
 
