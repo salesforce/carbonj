@@ -10,11 +10,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import com.demandware.carbonj.service.db.model.MsgPackSeries;
 import com.demandware.carbonj.service.engine.protobuf.MetricsResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -40,7 +40,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 public class GraphiteSeriesDataServlet
                 extends HttpServlet
 {
-    private Logger LOG = LoggerFactory.getLogger( GraphiteSeriesDataServlet.class );
+    private final Logger LOG = LoggerFactory.getLogger( GraphiteSeriesDataServlet.class );
 
     @Autowired(required = false)
     private TimeSeriesStore store;
@@ -84,7 +84,6 @@ public class GraphiteSeriesDataServlet
 
         String format = req.getParameter("format");
         String target = req.getParameter( "target" );
-        Preconditions.checkNotNull(target);
         String from = req.getParameter( "from" );
         String until = req.getParameter( "until" );
         String nowText = req.getParameter("now");
@@ -173,29 +172,22 @@ public class GraphiteSeriesDataServlet
 
             for ( Series series : seriesList )
             {
-                if (target.contains("gm.prd") && target.contains("jvm.runtime.uptime") && series.values.contains(null))
+                if (target.contains("gm.prd") && target.contains("jvm.runtime.uptime") && !(series.values.stream().allMatch(Objects::isNull)) &&
+                        series.values.contains(null))
                 {
-                    LOG.info( "carbonapi request: found null datapoints. target: " + target + " series: " +  series.toString() );
+                    LOG.info( "carbonapi request: Found null datapoint. Total datapoints before serialization: " + series.values.size() + ". Target: " + target + ". Series: " +  series.toString() );
                 }
                 msgPackSeries.add( new MsgPackSeries( series ) );
             }
 
-            OutputStream output = res.getOutputStream();
-            try
-            {
+            try (OutputStream output = res.getOutputStream()) {
                 // Serialize the series
-                byte[] serialized = objectMapper.writeValueAsBytes( msgPackSeries );
+                byte[] serialized = objectMapper.writeValueAsBytes(msgPackSeries);
                 //LOG.info("Serialized data: " + serialized );
-                res.setContentLength( serialized.length );
-                output.write( serialized );
-            }
-            catch ( IOException e )
-            {
-                LOG.error( "carbonapi request: error writing msgpack response", e.getMessage() );
-            }
-            finally
-            {
-                output.close();
+                res.setContentLength(serialized.length);
+                output.write(serialized);
+            } catch (IOException e) {
+                LOG.error("carbonapi request: error writing msgpack response", e.getMessage());
             }
         }
         else if ( protobuf )
