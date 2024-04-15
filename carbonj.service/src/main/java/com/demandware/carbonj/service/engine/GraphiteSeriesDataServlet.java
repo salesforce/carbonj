@@ -88,22 +88,17 @@ public class GraphiteSeriesDataServlet
         String from = req.getParameter( "from" );
         String until = req.getParameter( "until" );
         String nowText = req.getParameter("now");
+        int now = SystemTime.nowEpochSecond();
+        if( nowText != null )
+        {
+            now = Integer.parseInt( nowText );
+        }
 
         boolean randomTest = req.getParameter("randomTest") != null;
 
         boolean protobuf = "protobuf".equals( format );
         boolean msgpack = "msgpack".equals( format );
         boolean json = "json".equals( format );
-
-        int now = SystemTime.nowEpochSecond();
-        if( nowText != null )
-        {
-            now = Integer.parseInt( nowText );
-        }
-        else if (msgpack)
-        {
-            now = Integer.parseInt( until );
-        }
 
         if( json )
         {
@@ -177,9 +172,10 @@ public class GraphiteSeriesDataServlet
 
             for ( Series series : seriesList )
             {
-                if (target.contains("gm.prd") && target.contains("jvm.runtime.uptime") && series.values.contains(null))
+                if (target.contains("gm.prd") && target.contains("jvm.runtime.uptime") && !(series.values.stream().allMatch(x -> x == null)) &&
+                        series.values.contains(null))
                 {
-                    LOG.info( "carbonapi request: found null datapoints. target: " + target + " series: " +  series.toString() );
+                    LOG.info( "carbonapi request: Found null datapoint. Total datapoints before serialization: " + series.values.size() + ". Target: " + target + ". Series: " +  series.toString() );
                 }
                 msgPackSeries.add( new MsgPackSeries( series ) );
             }
