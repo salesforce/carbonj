@@ -8,7 +8,7 @@
 
 
 # pod id
-pod=pod98
+pod=${dw.podId}
 
 # group id
 groupId=${DW_GROUP_ID}
