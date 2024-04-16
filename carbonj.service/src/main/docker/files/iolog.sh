@@ -13,7 +13,7 @@
 #
 
 # pod id
-pod=${dw.podId}
+pod=${DW_POD_ID}
 
 # group id
 groupId=${DW_GROUP_ID}

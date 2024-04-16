@@ -128,7 +128,7 @@ env >> /etc/environment
 crontab -l | { cat; echo "* */6 * * * /app/bin/logCleanup.sh ${SERVICEDIR}/log 7 >/dev/null 2>&1"; } | crontab -
 crontab -l | { cat; echo "*/1 * * * * /app/bin/fdlog.sh"; } | crontab -
 crontab -l | { cat; echo "*/1 * * * * /app/bin/iolog.sh"; } | crontab -
-#crontab -l | { cat; echo "*/1 * * * * /app/bin/reportGcMetrics.sh"; } | crontab -
+crontab -l | { cat; echo "*/1 * * * * /app/bin/reportGcMetrics.sh"; } | crontab -
 crontab -l | { cat; echo "*/1 * * * * /bin/bash -c '/usr/bin/perl /app/bin/requestlog-stats.pl'"; } | crontab -
 crontab -l | { cat; echo "*/1 * * * * /app/bin/disklog.sh"; } | crontab -
 if [[ $ROCKSDB_REPORTING_ENABLED = 1 ]]; then
