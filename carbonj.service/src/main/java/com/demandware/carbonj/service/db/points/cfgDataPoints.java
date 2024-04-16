@@ -120,6 +120,7 @@ public class cfgDataPoints
     }
 
     @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
     StagingFiles stagingFiles(MetricProvider mProvider)
     {
         return new StagingFiles(metricRegistry, stagingDir(), fileSort(), mProvider);
