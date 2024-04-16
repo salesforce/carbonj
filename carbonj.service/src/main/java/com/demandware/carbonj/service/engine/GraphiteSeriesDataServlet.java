@@ -177,7 +177,8 @@ public class GraphiteSeriesDataServlet
                 if (target.contains("gm.prd") && target.contains("jvm.runtime.uptime") && !(series.values.stream().allMatch(Objects::isNull)) &&
                         series.values.contains(null))
                 {
-                    LOG.info( "carbonapi request: Found null datapoint. Total datapoints before serialization: " + series.values.size() + ". Target: " + target + ". Series: " +  series.toString() );
+                    LOG.info( "carbonapi request: Found null datapoint. From=" + from + ". Until=" + until +
+                            " Total datapoints before serialization: " + series.values.size() + ". Target: " + target + ". Series: " +  series);
                 }
                 msgPackSeries.add( new MsgPackSeries( series ) );
             }

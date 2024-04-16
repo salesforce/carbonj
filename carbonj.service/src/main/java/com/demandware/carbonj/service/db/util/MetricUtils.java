@@ -40,6 +40,6 @@ public class MetricUtils {
     }
 
     public static String dbDataPointLatencyName(String dbName, String namespace) {
-        return "db." + dbName + "." + namespace + ".latency";
+        return "db." + dbName + ".namespace." + namespace + ".latency";
     }
 }
