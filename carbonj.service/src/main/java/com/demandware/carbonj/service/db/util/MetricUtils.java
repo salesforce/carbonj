@@ -38,4 +38,8 @@ public class MetricUtils {
     public static String dbEmptyReadTimerName(String dbName) {
         return "db." + dbName + ".emptyRead.time";
     }
+
+    public static String dbDataPointLatencyName(String dbName, String namespace) {
+        return "db." + dbName + "." + namespace + ".latency";
+    }
 }

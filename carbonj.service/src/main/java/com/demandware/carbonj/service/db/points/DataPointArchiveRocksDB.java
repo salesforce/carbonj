@@ -13,13 +13,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.SyncPrimaryDbTask;
+import com.demandware.carbonj.service.db.index.NameUtils;
 import com.demandware.carbonj.service.db.util.MetricUtils;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
 import org.rocksdb.BlockBasedTableConfig;
@@ -98,6 +102,12 @@ class DataPointArchiveRocksDB
 
     private final ThreadPoolExecutor cleaner;
 
+    private final ConcurrentMap<String, Histogram> latencyByNamespaceMap = new ConcurrentHashMap<>();
+
+    private final MetricRegistry metricRegistry;
+
+    private final NameUtils nameUtils = new NameUtils();
+
     DataPointArchiveRocksDB(MetricRegistry metricRegistry,
                                 String dbName,
                                 RetentionPolicy policy,
@@ -105,6 +115,7 @@ class DataPointArchiveRocksDB
                                 RocksDBConfig rocksdbConfig,
                                 boolean longId)
     {
+        this.metricRegistry = metricRegistry;
         this.dbName = Preconditions.checkNotNull( dbName );
         this.policy = Preconditions.checkNotNull( policy );
         this.dbDir = Preconditions.checkNotNull( dbDir );
@@ -322,6 +333,12 @@ class DataPointArchiveRocksDB
                     byte[] key = DataPointRecord.toKeyBytes(p.metricId, interval, longId);
                     byte[] value = DataPointRecord.toValueBytes(p.val);
                     batch.put(key, value);
+                    String namespace = nameUtils.firstSegment(p.name);
+                    if (!latencyByNamespaceMap.containsKey(namespace)) {
+                        Histogram latency = metricRegistry.histogram(MetricRegistry.name(MetricUtils.dbDataPointLatencyName(dbName, namespace)));
+                        latencyByNamespaceMap.putIfAbsent(namespace, latency);
+                    }
+                    latencyByNamespaceMap.get(namespace).update(now - p.ts);
                 }
             }
             int batchSize = batch.count();
