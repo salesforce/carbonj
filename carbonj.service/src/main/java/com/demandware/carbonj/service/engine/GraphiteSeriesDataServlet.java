@@ -89,16 +89,21 @@ public class GraphiteSeriesDataServlet
         String until = req.getParameter( "until" );
         String nowText = req.getParameter("now");
         int now = SystemTime.nowEpochSecond();
-        if( nowText != null )
-        {
-            now = Integer.parseInt( nowText );
-        }
 
         boolean randomTest = req.getParameter("randomTest") != null;
 
         boolean protobuf = "protobuf".equals( format );
         boolean msgpack = "msgpack".equals( format );
         boolean json = "json".equals( format );
+
+        if( nowText != null )
+        {
+            now = Integer.parseInt( nowText );
+        }
+        else if (msgpack)
+        {
+            now = Integer.parseInt( until );
+        }
 
         if( json )
         {
