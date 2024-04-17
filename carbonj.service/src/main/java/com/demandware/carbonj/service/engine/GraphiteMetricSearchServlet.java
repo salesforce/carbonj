@@ -7,12 +7,9 @@
 package com.demandware.carbonj.service.engine;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.demandware.carbonj.service.db.model.MsgPackMetric;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -23,9 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Metric;
-import com.demandware.carbonj.service.engine.protobuf.MetricsResponse;
 import com.google.gson.Gson;
-import org.msgpack.jackson.dataformat.MessagePackFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,23 +81,10 @@ public class GraphiteMetricSearchServlet
         Preconditions.checkNotNull(query);
         boolean randomTest = req.getParameter("randomTest") != null;
 
-        boolean protobuf = "protobuf".equals( format );
-        boolean msgpack = "msgpack".equals( format );
         boolean json = "json".equals(format);
         if( json )
         {
             res.setContentType( "application/json" );
-        }
-        else if ( protobuf )
-        {
-            LOG.info( "carbonapi request: found protobuf request" );
-            res.setContentType( "application/protobuf" );
-            //LOG.info( "carbonapi request: query: " + query + " --- blacklist: " + queryBlacklist );
-        }
-        else if ( msgpack )
-        {
-            LOG.info( "carbonapi request: found msgpack request" );
-            res.setContentType("application/octet-stream");
         }
         else
         {
@@ -137,64 +119,6 @@ public class GraphiteMetricSearchServlet
             Gson gson = new Gson();
             res.getWriter().write( gson.toJson( metrics ) );
             res.getWriter().close();
-        }
-        else if ( msgpack )
-        {
-            ObjectMapper objectMapper = new ObjectMapper( new MessagePackFactory() );
-
-            List<MsgPackMetric> msgPackMetrics = new ArrayList<MsgPackMetric>();
-
-            for ( Metric metric : metrics )
-            {
-                msgPackMetrics.add( new MsgPackMetric( metric ) );
-            }
-
-            OutputStream output = res.getOutputStream();
-            try
-            {
-                // Serialize the metrics
-                byte[] serialized = objectMapper.writeValueAsBytes( msgPackMetrics );
-                res.setContentLength( serialized.length );
-                output.write( serialized );
-
-            }
-            catch ( IOException e )
-            {
-                LOG.error( "carbonapi request: error writing msgpack response", e.getMessage() );
-            }
-            finally
-            {
-                output.close();
-            }
-        }
-        else if (protobuf) {
-            //LOG.info( "carbonapi request: formatting response" );
-            OutputStream output = res.getOutputStream();
-
-            List<MetricsResponse.Metric> metricList = new ArrayList<MetricsResponse.Metric>();
-            for ( Metric metric : metrics )
-            {
-                MetricsResponse.Metric metricResult = MetricsResponse.Metric.newBuilder().setName(metric.name).setIsLeaf(metric.isLeaf()).build();
-                metricList.add(metricResult);
-            }
-
-            MetricsResponse.MetricList response =
-                    MetricsResponse.MetricList.newBuilder().setName("FindResponse").addAllMetrics(metricList).build();
-
-            //LOG.info( "carbonapi request: done formatting response " + response);
-            try
-            {
-                //LOG.info( "carbonapi request: writing response" );
-                response.writeTo( output );
-            }
-            catch ( Exception e )
-            {
-                LOG.error( "carbonapi request: error writing response", e.getMessage() );
-            }
-            finally
-            {
-                output.close();
-            }
         }
         else
         {
