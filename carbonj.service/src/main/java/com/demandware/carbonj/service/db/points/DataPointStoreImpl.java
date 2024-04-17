@@ -119,7 +119,7 @@ class DataPointStoreImpl
     {
         this.dbFactory = Preconditions.checkNotNull( dbFactory );
         this.dbMetrics = Preconditions.checkNotNull( dbMetrics );
-        this.stagingStore = Preconditions.checkNotNull( stagingStore );
+        this.stagingStore = stagingStore;
         this.updateLowerResolutionArchives = updateLowerResolutionArchives;
         this.queryCachePolicy = Preconditions.checkNotNull( queryCachePolicy );
         this.metricNamePresent = metricNamePresentPredicate;
@@ -143,13 +143,16 @@ class DataPointStoreImpl
     public void dumpStats()
     {
         dbFactory.dumpStats();
-        stagingStore.dumpStats();
+        if (stagingStore != null) {
+            stagingStore.dumpStats();
+        }
         seriesCacheStatsReporter.dumpStats();
     }
 
     @Override
     public void open()
     {
+        if (stagingStore == null) return;
         stagingStore.open( this );
     }
 
@@ -308,7 +311,9 @@ class DataPointStoreImpl
     @Override
     public void close()
     {
-        stagingStore.closeQuietly();
+        if (stagingStore != null) {
+            stagingStore.closeQuietly();
+        }
         dbFactory.close();
         seriesCacheStatsReporter.close();
     }
@@ -374,7 +379,9 @@ class DataPointStoreImpl
         String dbName = nextArchive.getName();
         // from also identifies interval in nextArchive for this data point
         int from = nextPolicy.interval( ts );
-        stagingStore.add( dbName, from, metric.id, val );
+        if (stagingStore != null) {
+            stagingStore.add(dbName, from, metric.id, val);
+        }
     }
 
     @Override

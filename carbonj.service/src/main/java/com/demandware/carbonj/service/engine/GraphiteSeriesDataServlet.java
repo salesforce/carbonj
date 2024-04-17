@@ -33,7 +33,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 public class GraphiteSeriesDataServlet
                 extends HttpServlet
 {
-    private Logger LOG = LoggerFactory.getLogger( GraphiteSeriesDataServlet.class );
+    private final Logger LOG = LoggerFactory.getLogger( GraphiteSeriesDataServlet.class );
 
     @Autowired(required = false)
     private TimeSeriesStore store;
@@ -80,15 +80,16 @@ public class GraphiteSeriesDataServlet
         String from = req.getParameter( "from" );
         String until = req.getParameter( "until" );
         String nowText = req.getParameter("now");
+
+        boolean randomTest = req.getParameter("randomTest") != null;
+        boolean json = "json".equals( format );
+
         int now = SystemTime.nowEpochSecond();
         if( nowText != null )
         {
             now = Integer.parseInt( nowText );
         }
 
-        boolean randomTest = req.getParameter("randomTest") != null;
-
-        boolean json = "json".equals( format );
         if( json )
         {
             res.setContentType( "application/json" );

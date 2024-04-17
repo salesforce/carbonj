@@ -28,6 +28,8 @@ if [ -f /app/config/service.properties ]; then
   mv /app/config/service.properties /app/config/application.properties
 fi
 
+YOURKIT_PROFILER_AGENT_PORT=20001
+
 if [ -d /data ]; then
 	rm -Rf $SERVICEDIR/work
 	ln -s /data $SERVICEDIR/work
@@ -40,6 +42,7 @@ if [ -d /data ]; then
 	else
 	  mkdir $SERVICEDIR/work/log-readonly
     ln -s $SERVICEDIR/work/log-readonly $SERVICEDIR/log
+    YOURKIT_PROFILER_AGENT_PORT=20002
 	fi
 fi
 
@@ -86,7 +89,7 @@ if [ "${ENABLE_YOURKIT_PROFILER}" == "true" ]; then
     chmod 444 ${YOURKIT_PROFILER_AGENT_FILE}
     rm -rf /tmp/${YOURKIT_PROFILER_UNZIPPED_DIR}
   fi
-  YOURKIT_PROFILER_OPTS="-agentpath:${YOURKIT_PROFILER_AGENT_FILE}=port=20001"
+  YOURKIT_PROFILER_OPTS="-agentpath:${YOURKIT_PROFILER_AGENT_FILE}=port=${YOURKIT_PROFILER_AGENT_PORT}"
 fi
 
 #########################

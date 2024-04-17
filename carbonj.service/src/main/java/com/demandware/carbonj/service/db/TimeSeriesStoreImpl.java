@@ -105,7 +105,9 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
 
     private volatile long logNoOfSeriesThreshold;
 
-    private boolean longId;
+    private final boolean longId;
+
+    private final boolean rocksdbReadonly;
 
     public static ThreadPoolExecutor newSerialTaskQueue(int queueSize) {
         ThreadFactory tf =
@@ -146,6 +148,18 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
                                boolean batchedSeriesRetrieval, int batchedSeriesSize, boolean dumpIndex,
                                File dumpIndexFile, int maxNonLeafPointsLoggedPerMin, String metricsStoreConfigFile,
                                boolean longId) {
+        this(metricRegistry, nameIndex, eventLogger, mainTaskQueue, heavyQueryTaskQueue, serialTaskQueue, pointStore,
+                dbMetrics, batchedSeriesRetrieval, batchedSeriesSize, dumpIndex, dumpIndexFile, maxNonLeafPointsLoggedPerMin,
+                metricsStoreConfigFile, longId, false);
+    }
+
+    public TimeSeriesStoreImpl(MetricRegistry metricRegistry, MetricIndex nameIndex, EventsLogger<CarbonjEvent> eventLogger,
+                               ThreadPoolExecutor mainTaskQueue,
+                               ThreadPoolExecutor heavyQueryTaskQueue, ThreadPoolExecutor serialTaskQueue,
+                               DataPointStore pointStore, DatabaseMetrics dbMetrics,
+                               boolean batchedSeriesRetrieval, int batchedSeriesSize, boolean dumpIndex,
+                               File dumpIndexFile, int maxNonLeafPointsLoggedPerMin, String metricsStoreConfigFile,
+                               boolean longId, boolean rocksdbReadonly) {
         this.nameIndex = Preconditions.checkNotNull(nameIndex);
         this.eventLogger = eventLogger;
         this.pointStore = Preconditions.checkNotNull(pointStore);
@@ -158,7 +172,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
         this.dumpIndexFile = dumpIndexFile;
         this.nonLeafPointsLogQuota = new Quota(maxNonLeafPointsLoggedPerMin, 60);
         this.longId = longId;
-
+        this.rocksdbReadonly = rocksdbReadonly;
 
         rejectedCounter = metricRegistry.counter(
                 MetricRegistry.name("timeSeriesStore.serialTaskQueue", "rejects"));
@@ -211,7 +225,9 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
 
     private void openDatabases() {
         nameIndex.open();
-        pointStore.open();
+        if (!rocksdbReadonly) {
+            pointStore.open();
+        }
     }
 
     @Override
@@ -226,7 +242,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
                 dp.drop();
                 serialTaskQueue.submit(() -> {
                     if (null != nameIndex.createLeafMetric(dp2.name)) {
-                        this.accept(new DataPoints(Arrays.asList(dp2)));
+                        this.accept(new DataPoints(List.of(dp2)));
                     }
                 });
             } catch (Exception e) {
@@ -304,7 +320,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
     @Override
     public List<Metric> findMetrics(String pattern, boolean leafOnly, boolean useThreshold, boolean skipInvalid) {
         long startTime = System.currentTimeMillis();
-        try(final Timer.Context ctx = DatabaseMetrics.findMetricsTimer.time())
+        try(final Timer.Context ignored = DatabaseMetrics.findMetricsTimer.time())
         {
             List<Metric> metrics = nameIndex.findMetrics(pattern, leafOnly, useThreshold, skipInvalid);
             long currentTimeMillis = System.currentTimeMillis();
@@ -495,8 +511,9 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
         }
         catch(Throwable t)
         {
-            if (DatabaseMetrics.getSeriesErrors!=null)
-            DatabaseMetrics.getSeriesErrors.mark();
+            if (DatabaseMetrics.getSeriesErrors != null) {
+                DatabaseMetrics.getSeriesErrors.mark();
+            }
 
             long time = System.currentTimeMillis();
             eventLogger.log(new FailedQueryStats(query, matchedLeafMetrics.size(), time, t));
@@ -624,7 +641,9 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
     {
         log.info( "closing databases" );
         nameIndex.close();
-        pointStore.close();
+        if (!rocksdbReadonly) {
+            pointStore.close();
+        }
         log.info( "all databases closed" );
     }
 
@@ -761,7 +780,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
         }
     }
 
-    private class FindSeriesLimitExceededEvent implements CarbonjEvent
+    private static class FindSeriesLimitExceededEvent implements CarbonjEvent
     {
         private final String pattern;
         private final int limit;

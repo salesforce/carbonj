@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -77,6 +78,7 @@ public class GraphiteMetricSearchServlet
 
         String format = req.getParameter("format");
         String query = req.getParameter( "query" );
+        Preconditions.checkNotNull(query);
         boolean randomTest = req.getParameter("randomTest") != null;
 
         boolean json = "json".equals(format);

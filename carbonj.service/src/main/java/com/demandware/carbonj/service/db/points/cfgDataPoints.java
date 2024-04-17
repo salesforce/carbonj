@@ -19,6 +19,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -119,12 +120,14 @@ public class cfgDataPoints
     }
 
     @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
     StagingFiles stagingFiles(MetricProvider mProvider)
     {
         return new StagingFiles(metricRegistry, stagingDir(), fileSort(), mProvider);
     }
 
     @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
     DataPointStagingStore pointStagingStore( StagingFiles stagingFiles)
     {
         return new DataPointStagingStore(metricRegistry, stagingFiles, stagingQueueSize,
@@ -134,7 +137,7 @@ public class cfgDataPoints
 
     @Bean
     DataPointStore dataPointStore(DataPointArchiveFactory dbFactory, DatabaseMetrics dbMetrics,
-                                  DataPointStagingStore stagingStore, NamespaceCounter nsCounter)
+                                  @Autowired(required = false) DataPointStagingStore stagingStore, NamespaceCounter nsCounter)
     {
         QueryCachePolicy qcp = new QueryCachePolicy( useTimeSeriesCacheFor60s24h, useTimeSeriesCacheFor60s30d,
                 useTimeSeriesCacheFor5m7d, useTimeSeriesCacheFor30m2y );

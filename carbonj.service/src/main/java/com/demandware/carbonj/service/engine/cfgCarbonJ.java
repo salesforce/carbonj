@@ -228,8 +228,10 @@ public class cfgCarbonJ
         return configServerUtil;
     }
 
-    @Bean( name = "dataPointSinkRelay" ) Relay relay( ScheduledExecutorService s,
-                                                      @Autowired(required = false) ConfigServerUtil configServerUtil )
+    @Bean( name = "dataPointSinkRelay" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    Relay relay( ScheduledExecutorService s,
+                 @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         File rulesFile = locateConfigFile( serviceDir, relayRulesFile );
         Relay r = new Relay( metricRegistry, "relay", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
@@ -239,8 +241,10 @@ public class cfgCarbonJ
         return r;
     }
 
-    @Bean( name = "auditLogRelay" ) Relay auditLog( ScheduledExecutorService s,
-                                                    @Autowired(required = false) ConfigServerUtil configServerUtil )
+    @Bean( name = "auditLogRelay" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    Relay auditLog( ScheduledExecutorService s,
+                    @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         File rulesFile = locateConfigFile( serviceDir, auditRulesFile );
         Relay r = new Relay( metricRegistry, "audit", rulesFile, destQueue, destBatchSize, refreshIntervalInMillis,
@@ -250,14 +254,18 @@ public class cfgCarbonJ
         return r;
     }
 
-    @Bean PointFilter pointFilter( NameUtils nameUtils )
+    @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    PointFilter pointFilter( NameUtils nameUtils )
     {
         return new PointFilter( metricRegistry, "pointFilter", maxLen, maxAge, maxFutureAge, nameUtils,
                         dupPointCacheMaxSize, dupPointCacheExpireInMin,
                         new Quota( errLogQuotaMax, errLogQuotaResetAfter ) );
     }
 
-    @Bean( name = "pointBlacklist" ) MetricList pointBlacklist( ScheduledExecutorService s,
+    @Bean( name = "pointBlacklist" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    MetricList pointBlacklist( ScheduledExecutorService s,
             @Autowired(required = false) ConfigServerUtil configServerUtil)
     {
         MetricList bs = new MetricList( metricRegistry, "blacklist", locateConfigFile( serviceDir, blacklistConfigFile ),
@@ -275,7 +283,9 @@ public class cfgCarbonJ
         return bs;
     }
 
-    @Bean( name = "pointAllowOnlyList" ) MetricList pointAllowOnlyList( ScheduledExecutorService s,
+    @Bean( name = "pointAllowOnlyList" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    MetricList pointAllowOnlyList( ScheduledExecutorService s,
             @Autowired(required = false) ConfigServerUtil configServerUtil )
     {
         MetricList metricList = new MetricList( metricRegistry, "allowOnly",
@@ -284,8 +294,9 @@ public class cfgCarbonJ
         return metricList;
     }
 
-
-    @Bean @DependsOn( "stringsCache" ) PointProcessor pointProcessor(
+    @Bean @DependsOn( "stringsCache" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    PointProcessor pointProcessor(
                     @Qualifier( "datapoint_sink" ) Consumer<DataPoints> sink, ScheduledExecutorService s,
                     @Qualifier( "pointBlacklist" ) MetricList blacklist,
                     @Qualifier( "pointAllowOnlyList" ) MetricList allowOnly,
@@ -324,7 +335,9 @@ public class cfgCarbonJ
         return pointProcessor;
     }
 
-    @Bean( name = "recoveryPointProcessor" ) @DependsOn( "stringsCache" ) PointProcessor recoveryPointProcessor(
+    @Bean( name = "recoveryPointProcessor" ) @DependsOn( "stringsCache" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    PointProcessor recoveryPointProcessor(
                     @Qualifier( "datapoint_sink" ) Consumer<DataPoints> sink, ScheduledExecutorService s,
                     @Qualifier( "pointBlacklist" ) MetricList blacklist,
                     @Qualifier( "pointAllowOnlyList" ) MetricList allowOnly,
@@ -376,13 +389,17 @@ public class cfgCarbonJ
         return pointProcessor;
     }
 
-    @Bean InputQueue inputQueue( PointProcessor pointProcessor )
+    @Bean
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    InputQueue inputQueue( PointProcessor pointProcessor )
     {
         return new InputQueue( metricRegistry, "input-queue-consumer", pointProcessor, aggregatorQueue,
                         relayQueueRejectPolicy, batchSize, emptyQueuePauseMillis );
     }
 
-    @Bean( name = "datapoint_sink" ) Consumer<DataPoints> dataPointSink( @Qualifier( "dataPointSinkRelay" ) Relay r )
+    @Bean( name = "datapoint_sink" )
+    @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
+    Consumer<DataPoints> dataPointSink( @Qualifier( "dataPointSinkRelay" ) Relay r )
     {
         if ( db != null )
         {
@@ -418,30 +435,29 @@ public class cfgCarbonJ
             return null;
     }
 
-    @Bean Void stats( ScheduledExecutorService s, @Qualifier( "dataPointSinkRelay" ) Relay r, InputQueue a,
-                      @Qualifier( "pointBlacklist" ) MetricList pbl, @Qualifier( "queryBlacklist" ) MetricList qbl,
-                      @Qualifier( "pointAllowOnlyList" ) MetricList pal,
-                      NettyServer nettyServer, @Qualifier( "auditLogRelay" ) Relay auditLog, StringsCache strCache,
+    @Bean Void stats( ScheduledExecutorService s,
+                      @Autowired(required = false) @Qualifier( "dataPointSinkRelay" ) Relay r,
+                      @Autowired(required = false) InputQueue a,
+                      @Autowired(required = false) @Qualifier( "pointBlacklist" ) MetricList pbl,
+                      @Qualifier( "queryBlacklist" ) MetricList qbl,
+                      @Autowired(required = false) @Qualifier( "pointAllowOnlyList" ) MetricList pal,
+                      NettyServer nettyServer,
+                      @Autowired(required = false) @Qualifier( "auditLogRelay" ) Relay auditLog,
+                      StringsCache strCache,
                       @Qualifier( "accumulator" ) Accumulator accu )
     {
 
         s.scheduleWithFixedDelay( () -> {
-            a.dumpStats();
-            pbl.dumpStats();
+            if (a != null) a.dumpStats();
+            if (pbl != null) pbl.dumpStats();
             qbl.dumpStats();
-            pal.dumpStats();
+            if (pal != null) pal.dumpStats();
             r.dumpStats();
-            auditLog.dumpStats();
-            if ( db != null )
-            {
-                db.dumpStats();
-            }
+            if (auditLog != null) auditLog.dumpStats();
+            if ( db != null ) db.dumpStats();
             nettyServer.dumpStats();
             strCache.dumpStats();
-            if ( accu != null )
-            {
-                accu.dumpStats();
-            }
+            if ( accu != null ) accu.dumpStats();
         }, 60, 60, TimeUnit.SECONDS );
         return null;
     }
@@ -464,10 +480,10 @@ public class cfgCarbonJ
         return null;
     }
 
-    @Bean Void refreshStats( ScheduledExecutorService s, InputQueue a, @Qualifier( "accumulator" ) Accumulator accu )
+    @Bean Void refreshStats( ScheduledExecutorService s, @Autowired(required = false) InputQueue a, @Qualifier( "accumulator" ) Accumulator accu )
     {
         s.scheduleWithFixedDelay( () -> {
-            a.refreshStats();
+            if (a != null) a.refreshStats();
             if ( accu != null )
             {
                 accu.refreshStats();
@@ -550,7 +566,7 @@ public class cfgCarbonJ
         } );
     }
 
-    @Bean CarbonjAdmin cjAdmin( InputQueue agg, NameUtils nameUtils )
+    @Bean CarbonjAdmin cjAdmin(@Autowired(required = false) InputQueue agg, NameUtils nameUtils )
     {
         return new CarbonjAdmin( agg, nameUtils, Optional.ofNullable( db ) );
     }

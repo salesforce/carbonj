@@ -13,13 +13,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.SyncPrimaryDbTask;
+import com.demandware.carbonj.service.db.index.NameUtils;
 import com.demandware.carbonj.service.db.util.MetricUtils;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
 import org.rocksdb.BlockBasedTableConfig;
@@ -96,16 +100,13 @@ class DataPointArchiveRocksDB
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
-    private final ThreadPoolExecutor cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
-        100000 ), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
-    {
-        @Override
-        public void rejectedExecution( Runnable r, ThreadPoolExecutor e )
-        {
-            log.info( "cleaner queue is full. rejecting (GC should pick this object up eventually)" );
-            super.rejectedExecution( r, e );
-        }
-    } );
+    private final ThreadPoolExecutor cleaner;
+
+    private final ConcurrentMap<String, Histogram> latencyByNamespaceMap = new ConcurrentHashMap<>();
+
+    private final MetricRegistry metricRegistry;
+
+    private final NameUtils nameUtils = new NameUtils();
 
     DataPointArchiveRocksDB(MetricRegistry metricRegistry,
                                 String dbName,
@@ -114,6 +115,7 @@ class DataPointArchiveRocksDB
                                 RocksDBConfig rocksdbConfig,
                                 boolean longId)
     {
+        this.metricRegistry = metricRegistry;
         this.dbName = Preconditions.checkNotNull( dbName );
         this.policy = Preconditions.checkNotNull( policy );
         this.dbDir = Preconditions.checkNotNull( dbDir );
@@ -128,6 +130,20 @@ class DataPointArchiveRocksDB
         this.catchUpTimer = metricRegistry.timer(MetricUtils.dbCatchUpTimerName(dbName));
         this.catchUpTimerError = metricRegistry.meter(MetricUtils.dbCatchUpTimerErrorName(dbName));
         this.longId = longId;
+        if (rocksdbConfig.readOnly) {
+            this.cleaner = null;
+        } else {
+            this.cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
+                    100000 ), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
+            {
+                @Override
+                public void rejectedExecution( Runnable r, ThreadPoolExecutor e )
+                {
+                    log.info( "cleaner queue is full. rejecting (GC should pick this object up eventually)" );
+                    super.rejectedExecution( r, e );
+                }
+            } );
+        }
         TtlDB.loadLibrary();
     }
 
@@ -191,7 +207,9 @@ class DataPointArchiveRocksDB
             {
                 final RocksIterator iterToDispose = iter;
                 // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute( ( ) -> dispose( iterToDispose ) );
+                if (cleaner != null) {
+                    cleaner.execute( ( ) -> dispose( iterToDispose ) );
+                }
             }
         }
     }
@@ -240,7 +258,9 @@ class DataPointArchiveRocksDB
             {
                 final RocksIterator iterToDispose = iter;
                 // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute( ( ) -> dispose( iterToDispose ) );
+                if (cleaner != null) {
+                    cleaner.execute(() -> dispose(iterToDispose));
+                }
             }
         }
 
@@ -313,6 +333,12 @@ class DataPointArchiveRocksDB
                     byte[] key = DataPointRecord.toKeyBytes(p.metricId, interval, longId);
                     byte[] value = DataPointRecord.toValueBytes(p.val);
                     batch.put(key, value);
+                    String namespace = nameUtils.firstSegment(p.name);
+                    if (!latencyByNamespaceMap.containsKey(namespace)) {
+                        Histogram latency = metricRegistry.histogram(MetricRegistry.name(MetricUtils.dbDataPointLatencyName(dbName, namespace)));
+                        latencyByNamespaceMap.putIfAbsent(namespace, latency);
+                    }
+                    latencyByNamespaceMap.get(namespace).update(now - p.ts);
                 }
             }
             int batchSize = batch.count();
@@ -345,18 +371,13 @@ class DataPointArchiveRocksDB
         }
         byte[] key = DataPointRecord.toKeyBytes( metricId, interval, longId );
         byte[] value = DataPointRecord.toValueBytes( v );
-        final Timer.Context timerContext = writeTimer.time();
-        try
+        try (Timer.Context ignored = writeTimer.time())
         {
             db.put( writeOptions, key, value );
         }
         catch ( RocksDBException e )
         {
             Throwables.throwIfUnchecked(e);
-        }
-        finally
-        {
-            timerContext.stop();
         }
     }
 
@@ -406,7 +427,9 @@ class DataPointArchiveRocksDB
         if ( o != null )
         {
             // contains global lock. Dispose in a separate thread to avoid contention.
-            cleaner.execute(o::close);
+            if (cleaner != null) {
+                cleaner.execute(o::close);
+            }
         }
     }
 
@@ -472,7 +495,9 @@ class DataPointArchiveRocksDB
             {
                 final RocksIterator iterToDispose = iter;
                 // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute( ( ) -> dispose( iterToDispose ) );
+                if (cleaner != null) {
+                    cleaner.execute(() -> dispose(iterToDispose));
+                }
             }
         }
 

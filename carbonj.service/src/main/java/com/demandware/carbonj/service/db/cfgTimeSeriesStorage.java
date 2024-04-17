@@ -73,6 +73,9 @@ public class cfgTimeSeriesStorage
     @Value( "${metrics.store:config/service.properties}" )
     private String metricStoreConfigFile = "config/service.properties";
 
+    @Value("${rocksdb.readonly:false}")
+    private boolean rocksdbReadonly;
+
     @Autowired
     MetricRegistry metricRegistry;
 
@@ -87,7 +90,7 @@ public class cfgTimeSeriesStorage
                 TimeSeriesStoreImpl.newSerialTaskQueue( serialQueueSize ), pointStore,
             dbMetrics, batchedSeriesRetrieval,
             batchedSeriesSize, dumpIndex, new File( dumpIndexFile ), maxNonLeafPointsLoggedPerMin, metricStoreConfigFile,
-                longId);
+                longId, rocksdbReadonly);
 
         s.scheduleWithFixedDelay(timeSeriesStore::reload, 60, 60, TimeUnit.SECONDS );
         s.scheduleWithFixedDelay(timeSeriesStore::refreshStats, 60, 10, TimeUnit.SECONDS );

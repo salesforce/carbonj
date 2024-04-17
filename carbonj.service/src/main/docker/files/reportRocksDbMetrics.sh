@@ -7,7 +7,7 @@
 #
 
 
-pod=pod98
+pod=${DW_POD_ID}
 realm=${DW_GROUP_ID}
 service=${SVC_PROP_APP_NAME}
 instance=$( hostname )
