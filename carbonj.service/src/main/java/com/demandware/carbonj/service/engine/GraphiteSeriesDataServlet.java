@@ -92,6 +92,7 @@ public class GraphiteSeriesDataServlet
 
         boolean protobuf = "protobuf".equals( format );
         boolean msgpack = "msgpack".equals( format );
+
         boolean json = "json".equals( format );
 
         int now = SystemTime.nowEpochSecond();
