@@ -88,6 +88,9 @@ public class RocksDBConfig
     @Value("${rocksdb.catchup.retry:3}")
     int catchupRetry = 3;
 
+    @Value("${rocksdb.object.cleaner.queue.size:100000}")
+    int objectCleanerQueueSize;
+
     @Override
     public String toString()
     {
@@ -101,6 +104,7 @@ public class RocksDBConfig
                         ", useBloomFilter=" + useBloomFilter +
                         ", readOnly=" + readOnly +
                         ", catchupRetry=" + catchupRetry +
+                        ", objectCleanerQueueSize=" + objectCleanerQueueSize +
                         '}';
     }
 }
