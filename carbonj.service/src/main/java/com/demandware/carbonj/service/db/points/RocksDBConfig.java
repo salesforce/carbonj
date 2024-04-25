@@ -89,7 +89,7 @@ public class RocksDBConfig
     int catchupRetry = 3;
 
     @Value("${rocksdb.object.cleaner.queue.size:100000}")
-    int objectCleanerQueueSize;
+    int objectCleanerQueueSize = 100000;
 
     @Override
     public String toString()
