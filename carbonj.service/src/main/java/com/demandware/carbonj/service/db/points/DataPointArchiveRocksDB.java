@@ -131,7 +131,7 @@ class DataPointArchiveRocksDB
         this.catchUpTimerError = metricRegistry.meter(MetricUtils.dbCatchUpTimerErrorName(dbName));
         this.longId = longId;
         this.cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
-                rocksdbConfig.objectCleanerQueueSize), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
+                rocksdbConfig.objectCleanerQueueSize ), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
         {
             @Override
             public void rejectedExecution( Runnable r, ThreadPoolExecutor e )

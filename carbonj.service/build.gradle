@@ -202,7 +202,7 @@ dependencies {
     implementation group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: '0.6.2'
     implementation group: 'com.google.guava', name: 'guava', version: '33.0.0-jre'
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.14.0'
-    implementation group: 'commons-io', name: 'commons-io', version: '2.16.0'
+    implementation group: 'commons-io', name: 'commons-io', version: '2.16.1'
     implementation group: 'joda-time', name: 'joda-time', version: '2.12.7'
     implementation group: 'io.netty', name: 'netty-all', version: '4.1.101.Final'
     implementation group: 'net.razorvine', name: 'pickle', version: '1.5'
