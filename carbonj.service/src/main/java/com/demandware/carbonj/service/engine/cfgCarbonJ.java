@@ -33,7 +33,6 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.eclipse.jetty.server.CustomRequestLog;
 import org.eclipse.jetty.server.RequestLog;
-import org.eclipse.jetty.server.Slf4jRequestLogWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -497,6 +496,11 @@ public class cfgCarbonJ
         return null;
     }
 
+    @Bean
+    public JettyServletWebServerFactory jettyServletWebServerFactory() {
+        return new JettyServletWebServerFactory(jettyPort);
+    }
+
     @Bean NettyServer netty()
     {
         return new NettyServer( metricRegistry, nettyIOThreads, nettyWorkerThreads );
@@ -641,9 +645,7 @@ public class cfgCarbonJ
 
                 // new jetty 11 uses a slf4j log writer for performance reasons:
                 // https://stackoverflow.com/questions/68737248/how-to-override-request-logging-mechanism-in-jetty-11-0-6
-                Slf4jRequestLogWriter slf4jRequestLogWriter = new Slf4jRequestLogWriter();
-                slf4jRequestLogWriter.setLoggerName("request.log");
-                RequestLog ncsaLog = new CustomRequestLog( slf4jRequestLogWriter,  CustomRequestLog.EXTENDED_NCSA_FORMAT);
+                RequestLog ncsaLog = new CustomRequestLog( jettyLogfilePath, CustomRequestLog.EXTENDED_NCSA_FORMAT);
                 server.setRequestLog(ncsaLog);
             } );
         }
