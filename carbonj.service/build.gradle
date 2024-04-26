@@ -225,7 +225,11 @@ dependencies {
     }
     implementation group:"org.springframework.boot", name:"spring-boot-starter-web", version: "${springbootVersion}"
     implementation group:"org.springframework.boot", name:"spring-boot-starter-jetty", version: "${springbootVersion}"
-
+    modules {
+        module("org.springframework.boot:spring-boot-starter-tomcat") {
+            replacedBy("org.springframework.boot:spring-boot-starter-jetty")
+        }
+    }
     implementation group:"org.springframework.boot", name:"spring-boot-starter-actuator", version: "${springbootVersion}"
     testImplementation group:"org.springframework.boot", name:"spring-boot-starter-test", version: "${springbootVersion}"
 
