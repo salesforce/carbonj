@@ -32,7 +32,6 @@ grafPort=2003
 # gc log file
 # java 9+ has new GC logging...
 log=$( echo $( ls -t /app/log/gc.log ) | awk '{print $1}' )
-#log=$( echo $( ls -t /app/log/gc*current ) | awk '{print $1}' )
 
 #
 # do work
@@ -42,8 +41,7 @@ log=$( echo $( ls -t /app/log/gc.log ) | awk '{print $1}' )
 time=$( date +%s )
 
 # grep and sum all times in file for last one minute
-# TODO remove hashes
-gcTime=$( tail -n 10000 $log | grep "Total time" | sed 's/\[//g'|sed 's/\]/ /g'| awk -v LAST_MINUTE="$(date -ud "-1 minutes" +"%Y-%m-%dT%H:%M:%S")" '($1 " " $2) >= LAST_MINUTE' | grep -Eo "Total time for which application threads were stopped: [0-9]+\.[0-9]+\ " |awk '{ print $9}' > /tmp/gc && awk '{s+=$1} END {print s}' /tmp/gc )
+gcTime=$(tail -n 10000 $log | grep "Pause" | sed 's/\[//g' | sed 's/\]/ /g' | awk -v LAST_MINUTE="$(date -ud "-1 minutes" +"%Y-%m-%dT%H:%M:%S")" '($1 " " $2) >= LAST_MINUTE' | awk '{print $NF}' | sed 's/ms//g' > /tmp/gc && awk '{s+=$1} END {print s}' /tmp/gc)
 
 # print to carbon
 echo "$namespace $gcTime $time"

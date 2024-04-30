@@ -125,7 +125,7 @@ echo $JAVA_OPTS $JAVA_OPTS_OVERRIDE
 env >> /etc/environment
 
 # no logs on disk
-crontab -l | { cat; echo "* */6 * * * /app/bin/logCleanup.sh ${SERVICEDIR}/log 7 >/dev/null 2>&1"; } | crontab -
+crontab -l | { cat; echo "* */6 * * * /app/bin/logCleanup.sh ${SERVICEDIR}/log/ 7 >/dev/null 2>&1"; } | crontab -
 crontab -l | { cat; echo "*/1 * * * * /app/bin/fdlog.sh"; } | crontab -
 crontab -l | { cat; echo "*/1 * * * * /app/bin/iolog.sh"; } | crontab -
 crontab -l | { cat; echo "*/1 * * * * /app/bin/reportGcMetrics.sh"; } | crontab -
