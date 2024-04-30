@@ -16,11 +16,14 @@ serviceName=${DW_SVC_VERSION}
 graphite_host=${DW_GRAPHITE_HOST}
 graphite_port=2003
 
-all=("30m2y" "5m7d"  "60s24h"  "index-id"  "index-name")
+all=("30m2y" "5m7d" "60s24h" "60s30d" "index-id" "index-name")
 
 for db in "${all[@]}"
 do
     log="/data/carbonj-data/${db}/LOG"
+    if [ ! -f $log ]; then
+      continue
+    fi
     metric_name="$pod.$realm.carbonj.$instance.${serviceName//./_}.rocksdb.${db}.compaction.bytes"
     time=$( date +%s )
     # Format date: 2017/11/24-12:22
