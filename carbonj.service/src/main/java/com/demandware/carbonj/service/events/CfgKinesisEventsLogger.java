@@ -33,11 +33,23 @@ public class CfgKinesisEventsLogger {
     @Value("${events.kinesis.threads:3}")
     private int noOfThreads;
 
+    @Value( "${events.kinesis.rbacEnabled:false}" )
+    private Boolean rbacEnabled = false;
+
+    @Value( "${events.kinesis.region:us-east-1}" )
+    private String region = "us-east-1";
+
+    @Value( "${events.kinesis.account:}" )
+    private String account;
+
+    @Value( "${events.kinesis.role:}" )
+    private String role;
+
     @Autowired
     MetricRegistry metricRegistry;
 
     @Bean(name = "KinesisEventsLogger")
     public EventsLogger getKinesisEventsLogger()  {
-        return new KinesisEventsLogger(metricRegistry, streamName, queueSize, emptyQueuePauseMillis, noOfThreads, batchSize, maxWaitTimeMillis);
+        return new KinesisEventsLogger(metricRegistry, streamName, rbacEnabled, region, account, role, queueSize, emptyQueuePauseMillis, noOfThreads, batchSize, maxWaitTimeMillis);
     }
 }
