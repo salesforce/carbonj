@@ -207,7 +207,7 @@ dependencies {
     implementation group: 'io.netty', name: 'netty-all', version: '4.1.101.Final'
     implementation group: 'net.razorvine', name: 'pickle', version: '1.5'
     implementation group: 'org.python', name: 'jython-standalone', version: '2.7.3'
-    implementation group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.15.0'
+    implementation group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.15.1'
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: '1.12.698'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.25'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.25'
