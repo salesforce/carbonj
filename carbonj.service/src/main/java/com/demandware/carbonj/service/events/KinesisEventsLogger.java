@@ -6,6 +6,17 @@
  */
 package com.demandware.carbonj.service.events;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
+import com.amazonaws.services.kinesis.AmazonKinesis;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceAsyncClientBuilder;
+import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
+import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
+import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.engine.RejectionHandler;
@@ -33,10 +44,37 @@ public class KinesisEventsLogger implements EventsLogger<byte[]> {
         queue.start();
     }
 
-    KinesisEventsLogger(MetricRegistry metricRegistry, String streamName, int queueSize, int emptyQueuePauseMillis, int noOfThreads, int batchSize, long maxWaitTimeMillis)
+    KinesisEventsLogger(MetricRegistry metricRegistry, String streamName, boolean rbacEnabled, String region, String account, String role,
+                        int queueSize, int emptyQueuePauseMillis, int noOfThreads, int batchSize, long maxWaitTimeMillis)
     {
-            this(metricRegistry, queueSize, emptyQueuePauseMillis, new DropRejectionHandler<>(), new KinesisQueueProcessor(metricRegistry, streamName,
-                    AmazonKinesisClientBuilder.defaultClient(), noOfThreads), batchSize, maxWaitTimeMillis);
+            this(metricRegistry, queueSize, emptyQueuePauseMillis, new DropRejectionHandler<>(), new KinesisQueueProcessor(metricRegistry,
+                    streamName, buildKinesisClient(rbacEnabled, region, account, role), noOfThreads), batchSize, maxWaitTimeMillis);
+    }
+
+    private static AmazonKinesis buildKinesisClient(boolean rbacEnabled, String region, String account, String role)
+    {
+        if ( rbacEnabled) {
+            String roleArn = "arn:aws:iam::" + account + ":role/" + role;
+            String roleSessionName = "cc-umon-client-events-session";
+
+            final AWSCredentialsProvider credentialsProvider;
+
+            log.info( "Rbac enabled for events.  Building kinesis client and credentials provider with region: " + region +
+                    ", account: " + account + ", role: " + role);
+
+            AWSSecurityTokenService stsClient =
+                    AWSSecurityTokenServiceAsyncClientBuilder.standard().withRegion(region).build();
+
+            credentialsProvider = new STSAssumeRoleSessionCredentialsProvider.Builder(roleArn, roleSessionName)
+                    .withStsClient(stsClient).withRoleSessionDurationSeconds(3600).build();
+
+            return AmazonKinesisClientBuilder.standard().withCredentials( credentialsProvider ).withRegion(region).build();
+        }
+        else
+        {
+            log.info( "Rbac not enabled for events.  Building kinesis client.");
+            return AmazonKinesisClientBuilder.defaultClient();
+        }
     }
 
     @Override
