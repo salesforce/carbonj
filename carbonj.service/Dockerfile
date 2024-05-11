@@ -5,8 +5,8 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-#FROM quay.io/centos/centos:stream8
-FROM centos:8
+FROM quay.io/centos/centos:stream9
+#FROM centos:8
 ARG DEPENDENCY=build/docker/dependency
 ARG VERSION=latest
 
@@ -16,14 +16,14 @@ ARG VERSION=latest
 # Add Tini for proper sigkill handling https://github.com/krallin/tini
 RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
   sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* && \
-  yum update -y && \
-  yum install -y libevent perl wget util-linux-ng cronie procps nc lsof sysstat epel-release && \
-  yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel && \
-  rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
-  yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
-  yum update -y && \
-  yum install -y zulu17-jdk python3 perl-URI-Encode perl-Data-Dumper && \
-  yum clean all && \
+  dnf update -y && \
+  dnf install -y libevent perl wget util-linux-ng cronie procps nc lsof sysstat epel-release && \
+  dnf install -y gcc-c++ gcc make libtool automake autoconf make python3-devel && \
+  dnf --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
+  dnf install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
+  dnf update -y && \
+  dnf install -y zulu17-jdk python3 perl-URI-Encode perl-Data-Dumper && \
+  dnf clean all && \
   pip3 install --upgrade pip && \
   pip3 install aiohttp && \
   /sbin/chkconfig crond on && \
