@@ -30,25 +30,24 @@ public class StagingFileSetCollector
     synchronized public List<SortedStagingFile> collectEligibleFiles(Map<StagingFileSet, StagingFile> files, String dbName)
     {
         List<SortedStagingFile> sortedFiles = new ArrayList<>();
-        List<StagingFileSet> names = new ArrayList<>( files.keySet() );
+        List<StagingFileSet> names = new ArrayList<>( files.keySet().stream().filter(fs -> fs.dbName.equals(dbName)).toList() );
         names.sort(Comparator.comparingInt(o -> o.from));
 
         names.stream()
-                .filter(fs -> fs.dbName.equals(dbName))
                 .filter( fs -> fs.needsCollection( files.get( fs ).lastModified() ) )
                 .forEach( fs ->
                                 {
-                                    log.debug( "processing staging file: [" + fs + "]" );
+                                    log.info( "processing staging file: [" + fs + "]" );
                                     StagingFile f = files.remove( fs );
                                     f.close();
                                     Optional<String> lastSorted = fs.getLastSortedFileName( dir );
-                                    log.debug( "sorting ..." );
+                                    log.info( "sorting ..." );
                                     SortedStagingFile sortedFile = f.sort(lastSorted);
-                                    log.debug("sorted file: [" + sortedFile + "]");
+                                    log.info("sorted file: [" + sortedFile + "]");
                                     sortedFiles.add( sortedFile );
                                 }
                 );
-        log.debug("sorted files: [" + sortedFiles + "]");
+        log.info("sorted files: [" + sortedFiles + "]");
         return sortedFiles;
     }
 }
