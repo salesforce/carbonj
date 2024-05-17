@@ -18,26 +18,25 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Throwables;
 
 import com.demandware.carbonj.service.db.util.time.TimeSource;
 
 /**
  * Represents group of file names with data points for a specific interval within data point archive (retention policy)
- *
+ * <p>
  * Unsorted file names: "<dbName>-<ts>.<seq>"
  * Sorted file names: "<dbName>-<ts>.<seq>.s"
- *
+ * <p>
  * All data points within file have the same ts (interval).
- *
+ * <p>
  * File content:
- *
+ * <p>
  * <metricId> <value>
- *
+ * <p>
  * If new data points arrive while the file is being sorted/processed file with the new sequence is started. At a later
  * time this new sequence file will be sorted along with the previous sorted file and processed.
  */
-class StagingFileSet
+public class StagingFileSet
 {
 
     public static final String PARTS_DELIMITER = "-";
@@ -96,15 +95,11 @@ class StagingFileSet
 
     private int getCollectionIntervalSeconds(String dbName)
     {
-        switch( dbName )
-        {
-            case "5m7d":
-                return 90; // 90 sec
-            case "30m2y":
-                return 5 * 60; // 5 min
-            default:
-                return 20 * 60; // 20 min
-        }
+        return switch (dbName) {
+            case "5m7d" -> 90; // 90 sec
+            case "30m2y" -> 5 * 60; // 5 min
+            default -> 20 * 60; // 20 min
+        };
     }
 
     public boolean needsCollection(int lastModified)
@@ -152,13 +147,13 @@ class StagingFileSet
         List<Integer> seqs = new ArrayList<>();
         try(DirectoryStream<Path> paths = Files.newDirectoryStream( dir.toPath() ))
         {
-            paths.forEach( p -> extractSequence( p, fileId, sorted ).ifPresent( v -> seqs.add( v ) ));
+            paths.forEach( p -> extractSequence( p, fileId, sorted ).ifPresent(seqs::add));
         }
         catch(IOException e)
         {
-            Throwables.propagate( e );
+            throw new RuntimeException(e);
         }
-        seqs.sort( (x, y) -> Integer.compare(x, y) );
+        seqs.sort(Integer::compare);
         return seqs;
     }
 
@@ -210,10 +205,8 @@ class StagingFileSet
     {
         if ( this == o )
             return true;
-        if ( !( o instanceof StagingFileSet ) )
+        if ( !(o instanceof StagingFileSet fileName) )
             return false;
-
-        StagingFileSet fileName = (StagingFileSet) o;
 
         if ( from != fileName.from )
             return false;
@@ -242,12 +235,12 @@ class StagingFileSet
             try(DirectoryStream<Path> paths = Files.newDirectoryStream( dir.toPath() ))
             {
                 paths.forEach( p -> StagingFileSet.forPath( p )
-                                                  .ifPresent( fn -> names.add( fn ) ) );
+                                                  .ifPresent(names::add) );
             }
         }
         catch(IOException e)
         {
-            Throwables.propagate( e );
+            throw new RuntimeException(e);
         }
         return names;
     }

@@ -19,11 +19,10 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.demandware.carbonj.service.db.model.MetricProvider;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class StagingFile implements Closeable
+public class StagingFile implements Closeable
 {
     private static final Logger log = LoggerFactory.getLogger(StagingFile.class);
 
@@ -33,7 +32,7 @@ class StagingFile implements Closeable
 
     private final StagingFilesSort sort;
 
-    private MetricProvider metricProvider;
+    private final MetricProvider metricProvider;
 
     private static Timer stagingFileSortTimer;
 
@@ -59,7 +58,7 @@ class StagingFile implements Closeable
         }
         catch(IOException e)
         {
-            Throwables.propagate( e );
+            throw new RuntimeException(e);
         }
     }
 
@@ -153,18 +152,13 @@ class StagingFile implements Closeable
 
     private void sort(File inFile, Optional<File> extraMergeFile, File outFile)
     {
-        final Timer.Context timerContext = stagingFileSortTimer.time();
-        try
+        try (Timer.Context ignored = stagingFileSortTimer.time())
         {
             sort.sort( inFile, extraMergeFile, outFile );
         }
         catch(Exception e)
         {
-            Throwables.propagate( e );
-        }
-        finally
-        {
-            timerContext.stop();
+            throw new RuntimeException(e);
         }
     }
 
@@ -181,10 +175,8 @@ class StagingFile implements Closeable
     {
         if ( this == o )
             return true;
-        if ( !( o instanceof StagingFile ) )
+        if ( !(o instanceof StagingFile that) )
             return false;
-
-        StagingFile that = (StagingFile) o;
 
         return file.equals( that.file );
 

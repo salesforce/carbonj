@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Central service for managing staging files.
  */
-class StagingFiles
+public class StagingFiles
 {
     private static final Logger log = LoggerFactory.getLogger(StagingFiles.class);
 
@@ -32,9 +32,9 @@ class StagingFiles
      */
     private volatile ConcurrentMap<StagingFileSet, StagingFile> files = new ConcurrentHashMap<>();
 
-    private File dir;
+    private final File dir;
 
-    private StagingFileSetCollector fileSetCollector;
+    private final StagingFileSetCollector fileSetCollector;
 
     private final StagingFilesSort sort;
 
@@ -109,9 +109,9 @@ class StagingFiles
         }
     }
 
-    public List<SortedStagingFile> collectEligibleFiles()
+    public List<SortedStagingFile> collectEligibleFiles(String dbName)
     {
-        return fileSetCollector.collectEligibleFiles( files );
+        return fileSetCollector.collectEligibleFiles(files, dbName);
     }
 
     public void write(StagingFileRecord r)
@@ -158,11 +158,11 @@ class StagingFiles
 
     public void flush()
     {
-        files.values().forEach( f -> f.flush() );
+        files.values().forEach(StagingFile::flush);
     }
 
     public void close()
     {
-        files.values().forEach( f -> f.close() );
+        files.values().forEach(StagingFile::close);
     }
 }

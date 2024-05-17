@@ -12,9 +12,9 @@ import com.demandware.carbonj.service.engine.DataPoint;
  * Representing "null" metric. Primary purpose is to avoid creating Optional instance for
  * every Metric instance we need to cache.
  */
-class NullMetric extends Metric
+public class NullMetric extends Metric
 {
-    private static final NullMetric instance = new NullMetric();
+    public static final NullMetric METRIC_NULL = new NullMetric();
 
     private NullMetric()
     {
@@ -23,6 +23,6 @@ class NullMetric extends Metric
 
     public static NullMetric getInstance()
     {
-        return instance;
+        return METRIC_NULL;
     }
 }

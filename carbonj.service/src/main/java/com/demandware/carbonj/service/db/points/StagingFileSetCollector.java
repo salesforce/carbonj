@@ -8,6 +8,7 @@ package com.demandware.carbonj.service.db.points;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,20 +20,21 @@ import org.slf4j.LoggerFactory;
 public class StagingFileSetCollector
 {
     private static final Logger log = LoggerFactory.getLogger( StagingFileSetCollector.class );
-    private File dir;
+    private final File dir;
 
     public StagingFileSetCollector(File dir)
     {
         this.dir = Preconditions.checkNotNull( dir );
     }
 
-    synchronized public List<SortedStagingFile> collectEligibleFiles(Map<StagingFileSet, StagingFile> files)
+    synchronized public List<SortedStagingFile> collectEligibleFiles(Map<StagingFileSet, StagingFile> files, String dbName)
     {
-        List<SortedStagingFile> sortedFiles = new ArrayList<>(  );
+        List<SortedStagingFile> sortedFiles = new ArrayList<>();
         List<StagingFileSet> names = new ArrayList<>( files.keySet() );
-        names.sort( (o1, o2) -> o1.from - o2.from );
+        names.sort(Comparator.comparingInt(o -> o.from));
 
         names.stream()
+                .filter(fs -> fs.dbName.equals(dbName))
                 .filter( fs -> fs.needsCollection( files.get( fs ).lastModified() ) )
                 .forEach( fs ->
                                 {

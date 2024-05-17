@@ -6,21 +6,38 @@
  */
 package com.demandware.carbonj.service.db;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.codahale.metrics.*;
 import com.demandware.carbonj.service.db.log.CompletedQueryStats;
 import com.demandware.carbonj.service.db.log.QueryStats;
 import com.demandware.carbonj.service.db.log.Stats;
+import com.demandware.carbonj.service.db.model.DataPointExportResults;
+import com.demandware.carbonj.service.db.model.DataPointImportResults;
+import com.demandware.carbonj.service.db.model.DataPointStore;
+import com.demandware.carbonj.service.db.model.DataPointValue;
+import com.demandware.carbonj.service.db.model.DeleteAPIResult;
 import com.demandware.carbonj.service.db.model.Metric;
-import com.demandware.carbonj.service.db.model.*;
+import com.demandware.carbonj.service.db.model.MetricIndex;
+import com.demandware.carbonj.service.db.model.RetentionPolicy;
+import com.demandware.carbonj.service.db.model.Series;
+import com.demandware.carbonj.service.db.model.TooManyDatapointsFoundException;
+import com.demandware.carbonj.service.db.model.TooManyMetricsFoundException;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.Quota;
-import com.demandware.carbonj.service.engine.*;
+import com.demandware.carbonj.service.engine.BlockingPolicy;
+import com.demandware.carbonj.service.engine.DataPoint;
+import com.demandware.carbonj.service.engine.DataPoints;
+import com.demandware.carbonj.service.engine.DrainUtils;
+import com.demandware.carbonj.service.engine.Query;
+import com.demandware.carbonj.service.engine.ResponseStream;
 import com.demandware.carbonj.service.events.CarbonjEvent;
 import com.demandware.carbonj.service.events.Constants;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -32,8 +49,19 @@ import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.LongSummaryStatistics;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -238,7 +266,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
             // 2. asynchronously create a new name in the name index
             // 3. resubmit the data point copy for creation as it will not be stored the first time
             try {
-                DataPoint dp2 = new DataPoint(dp.name, dp.val, dp.ts);
+                DataPoint dp2 = new DataPoint(dp.name, dp.val, dp.ts, false);
                 dp.drop();
                 serialTaskQueue.submit(() -> {
                     if (null != nameIndex.createLeafMetric(dp2.name)) {
@@ -415,7 +443,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
         }
 
         List<Series> seriesList = new ArrayList<>();
-        try(Timer.Context t = DatabaseMetrics.getSeriesTimer.time())
+        try (Timer.Context ignored = DatabaseMetrics.getSeriesTimer.time())
         {
             List<Metric> leafMetrics = nameIndex.findMetrics(query.pattern(), true, true, true);
 
@@ -518,7 +546,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
             long time = System.currentTimeMillis();
             eventLogger.log(new FailedQueryStats(query, matchedLeafMetrics.size(), time, t));
 
-            Throwables.propagate(t);
+            throw new RuntimeException(t);
         }
         finally
         {

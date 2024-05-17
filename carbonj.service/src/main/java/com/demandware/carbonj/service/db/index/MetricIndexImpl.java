@@ -65,6 +65,7 @@ import java.util.stream.Collectors;
 
 import static com.demandware.carbonj.service.db.index.QueryUtils.filter;
 import static com.demandware.carbonj.service.db.index.QueryUtils.splitQuery;
+import static com.demandware.carbonj.service.db.model.NullMetric.METRIC_NULL;
 
 /**
  * Index to access metric metadata. Uses one global lock to perform updates (addition of a new metric). If insert
@@ -152,7 +153,6 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
     private static class DeleteResult extends DeleteAPIResult
     {
         public List<Metric> metrics = new ArrayList<>();
-        public boolean deleteBranch = true;
     }
 
     public MetricIndexImpl( MetricRegistry metricRegistry, String metricsStoreConfigFile,
@@ -210,7 +210,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                                 if (e != null) {
                                     return toMetric(e);
                                 } else {
-                                    return Metric.METRIC_NULL;
+                                    return METRIC_NULL;
                                 }
                             }
                         });
@@ -231,7 +231,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                                     if (e != null) {
                                         return getMetric(e.metricName());
                                     } else {
-                                        return Metric.METRIC_NULL;
+                                        return METRIC_NULL;
                                     }
                                 }
                             });
@@ -374,7 +374,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         {
             try {
                 Metric m = metricIdCache.get(metricId);
-                return m == Metric.METRIC_NULL ? null : m;
+                return m == METRIC_NULL ? null : m;
             } catch (ExecutionException e) {
                 Throwables.throwIfUnchecked(e);
                 return null;
@@ -498,7 +498,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         try
         {
             Metric m = metricCache.get( key );
-            if ( m == Metric.METRIC_NULL)
+            if ( m == METRIC_NULL)
             {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Metric is null for the id [%s]", key));
