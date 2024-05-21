@@ -36,14 +36,16 @@ if [ -d /data ]; then
 	mkdir $SERVICEDIR/work/carbonj-data
 	mkdir $SERVICEDIR/work/carbonj-tmp
 	mkdir $SERVICEDIR/work/carbonj-staging
-	if [ "${ROCKSDB_READONLY}" == "false" ]; then
-	  mkdir $SERVICEDIR/work/log
-	  ln -s $SERVICEDIR/work/log $SERVICEDIR/log
-	else
-	  mkdir $SERVICEDIR/work/log-readonly
-    ln -s $SERVICEDIR/work/log-readonly $SERVICEDIR/log
-    YOURKIT_PROFILER_AGENT_PORT=20002
-	fi
+fi
+
+# Add log directory
+if [ "${ROCKSDB_READONLY}" == "true" ]; then
+  mkdir -p $SERVICEDIR/work/log-readonly
+  ln -s $SERVICEDIR/work/log-readonly $SERVICEDIR/log
+  YOURKIT_PROFILER_AGENT_PORT=20002
+else
+  mkdir -p $SERVICEDIR/work/log
+  ln -s $SERVICEDIR/work/log $SERVICEDIR/log
 fi
 
 #set default spring profile if none is given. exclusively used for properties overrides file

@@ -14,7 +14,7 @@ ARG VERSION=latest
 # Ensure crontab starts
 # Add Tini for proper sigkill handling https://github.com/krallin/tini
 RUN yum update -y && \
-  yum install -y libevent perl wget util-linux-ng cronie procps nc lsof && \
+  yum install -y libevent perl wget util-linux-ng cronie procps nc lsof hostname && \
   yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel && \
   rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
   yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
