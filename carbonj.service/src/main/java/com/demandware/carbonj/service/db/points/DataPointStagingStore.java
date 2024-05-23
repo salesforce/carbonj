@@ -97,8 +97,8 @@ public class DataPointStagingStore
         IntervalProcessorTaskFactory taskFactory = new IntervalProcessorTaskFactoryImpl( pointStore);
         this.intervalProcessors = new IntervalProcessors(metricRegistry, stagingIntervalQueueConsumerBatchSize,
             stagingIntervalsQueueSizePerDb, stagingIntervalsQueueConsumersPerDb, taskFactory, emptyQueuePauseInMillis );
-        s.scheduleWithFixedDelay(this::propagateDb5m7d, 1, timeAggrJobIntervalInMins, TimeUnit.MINUTES );
-        s.scheduleWithFixedDelay(this::propagateDb30m2y, 1 + timeAggrJobIntervalInMins / 2, timeAggrJobIntervalInMins, TimeUnit.MINUTES );
+        s.scheduleAtFixedRate(this::propagateDb5m7d, 1, timeAggrJobIntervalInMins, TimeUnit.MINUTES );
+        s.scheduleAtFixedRate(this::propagateDb30m2y, 1 + timeAggrJobIntervalInMins / 2, timeAggrJobIntervalInMins, TimeUnit.MINUTES );
         s.scheduleWithFixedDelay(this::cleanup, 15, 5, TimeUnit.MINUTES );
 
         intervalProcessorExecutorService = Executors.newFixedThreadPool(timeAggrJobThreads, new ThreadFactory() {

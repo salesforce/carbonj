@@ -130,7 +130,7 @@ class SystemSort implements StagingFilesSort
     @Override
     public void sort( File inFile, Optional<File> extraMergeFile, File outFile) throws IOException
     {
-        log.debug(String.format("sorting [%s], with mergeFile [%s], into [%s]", inFile, extraMergeFile.orElse( null ), outFile));
+        log.info(String.format("sorting [%s], with mergeFile [%s], into [%s]", inFile, extraMergeFile.orElse( null ), outFile));
         File tmpOutFile = outFile;
         if( extraMergeFile.isPresent() )
         {
