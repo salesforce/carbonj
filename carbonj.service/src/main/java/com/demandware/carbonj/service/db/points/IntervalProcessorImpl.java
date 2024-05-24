@@ -103,8 +103,6 @@ public class IntervalProcessorImpl implements IntervalProcessor
         log.info( String.format("Started interval processor for dbName [%s], with queueSize [%s], consumers [%s], batch size [%s]",
             dbName, queueSize, nConsumers, batchSize) );
 
-        List<IntervalValues> batch = new ArrayList<>( batchSize );
-
         // queue consumer loop.
         while ( true )
         {
@@ -115,7 +113,7 @@ public class IntervalProcessorImpl implements IntervalProcessor
                     return;
                 }
 
-                batch.clear();
+                List<IntervalValues> batch = new ArrayList<>( batchSize );
                 try
                 {
                     queue.drainTo( batch, batchSize );
