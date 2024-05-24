@@ -9,7 +9,14 @@ package com.demandware.carbonj.service.engine;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.model.*;
+import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
+import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
+import com.amazonaws.services.dynamodbv2.model.KeyType;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +27,6 @@ import java.util.concurrent.TimeUnit;
 
 public class DynamoDbCheckPointMgr implements CheckPointMgr<Date> {
     private static final Logger log = LoggerFactory.getLogger(DynamoDbCheckPointMgr.class);
-
-    private static final String VERSION = "1.0";
 
     private final String tableName;
     private final int defaultOffsetMins;
@@ -47,7 +52,7 @@ public class DynamoDbCheckPointMgr implements CheckPointMgr<Date> {
                 .withKeySchema(
                         new KeySchemaElement("checkPointType", KeyType.HASH))
                 .withProvisionedThroughput(
-                        new ProvisionedThroughput(new Long(provisionedThroughput), new Long(provisionedThroughput)))
+                        new ProvisionedThroughput((long)provisionedThroughput, (long)provisionedThroughput))
                 .withTableName(tableName);
         log.info("Issuing CreateTable request for " + tableName);
         Table newlyCreatedTable = dynamoDB.createTable(request);

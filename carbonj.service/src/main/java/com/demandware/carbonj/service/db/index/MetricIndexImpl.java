@@ -61,6 +61,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.demandware.carbonj.service.db.index.QueryUtils.filter;
@@ -109,9 +110,11 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
     private final CacheStatsReporter metricCacheStatsReporter;
     private CacheStatsReporter metricIdCacheStatsReporter;
     private final CacheStatsReporter queryCacheStatsReporter;
+    private final CacheStatsReporter queryPatternCacheStatsReporter;
     private final LoadingCache<String, Metric> metricCache;
     private LoadingCache<Long, Metric> metricIdCache;
     private final LoadingCache<String, List<Metric>> queryCache;
+    private final LoadingCache<String, Pattern> queryPatternCache;
 
     private final String metricsStoreConfigFile;
     private final NameUtils nameUtils;
@@ -161,10 +164,13 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                             NameUtils nameUtils, StorageAggregationPolicySource aggrPolicySource,
                             int nameIndexQueryCacheMaxSize, int expireAfterWriteQueryCacheInSeconds,
                             boolean idCacheEnabled,
-                            boolean longId) {
+                            boolean longId,
+                            int nameIndexQueryPatternCacheMaxSize, int expireAfterWriteQueryPatternCacheInSeconds) {
         this(metricRegistry, metricsStoreConfigFile, nameIndex, idIndex, dbMetrics, nameIndexMaxCacheSize,
                 expireAfterAccessInMinutes, nameUtils, aggrPolicySource, nameIndexQueryCacheMaxSize,
-                expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId, new NamespaceCounter(metricRegistry, 7200), false, true, 100);
+                expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId,
+                new NamespaceCounter(metricRegistry, 7200), false, true, 100,
+                nameIndexQueryPatternCacheMaxSize, expireAfterWriteQueryPatternCacheInSeconds);
     }
 
     public MetricIndexImpl( MetricRegistry metricRegistry, String metricsStoreConfigFile,
@@ -177,7 +183,8 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                             NamespaceCounter namespaceCounter,
                             boolean rocksdbReadonly,
                             boolean syncSecondaryDb,
-                            int nameIndexKeyQueueSizeLimit) {
+                            int nameIndexKeyQueueSizeLimit,
+                            int nameIndexQueryPatternCacheMaxSize, int expireAfterWriteQueryPatternCacheInSeconds) {
         this.metricRegistry = metricRegistry;
         this.metricsStoreConfigFile = metricsStoreConfigFile;
         this.nameUtils = Preconditions.checkNotNull(nameUtils);
@@ -262,6 +269,22 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                             }
                         });
         this.queryCacheStatsReporter = new CacheStatsReporter( metricRegistry, "MetricsQueryCache", nameIndexQueryCacheMaxSize, queryCache );
+
+        this.queryPatternCache =
+                CacheBuilder.newBuilder()
+                        .initialCapacity(nameIndexQueryPatternCacheMaxSize)
+                        .maximumSize(nameIndexQueryPatternCacheMaxSize)
+                        .recordStats()
+                        .concurrencyLevel(8)
+                        .expireAfterWrite(expireAfterWriteQueryPatternCacheInSeconds, TimeUnit.SECONDS)
+                        .build(new CacheLoader<>() {
+                            @SuppressWarnings("NullableProblems")
+                            @Override
+                            public Pattern load(String pattern) {
+                                return Pattern.compile(pattern);
+                            }
+                        });
+        this.queryPatternCacheStatsReporter = new CacheStatsReporter( metricRegistry, "MetricsQueryPatternCache", nameIndexQueryPatternCacheMaxSize, queryPatternCache );
 
         this.aggrPolicySource = Preconditions.checkNotNull( aggrPolicySource );
 
@@ -417,6 +440,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
             metricIdCacheStatsReporter.dumpStats();
         }
         queryCacheStatsReporter.dumpStats();
+        queryPatternCacheStatsReporter.dumpStats();
         dumpDbPropertyStats(nameIndexStorePropertyMetricMap, nameIndex);
         dumpDbPropertyStats(idIndexStorePropertyMetricMap, idIndex);
     }
@@ -544,8 +568,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
     }
 
     @Override
-    public DeleteAPIResult deleteAPI(String name, boolean delete, Set<String> exclude)
-    {
+    public DeleteAPIResult deleteAPI(String name, boolean delete, Set<String> exclude) {
         List<String> metricNames = new ArrayList<>();
         // id starting with **. is considered as segment delete. Ex: **.order.count
         if( name.startsWith("**.") )
@@ -554,8 +577,12 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         }
         else
         {
-            metricNames.addAll( findMetrics( rootKey, 0, splitQuery( name ), false, Integer.MAX_VALUE, false )
-                    .stream().map(m -> m.name ).toList());
+            try {
+                metricNames.addAll( findMetrics( rootKey, 0, splitQuery( name ), false, Integer.MAX_VALUE, false )
+                        .stream().map(m -> m.name ).toList());
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         DeleteResult deleteResult = new DeleteResult();
@@ -672,9 +699,13 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
     }
 
     @Override
-    public List<Metric> findMetrics( String pattern )
-    {
-        return findMetrics(rootKey, 0, splitQuery( pattern ), false, Integer.MAX_VALUE, false );
+    public List<Metric> findMetrics( String pattern ) {
+        try {
+            return findMetrics(rootKey, 0, splitQuery( pattern ), false, Integer.MAX_VALUE, false );
+        } catch (ExecutionException e) {
+            log.error("Failed to find metrics for pattern {} - {}", pattern, e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
 
@@ -707,8 +738,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         }
     }
 
-    private List<Metric> findMetricsNoCache(String pattern, boolean leafOnly, boolean useThreshold, boolean skipInvalid)
-    {
+    private List<Metric> findMetricsNoCache(String pattern, boolean leafOnly, boolean useThreshold, boolean skipInvalid) {
         List<Metric> metrics;
         int threshold = enforceMaxSeriesPerRequest && useThreshold ? maxSeriesPerRequest : Integer.MAX_VALUE;
 
@@ -724,6 +754,9 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                     "Pattern [%s], configured threshold value: %s", pattern, threshold );
             log.warn(msg);
             throw new TooManyMetricsFoundException(e.getLimit(), msg);
+        } catch (ExecutionException e) {
+            log.error("Failed to query metrics for pattern {} - {}", pattern, e.getMessage());
+            metrics = new ArrayList<>();
         }
 
         // can happen if enforceMaxSeriesPerRequest is false
@@ -737,16 +770,15 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         return metrics;
     }
 
-    private List<Metric> findMetrics( String parentKey, int queryPartIdx, String[] queryParts, boolean leafOnly, int max,
-                                      boolean excludeInvalid )
-    {
+    private List<Metric> findMetrics( String parentKey, int queryPartIdx, QueryPart[] queryParts, boolean leafOnly, int max,
+                                      boolean excludeInvalid ) throws ExecutionException {
         Metric parent = getMetric( parentKey );
         if ( parent == null )
         {
             DatabaseMetrics.deletedMetricAccessError.mark();
             return Collections.emptyList();
         }
-        List<String> matches = filter( parent.children(), queryParts[queryPartIdx] );
+        List<String> matches = filter( parent.children(), queryParts[queryPartIdx], queryPatternCache );
         boolean isLastQuerySegment = queryPartIdx + 1 >= queryParts.length;
         if ( isLastQuerySegment )
         {
@@ -797,7 +829,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
 
     }
 
-    private List<String> findMetricWithSegment(String parentKey, int queryPartIdx, String[] queryParts)
+    private List<String> findMetricWithSegment(String parentKey, int queryPartIdx, QueryPart[] queryParts)
     {
         Metric parent = getMetric( parentKey );
         List<String> matched = new ArrayList<>();
@@ -805,7 +837,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         {
             String childKey = toMetricName( parentKey, childName );
             int qIndex = queryPartIdx;
-            if(childName.equals(queryParts[queryPartIdx]))
+            if(childName.equals(queryParts[queryPartIdx].getQuery()))
             {
                 boolean isLastSegment = queryPartIdx + 1 >= queryParts.length;
                 if( isLastSegment )
@@ -821,14 +853,14 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
             }
             else
             {
-                qIndex = queryPartIdx != 0 ? (childName.equals(queryParts[0])? 1 : 0)  : queryPartIdx;
+                qIndex = queryPartIdx != 0 ? (childName.equals(queryParts[0].getQuery())? 1 : 0)  : queryPartIdx;
             }
             matched.addAll(findMetricWithSegment(childKey, qIndex, queryParts));
         }
         return matched;
     }
 
-    private List<String> findAllMetricsWithSegment( String parentKey, int queryPartIdx, String[] queryParts )
+    private List<String> findAllMetricsWithSegment( String parentKey, int queryPartIdx, QueryPart[] queryParts )
     {
         return new ArrayList<>(findMetricWithSegment(parentKey, queryPartIdx, queryParts));
     }

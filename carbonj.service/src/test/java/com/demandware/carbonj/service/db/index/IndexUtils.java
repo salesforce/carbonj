@@ -66,7 +66,7 @@ public class IndexUtils
         StorageAggregationPolicySource policySource = new StorageAggregationPolicySource( rulesLoader );
 
         return new MetricIndexImpl(new MetricRegistry(), metricStoreConfig, nameIndex, idIndex, dbMetrics, 10000, 60,
-                new NameUtils(),  policySource, 2000,120, false, longId);
+                new NameUtils(),  policySource, 2000,120, false, longId, 10000, 60);
     }
 
     private static DatabaseMetrics databaseMetrics()

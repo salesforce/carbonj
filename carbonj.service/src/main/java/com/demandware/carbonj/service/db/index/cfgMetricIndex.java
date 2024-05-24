@@ -49,12 +49,6 @@ public class cfgMetricIndex
     @Value( "${metrics.cacheExpireAfterAccessInMinutes:120}" )
     private int metricCacheExpireAfterAccessInMinutes = 120;
 
-    @Value( "${metrics.tasks.emptyQueuePauseMillis:10000}" )
-    private int emptyQueuePauseMillis = 1000;
-
-    @Value( "${metrics.tasks.queueReadBatchSize:10000}" )
-    private int queueReadBatchSize = 10000;
-
     @Value( "${storage.aggregation.rules:config/storage-aggregation.conf}" )
     private String storageAggregationRulesConfigFile = "config/storage-aggregation.conf";
 
@@ -63,6 +57,12 @@ public class cfgMetricIndex
 
     @Value( "${metrics.store.expireAfterWriteQueryCacheInSeconds:120}" )
     private int expireAfterWriteQueryCacheInSeconds;
+
+    @Value( "${metrics.store.queryPatternCacheMaxSize:10000}" )
+    private int nameIndexQueryPatternCacheMaxSize;
+
+    @Value( "${metrics.store.expireAfterWriteQueryPatternCacheInSeconds:120}" )
+    private int expireAfterWriteQueryPatternCacheInSeconds;
 
     @Value( "${metrics.store.enableIdCache:false}" )
     private boolean enableIdCache;
@@ -115,10 +115,10 @@ public class cfgMetricIndex
 
         File rulesFile = locateConfigFile( serviceDir, storageAggregationRulesConfigFile );
         StorageAggregationRulesLoader rulesLoader = new StorageAggregationRulesLoader( rulesFile );
-        s.scheduleWithFixedDelay( ( ) -> rulesLoader.reload(), 60, 45, TimeUnit.SECONDS );
+        s.scheduleWithFixedDelay(rulesLoader::reload, 60, 45, TimeUnit.SECONDS );
 
         StorageAggregationPolicySource policySource = new StorageAggregationPolicySource( rulesLoader );
-        s.scheduleWithFixedDelay( () -> policySource.cleanup(), 10, 120, TimeUnit.MINUTES );
+        s.scheduleWithFixedDelay(policySource::cleanup, 10, 120, TimeUnit.MINUTES );
         return policySource;
     }
 
@@ -133,7 +133,8 @@ public class cfgMetricIndex
         MetricIndexImpl metricIndex = new MetricIndexImpl(metricRegistry, metricStoreConfigFile, nameIndex, idIndex, dbMetrics,
                 nameIndexMaxCacheSize, metricCacheExpireAfterAccessInMinutes, nameUtils, policySource,
                 nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache, longId,
-                namespaceCounter, rocksdbReadonly, syncSecondaryDb, nameIndexKeyQueueSizeLimit);
+                namespaceCounter, rocksdbReadonly, syncSecondaryDb, nameIndexKeyQueueSizeLimit,
+                nameIndexQueryPatternCacheMaxSize, expireAfterWriteQueryPatternCacheInSeconds);
         s.scheduleWithFixedDelay(metricIndex::reload, 300, 300, TimeUnit.SECONDS);
         return metricIndex;
     }

@@ -12,8 +12,7 @@ import java.util.List;
 
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
 
 //TODO: make it a parameterized test
 //@RunWith( Parameterized.class)
@@ -28,39 +27,37 @@ public class _QueryFilter
     @Test
     public void selectWithStartInOneLevel()
     {
-        String[] queries = QueryUtils.splitQuery( "*" );
+        QueryPart[] queries = QueryUtils.splitQuery( "*" );
         List<String> candidates = Arrays.asList("aaa", "bbb", "c", "d");
         List<String> expected = Arrays.asList( "aaa", "bbb", "c", "d" );
-        assertThat( QueryUtils.filter( candidates, queries[0] ), equalTo(expected) );
+        assertEquals( QueryUtils.filter( candidates, queries[0], null), expected );
     }
 
     @Test
     public void selectWithExactMatch()
     {
-        String[] queries = QueryUtils.splitQuery( "bbb" );
+        QueryPart[] queries = QueryUtils.splitQuery( "bbb" );
         List<String> candidates = Arrays.asList("aaa", "bbb", "c", "d");
-        List<String> expected = Arrays.asList( "bbb" );
-        assertThat( QueryUtils.filter( candidates, queries[0] ), equalTo(expected) );
+        List<String> expected = List.of("bbb");
+        assertEquals( QueryUtils.filter( candidates, queries[0], null), expected );
     }
 
     @Test
     public void selectWithNoMatch()
     {
-        String[] queries = QueryUtils.splitQuery( "x*" );
+        QueryPart[] queries = QueryUtils.splitQuery( "x*" );
         List<String> candidates = Arrays.asList("aaa", "bbb", "c", "d");
         List<String> expected = Collections.emptyList();
-        assertThat( QueryUtils.filter( candidates, queries[0] ), equalTo(expected) );
+        assertEquals( QueryUtils.filter( candidates, queries[0], null), expected );
     }
 
 
     @Test
     public void selectMatch()
     {
-        String[] queries = QueryUtils.splitQuery( "a*a" );
+        QueryPart[] queries = QueryUtils.splitQuery( "a*a" );
         List<String> candidates = Arrays.asList("aaa", "bbb", "c", "d", "adkdddda", "ajjaj");
         List<String> expected = Arrays.asList( "aaa", "adkdddda" );
-        assertThat( QueryUtils.filter( candidates, queries[0] ), equalTo(expected) );
+        assertEquals( QueryUtils.filter( candidates, queries[0], null), expected );
     }
-
-
 }
