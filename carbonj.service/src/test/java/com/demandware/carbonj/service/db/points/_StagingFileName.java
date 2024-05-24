@@ -53,15 +53,15 @@ public class _StagingFileName extends BaseTest
         assertEquals( "5m7d-100000.1", fn.getNextUnsortedFileName( dir ));
         File x = new File(dir, "5m7d-100000.1");
         assertTrue(x.createNewFile());
-        StagingFile stagingFile = new StagingFile(metricRegistry, x, sort(), mock( MetricProvider.class) );
-        stagingFile.sort( Optional.empty() );
+        StagingFile stagingFile = new StagingFile(metricRegistry, x, sort(), mock( MetricProvider.class), fn.dbName );
+        stagingFile.sort( Optional.empty(), fn.dbName );
 
         assertEquals( Optional.of("5m7d-100000.1.s"), fn.getLastSortedFileName( dir ));
         assertEquals( "5m7d-100000.2", fn.getNextUnsortedFileName( dir ));
         File x2 = new File(dir, "5m7d-100000.2");
         assertTrue(x2.createNewFile());
-        StagingFile stagingFile2 = new StagingFile( metricRegistry, x2, sort(), mock( MetricProvider.class) );
-        stagingFile2.sort( Optional.of("5m7d-100000.1.s") );
+        StagingFile stagingFile2 = new StagingFile( metricRegistry, x2, sort(), mock( MetricProvider.class), fn.dbName );
+        stagingFile2.sort( Optional.of("5m7d-100000.1.s"), fn.dbName );
         assertEquals( Optional.of("5m7d-100000.2.s"), fn.getLastSortedFileName( dir ));
     }
 

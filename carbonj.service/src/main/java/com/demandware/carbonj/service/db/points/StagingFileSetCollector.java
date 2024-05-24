@@ -42,7 +42,7 @@ public class StagingFileSetCollector
                                     f.close();
                                     Optional<String> lastSorted = fs.getLastSortedFileName( dir );
                                     log.info( "sorting ..." );
-                                    SortedStagingFile sortedFile = f.sort(lastSorted);
+                                    SortedStagingFile sortedFile = f.sort(lastSorted, dbName);
                                     log.info("sorted file: [" + sortedFile + "]");
                                     sortedFiles.add( sortedFile );
                                 }

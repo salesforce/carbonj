@@ -14,11 +14,14 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.demandware.carbonj.service.db.model.MetricProvider;
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,14 +37,24 @@ public class StagingFile implements Closeable
 
     private final MetricProvider metricProvider;
 
-    private static Timer stagingFileSortTimer;
+    private static final ConcurrentMap<String, Timer> stagingFileSortTimerMap = new ConcurrentHashMap<>();
 
-    StagingFile(MetricRegistry metricRegistry, File file, StagingFilesSort sort, MetricProvider metricProvider )
+    StagingFile(MetricRegistry metricRegistry, File file, StagingFilesSort sort, MetricProvider metricProvider) {
+        this(metricRegistry, file, sort, metricProvider, "");
+    }
+
+    StagingFile(MetricRegistry metricRegistry, File file, StagingFilesSort sort, MetricProvider metricProvider, String dbName)
     {
         this.file = file;
         this.sort = sort;
         this.metricProvider = Preconditions.checkNotNull( metricProvider );
-        stagingFileSortTimer = metricRegistry.timer( "staging.filesort.timer" );
+        if (!stagingFileSortTimerMap.containsKey(dbName)) {
+            String timerName = "staging.filesort.timer";
+            if (!StringUtils.isEmpty(dbName)) {
+                timerName = timerName + "." + dbName;
+            }
+            stagingFileSortTimerMap.putIfAbsent(dbName, metricRegistry.timer(timerName));
+        }
     }
 
     public synchronized int lastModified()
@@ -130,7 +143,7 @@ public class StagingFile implements Closeable
      *                   of merge.
      * @return file with sorted data. Original file will be unchanged.
      */
-    public synchronized SortedStagingFile sort( Optional<String> lastSorted)
+    public synchronized SortedStagingFile sort( Optional<String> lastSorted, String dbName)
     {
         Preconditions.checkState( isClosed(), "Staging file must be closed before sorting." );
 
@@ -144,15 +157,15 @@ public class StagingFile implements Closeable
             return null;
         }
 
-        sort(file, extraMergeFile, outFile);
+        sort(file, extraMergeFile, outFile, dbName);
         return new SortedStagingFile( outFile, metricProvider );
     }
 
 
 
-    private void sort(File inFile, Optional<File> extraMergeFile, File outFile)
+    private void sort(File inFile, Optional<File> extraMergeFile, File outFile, String dbName)
     {
-        try (Timer.Context ignored = stagingFileSortTimer.time())
+        try (Timer.Context ignored = stagingFileSortTimerMap.get(dbName).time())
         {
             sort.sort( inFile, extraMergeFile, outFile );
         }

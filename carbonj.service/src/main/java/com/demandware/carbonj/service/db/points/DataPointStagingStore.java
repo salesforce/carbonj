@@ -146,7 +146,7 @@ public class DataPointStagingStore
 
     public void propagate(String dbName)
     {
-        log.info( "propagating points from staged files." );
+        log.info( "propagating points from staged files for db {}.", dbName );
         try
         {
             List<SortedStagingFile> files = stagingFiles.collectEligibleFiles(dbName);

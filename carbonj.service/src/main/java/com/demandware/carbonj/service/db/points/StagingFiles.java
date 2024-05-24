@@ -142,7 +142,7 @@ public class StagingFiles
     {
         File f = new File( dir, fs.nameForUnsorted(fs.id, seq) );
         Preconditions.checkState( f.exists() );
-        StagingFile sf = new StagingFile(metricRegistry, f, sort, metricProvider);
+        StagingFile sf = new StagingFile(metricRegistry, f, sort, metricProvider, fs.dbName);
         sf.open();
         return sf;
     }
@@ -151,7 +151,7 @@ public class StagingFiles
     {
         File f = new File( dir, fs.getNextUnsortedFileName( dir ) );
         Preconditions.checkState( !f.exists() );
-        StagingFile sf = new StagingFile(metricRegistry, f, sort, metricProvider);
+        StagingFile sf = new StagingFile(metricRegistry, f, sort, metricProvider, fs.dbName);
         sf.open();
         return sf;
     }
