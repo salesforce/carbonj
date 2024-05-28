@@ -37,17 +37,17 @@ public class StagingFileSetCollector
                 .filter( fs -> fs.needsCollection( files.get( fs ).lastModified() ) )
                 .forEach( fs ->
                                 {
-                                    log.info( "processing staging file: [" + fs + "]" );
+                                    log.debug( "processing staging file: [" + fs + "]" );
                                     StagingFile f = files.remove( fs );
                                     f.close();
                                     Optional<String> lastSorted = fs.getLastSortedFileName( dir );
-                                    log.info( "sorting ..." );
+                                    log.debug( "sorting ..." );
                                     SortedStagingFile sortedFile = f.sort(lastSorted, dbName);
-                                    log.info("sorted file: [" + sortedFile + "]");
+                                    log.debug("sorted file: [" + sortedFile + "]");
                                     sortedFiles.add( sortedFile );
                                 }
                 );
-        log.info("sorted files: [" + sortedFiles + "]");
+        log.debug("sorted files: [" + sortedFiles + "]");
         return sortedFiles;
     }
 }
