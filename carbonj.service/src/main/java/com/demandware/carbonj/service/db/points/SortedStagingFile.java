@@ -10,12 +10,13 @@ import com.demandware.carbonj.service.db.model.IntervalValues;
 import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.MetricProvider;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -23,13 +24,11 @@ import java.util.Optional;
 /**
  * Provides access to a sorted staging file - loads data points in sets by metric id.
  */
-class SortedStagingFile
+public class SortedStagingFile
 {
-    private static final Logger log = LoggerFactory.getLogger(SortedStagingFile.class);
-
-    private StagingFileSet fileName;
-    private File file;
-    private MetricProvider metricProvider;
+    private final StagingFileSet fileName;
+    private final File file;
+    private final MetricProvider metricProvider;
 
     private BufferedReader br;
 
@@ -56,7 +55,7 @@ class SortedStagingFile
         }
         catch(IOException e)
         {
-            Throwables.propagate( e );
+            throw new RuntimeException(e);
         }
     }
 

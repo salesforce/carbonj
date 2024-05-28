@@ -22,7 +22,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.demandware.carbonj.service.db.model.IntervalValues;
 import com.demandware.carbonj.service.engine.BlockingPolicy;
-import com.google.common.base.Throwables;
 
 /**
  * Creates aggregated data points for low resolution archives. There will be a separate instance per
@@ -43,10 +42,10 @@ public class IntervalProcessorImpl implements IntervalProcessor
     // size of the queue
     final private int queueSize;
 
-    private ArrayBlockingQueue<IntervalValues> queue;
+    private final ArrayBlockingQueue<IntervalValues> queue;
     private final int emptyQueuePauseInMillis;
 
-    private Executor s;
+    private final Executor s;
 
     final private IntervalProcessorTaskFactory taskFactory;
 
@@ -82,7 +81,7 @@ public class IntervalProcessorImpl implements IntervalProcessor
      * Puts object on the queue.
      *
      * @param intervalValues queue entry
-     * @throws InterruptedException
+     * @throws InterruptedException Any interrupted exception
      */
     @Override
     public void put(IntervalValues intervalValues)
@@ -118,7 +117,7 @@ public class IntervalProcessorImpl implements IntervalProcessor
                 try
                 {
                     queue.drainTo( batch, batchSize );
-                    if ( batch.size() == 0 )
+                    if (batch.isEmpty())
                     {
                         TimeUnit.MILLISECONDS.sleep(emptyQueuePauseInMillis);
                         continue;
@@ -129,7 +128,7 @@ public class IntervalProcessorImpl implements IntervalProcessor
                 catch ( Exception e )
                 {
                     log.error( "Failure saving metrics for aggregation.", e );
-                    Throwables.propagate( e );
+                    throw new RuntimeException(e);
                 }
             }
             catch ( Throwable t )

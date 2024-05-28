@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static com.demandware.carbonj.service.db.model.NullMetric.METRIC_NULL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -36,13 +37,13 @@ public class IndexNameSyncTest extends BaseIndexTest {
         LoadingCache<String, Metric> metricCache = metricIndex.getMetricCache();
         Map<String, Metric> metricCacheMap = metricCache.asMap();
         assertTrue(metricCacheMap.containsKey("root"));
-        assertNotEquals(metricCacheMap.get("root"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("root"), METRIC_NULL);
         assertTrue(metricCacheMap.containsKey("a"));
-        assertNotEquals(metricCacheMap.get("a"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("a"), METRIC_NULL);
         assertTrue(metricCacheMap.containsKey("a.b"));
-        assertNotEquals(metricCacheMap.get("a.b"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("a.b"), METRIC_NULL);
         assertTrue(metricCacheMap.containsKey("a.b.c"));
-        assertNotEquals(metricCacheMap.get("a.b.c"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("a.b.c"), METRIC_NULL);
 
         // Run SyncSecondaryDbTask to dump metric names from queue into a file
         MetricIndexImpl.SyncSecondaryDbTask syncSecondaryDbTask = metricIndex.new SyncSecondaryDbTask();
@@ -66,16 +67,16 @@ public class IndexNameSyncTest extends BaseIndexTest {
         syncNameIndexCacheTask.run();
         metricCacheMap = metricCache.asMap();
         assertTrue(metricCacheMap.containsKey("root"));
-        assertNotEquals(metricCacheMap.get("root"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("root"), METRIC_NULL);
         assertTrue(metricCacheMap.get("root").children().contains("a"));
         assertTrue(metricCacheMap.containsKey("a"));
-        assertNotEquals(metricCacheMap.get("a"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("a"), METRIC_NULL);
         assertTrue(metricCacheMap.get("a").children().contains("b"));
         assertTrue(metricCacheMap.containsKey("a.b"));
-        assertNotEquals(metricCacheMap.get("a.b"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("a.b"), METRIC_NULL);
         assertTrue(metricCacheMap.get("a.b").children().contains("c"));
         assertTrue(metricCacheMap.containsKey("a.b.c"));
-        assertNotEquals(metricCacheMap.get("a.b.c"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("a.b.c"), METRIC_NULL);
         assertTrue(metricCacheMap.get("a.b.c").children().isEmpty());
 
         // Simulate index-name DB updated but metric cached has not been updated on read JVM
@@ -101,10 +102,10 @@ public class IndexNameSyncTest extends BaseIndexTest {
         syncNameIndexCacheTask.run();
         metricCacheMap = metricCache.asMap();
         assertTrue(metricCacheMap.containsKey("a.b"));
-        assertNotEquals(metricCacheMap.get("a.b"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("a.b"), METRIC_NULL);
         assertTrue(metricCacheMap.get("a.b").children().contains("d"));
         assertTrue(metricCacheMap.containsKey("a.b.d"));
-        assertNotEquals(metricCacheMap.get("a.b.d"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("a.b.d"), METRIC_NULL);
         assertTrue(metricCacheMap.get("a.b.d").children().isEmpty());
 
         // Simulate root level metric add
@@ -134,13 +135,13 @@ public class IndexNameSyncTest extends BaseIndexTest {
         syncNameIndexCacheTask.run();
         metricCacheMap = metricCache.asMap();
         assertTrue(metricCacheMap.containsKey("root"));
-        assertNotEquals(metricCacheMap.get("root"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("root"), METRIC_NULL);
         assertTrue(metricCacheMap.get("root").children().contains("x"));
         assertTrue(metricCacheMap.containsKey("x"));
-        assertNotEquals(metricCacheMap.get("x"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("x"), METRIC_NULL);
         assertTrue(metricCacheMap.get("x").children().contains("y"));
         assertTrue(metricCacheMap.containsKey("x.y"));
-        assertNotEquals(metricCacheMap.get("x.y"), Metric.METRIC_NULL);
+        assertNotEquals(metricCacheMap.get("x.y"), METRIC_NULL);
         assertTrue(metricCacheMap.get("x.y").children().isEmpty());
     }
 }

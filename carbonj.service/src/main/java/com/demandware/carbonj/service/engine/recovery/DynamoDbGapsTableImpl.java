@@ -7,14 +7,30 @@
 package com.demandware.carbonj.service.engine.recovery;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.document.*;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
+import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.DeleteItemSpec;
-import com.amazonaws.services.dynamodbv2.model.*;
+import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
+import com.amazonaws.services.dynamodbv2.model.KeyType;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
+import com.amazonaws.services.dynamodbv2.model.ScanRequest;
+import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.demandware.carbonj.service.engine.DynamoDbUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class DynamoDbGapsTableImpl implements GapsTable {
 
@@ -43,7 +59,7 @@ public class DynamoDbGapsTableImpl implements GapsTable {
         ks.add(new KeySchemaElement("starttime", KeyType.HASH));
 
         ProvisionedThroughput provisionedthroughput =
-                new ProvisionedThroughput(new Long(provisionedThroughput), new Long(provisionedThroughput));
+                new ProvisionedThroughput((long) provisionedThroughput, (long) provisionedThroughput);
 
         CreateTableRequest request =
                 new CreateTableRequest()

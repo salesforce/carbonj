@@ -21,6 +21,8 @@ public class RetentionPolicy
 
     private static final ConcurrentMap<String, RetentionPolicy> policies = new ConcurrentHashMap<>();
 
+    private static final ConcurrentMap<String, String> dbNameToPolicyNameMap = new ConcurrentHashMap<>();
+
     private static final String _60s24h = "60s24h";
     private static final String _60s30d = "60s30d";
     private static final String _5m7d = "5m7d";
@@ -63,11 +65,6 @@ public class RetentionPolicy
         }
     }
 
-    public boolean includes2( int ts, int now ) // TODO: keeping it for now to minimize impact on existing logic
-    {
-        return now - retention <= interval( ts );
-    }
-
     public boolean includes( int ts, int now )
     {
         return interval( now - retention ) <= interval( ts );
@@ -94,15 +91,9 @@ public class RetentionPolicy
             .collect( Collectors.toList() );
     }
 
-    public static boolean policyNameExists( String name )
-    {
-        return policies.containsKey( name );
-    }
-
     public static boolean dbNameExists( String dbName )
     {
-        String policyName = dbNameToPolicyName( dbName );
-        return policies.containsKey( policyName );
+        return dbNameToPolicyNameMap.containsKey( dbName );
     }
 
     public static RetentionPolicy _60s24h()
@@ -136,34 +127,15 @@ public class RetentionPolicy
         if ( p == null )
         {
             p = policies.computeIfAbsent( name, RetentionPolicy::new);
+            dbNameToPolicyNameMap.putIfAbsent(p.dbName, p.name);
         }
         return p;
     }
 
     public static RetentionPolicy getInstanceForDbName( String dbName )
     {
-        String rpName = dbNameToPolicyName( dbName );
+        String rpName = dbNameToPolicyNameMap.get( dbName );
         return getInstance( rpName );
-    }
-
-    private static String dbNameToPolicyName( String dbName )
-    {
-        int precisionEnd = 0;
-        for ( int i = 0; i < dbName.length(); i++ )
-        {
-            int ch = dbName.charAt( i );
-            if ( ch == 's' || ch == 'm' || ch == 'h' || ch == 'd' || ch == 'y' )
-            {
-                precisionEnd = i + 1;
-                break;
-            }
-        }
-        if ( precisionEnd == 0 || precisionEnd >= dbName.length() )
-        {
-            throw new RuntimeException( String.format( "Failed to convert dbname [%s] to policy name", dbName ) );
-        }
-
-        return dbName.substring( 0, precisionEnd ) + ":" + dbName.substring( precisionEnd );
     }
 
     private static int toSeconds( String value )

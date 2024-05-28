@@ -53,7 +53,7 @@ public class IntervalValues
         OptionalDouble od = aggr.apply( values );
         if( od.isPresent() )
         {
-            DataPoint p = new DataPoint( metric.name, od.getAsDouble(), intervalStart );
+            DataPoint p = new DataPoint( metric.name, od.getAsDouble(), intervalStart, false );
             p.metricId = metric.id;
             return p;
         }

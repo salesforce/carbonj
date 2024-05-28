@@ -8,7 +8,15 @@ package com.demandware.carbonj.service.db.points;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +28,6 @@ import com.demandware.carbonj.service.db.model.DataPointStore;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
 import com.demandware.carbonj.service.engine.DataPoint;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 
 /**
  * Staging queue processor.
@@ -44,15 +51,14 @@ public class DataPointStagingStore
 
     private ArrayBlockingQueue<StagingFileRecord> queue;
 
-    private ScheduledExecutorService s;
     private ExecutorService intervalProcessorExecutorService;
     private ExecutorCompletionService<IntervalProcessors.Stats> executorCompletionService;
 
     final private StagingFiles stagingFiles;
 
-    private StagingFileSetProvider stagingFileSetProvider = new StagingFileSetProvider();
+    private final StagingFileSetProvider stagingFileSetProvider = new StagingFileSetProvider();
 
-    private int queueSize;
+    private final int queueSize;
 
     private IntervalProcessors intervalProcessors;
 
@@ -86,18 +92,20 @@ public class DataPointStagingStore
 
     public void open(DataPointStore pointStore)
     {
-        this.s = Executors.newSingleThreadScheduledExecutor();
+        ScheduledExecutorService s = Executors.newSingleThreadScheduledExecutor();
         this.queue = new ArrayBlockingQueue<>( queueSize );
         IntervalProcessorTaskFactory taskFactory = new IntervalProcessorTaskFactoryImpl( pointStore);
         this.intervalProcessors = new IntervalProcessors(metricRegistry, stagingIntervalQueueConsumerBatchSize,
             stagingIntervalsQueueSizePerDb, stagingIntervalsQueueConsumersPerDb, taskFactory, emptyQueuePauseInMillis );
-        this.s.scheduleWithFixedDelay(this::propagate, 1, timeAggrJobIntervalInMins, TimeUnit.MINUTES );
-        this.s.scheduleWithFixedDelay(this::cleanup, 15, 5, TimeUnit.MINUTES );
+        s.scheduleAtFixedRate(this::propagateDb5m7d, 1, timeAggrJobIntervalInMins, TimeUnit.MINUTES );
+        s.scheduleAtFixedRate(this::propagateDb30m2y, 1 + timeAggrJobIntervalInMins / 2, timeAggrJobIntervalInMins, TimeUnit.MINUTES );
+        s.scheduleWithFixedDelay(this::cleanup, 15, 5, TimeUnit.MINUTES );
 
         intervalProcessorExecutorService = Executors.newFixedThreadPool(timeAggrJobThreads, new ThreadFactory() {
 
             private int threadNo = 1;
 
+            @SuppressWarnings("NullableProblems")
             @Override
             public Thread newThread(Runnable r) {
                 Thread thread = new Thread(r, "Interval-Processors-" + (threadNo++));
@@ -128,12 +136,20 @@ public class DataPointStagingStore
         return this.intervalProcessors.processFile( stagingFile );
     }
 
-    public synchronized void propagate()
+    public synchronized void propagateDb5m7d() {
+        propagate("5m7d");
+    }
+
+    public synchronized void propagateDb30m2y() {
+        propagate("30m2y");
+    }
+
+    public void propagate(String dbName)
     {
-        log.info( "propagating points from staged files." );
+        log.info( "propagating points from staged files for db {}.", dbName );
         try
         {
-            List<SortedStagingFile> files = stagingFiles.collectEligibleFiles();
+            List<SortedStagingFile> files = stagingFiles.collectEligibleFiles(dbName);
             int count = 0;
             for (SortedStagingFile file: files) {
                 executorCompletionService.submit(new IntervalProcessorTask(this, file));
@@ -204,14 +220,14 @@ public class DataPointStagingStore
                 try
                 {
                     queue.drainTo(batch, batchSize);
-                    if( batch.size() == 0 )
+                    if(batch.isEmpty())
                     {
                         // no new data. take this opportunity to flush
                         stagingFiles.flush();
 
                         // check again
                         queue.drainTo(batch, batchSize);
-                        if( batch.size() == 0 )
+                        if(batch.isEmpty())
                         {
                             // still nothing.
                             TimeUnit.MILLISECONDS.sleep( 100 );
@@ -281,7 +297,7 @@ public class DataPointStagingStore
         }
         catch ( InterruptedException e )
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException(e);
         }
 
         intervalProcessorExecutorService.shutdown();
@@ -291,7 +307,7 @@ public class DataPointStagingStore
 
     private static class IntervalProcessorTask implements Callable<IntervalProcessors.Stats> {
 
-        private DataPointStagingStore stagingStore;
+        private final DataPointStagingStore stagingStore;
         private final SortedStagingFile sortedStagingFile;
 
         private IntervalProcessorTask(DataPointStagingStore stagingStore, SortedStagingFile sortedStagingFile) {

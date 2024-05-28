@@ -27,10 +27,14 @@ public class DataPoint
 
     public DataPoint( String name, double val, int ts )
     {
-        this.name = StringsCache.get( name );
+        this(name, val, ts, true);
+    }
+
+    public DataPoint(String name, double val, int ts, boolean queryCache)
+    {
+        this.name = queryCache ? StringsCache.get(name) : name;
         this.ts = ts;
         this.val = val;
-
     }
 
     public static int align2Min( DateTime dt )
@@ -135,20 +139,11 @@ public class DataPoint
         {
             return false;
         }
-        if ( Double.doubleToLongBits( val ) != Double.doubleToLongBits( other.val ) )
-        {
-            return false;
-        }
-        return true;
+        return Double.doubleToLongBits(val) == Double.doubleToLongBits(other.val);
     }
 
     public int intervalValue(int precision)
     {
         return ts - ( ts % precision );
-    }
-
-    public static int intervalValue(int ts, int precision)
-    {
-        return ts - (ts % precision);
     }
 }

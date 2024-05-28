@@ -6,11 +6,20 @@
  */
 package com.demandware.carbonj.service.db.index;
 
+import com.google.common.cache.LoadingCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class QueryUtils
 {
+
+    private static final Logger log = LoggerFactory.getLogger( QueryUtils.class );
 
     public static String patternToRegEx(String p)
     {
@@ -22,9 +31,18 @@ class QueryUtils
         return "^" + r + "$";
     }
 
-    public static List<String> filter( List<String> entries, String pattern)
-    {
-        return entries.stream().filter( s -> match( s, pattern ) ).collect( Collectors.toList());
+    public static List<String> filter(List<String> entries, QueryPart pattern, LoadingCache<String, Pattern> queryPatternCache) {
+        List<String> matched = new ArrayList<>();
+        for (String entry : entries) {
+            try {
+                if (match(entry, pattern, queryPatternCache)) {
+                    matched.add(entry);
+                }
+            } catch (ExecutionException e) {
+                log.error("Failed to check query pattern {} for query {} - {}", pattern.getQuery(), entry, e.getMessage());
+            }
+        }
+        return matched;
     }
 
     /*
@@ -46,17 +64,20 @@ class QueryUtils
         return s.indexOf( '*' ) > -1 || s.indexOf( '[' ) > -1 || s.indexOf( '{' ) > -1;
     }
 
-    public static String[] splitQuery(String query)
+    public static QueryPart[] splitQuery(String query)
     {
         String[] parts = query.split( "\\." );
+        QueryPart[] queryParts = new QueryPart[parts.length];
         for(int i = 0; i < parts.length; i++)
         {
             if( isPattern(parts[i]) )
             {
-                parts[i] = patternToRegEx(parts[i]);
+                queryParts[i] = new QueryPart(patternToRegEx(parts[i]), true);
+            } else {
+                queryParts[i] = new QueryPart(parts[i], false);
             }
         }
-        return parts;
+        return queryParts;
     }
 
 
@@ -80,10 +101,16 @@ class QueryUtils
     //                return matching
 
 
-
-    public static boolean match(String namePart, String pattern)
-    {
-        return namePart.matches( pattern );
+    public static boolean match(String namePart, QueryPart pattern, LoadingCache<String, Pattern> queryPatternCache) throws ExecutionException {
+        if (pattern.isRegEx()) {
+            if (queryPatternCache != null) {
+                Matcher matcher = queryPatternCache.get(pattern.getQuery()).matcher(namePart);
+                return matcher.matches();
+            } else {
+                return namePart.matches(pattern.getQuery());
+            }
+        } else {
+            return namePart.equals(pattern.getQuery());
+        }
     }
-
 }

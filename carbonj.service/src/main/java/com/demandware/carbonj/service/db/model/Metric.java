@@ -12,19 +12,14 @@ import java.util.List;
 import java.util.Optional;
 
 import com.demandware.carbonj.service.accumulator.MetricAggregationPolicy;
-import com.google.common.base.Preconditions;
-
 import com.demandware.carbonj.service.strings.StringsCache;
 
 public class Metric
 {
-    final public static Metric METRIC_NULL = NullMetric.getInstance();
-
     final public long id;
     final public String name; // metric name
     final public List<RetentionPolicy> retentionPolicies;
     final private List<String> children;
-    private int lastTs = 0;
 
     private AggregationPolicy aggregationPolicy;
 
@@ -40,9 +35,9 @@ public class Metric
         this.aggregationPolicy = aggregationPolicy;
         this.retentionPolicies = retentionPolicies;
         // There will be a lot of Metric instances. Avoid keeping duplicate empty lists around.
-        if( children == null || children.size() == 0)
+        if( children == null || children.isEmpty())
         {
-            this.children = Collections.EMPTY_LIST;
+            this.children = Collections.emptyList();
         }
         else
         {
@@ -65,19 +60,6 @@ public class Metric
         return this.metricAggregationPolicy;
     }
 
-    public synchronized boolean isDuplicatePoint(int ts)
-    {
-        if( lastTs == ts )
-        {
-            return true;
-        }
-        else
-        {
-            lastTs = ts;
-            return false;
-        }
-    }
-
     public List<String> children()
     {
         return children;
@@ -85,7 +67,7 @@ public class Metric
 
     public Optional<RetentionPolicy> retentionPolicyAfter(RetentionPolicy policy)
     {
-        if( policy == null && retentionPolicies.size() > 0)
+        if( policy == null && !retentionPolicies.isEmpty())
         {
             return Optional.of(retentionPolicies.get( 0 ));
         }
@@ -98,38 +80,6 @@ public class Metric
             }
         }
         return Optional.empty();
-    }
-
-    public Optional<RetentionPolicy> retentionPolicyBefore(RetentionPolicy policy)
-    {
-        Preconditions.checkNotNull( policy );
-        Preconditions.checkState( retentionPolicies != null );
-
-        if( retentionPolicies.size() < 2 )
-        {
-            return Optional.empty();
-        }
-
-        RetentionPolicy last = retentionPolicies.get( 0 );
-        for(int i = 1; i < retentionPolicies.size(); i++)
-        {
-            RetentionPolicy rp = retentionPolicies.get( i );
-            if( rp.name.equals( policy.name ) )
-            {
-                return Optional.of( last );
-            }
-            last = rp;
-        }
-
-        return Optional.empty();
-    }
-
-    public RetentionPolicy retentionPolicyForDb(String dbName)
-    {
-        return retentionPolicies.stream().filter( p -> p.dbName.equalsIgnoreCase( dbName ) ).findFirst()
-                        .orElseThrow( () -> new RuntimeException(
-                                        String.format( "Unknown db name [%s] for metric (id: [%s], name: [%s])",
-                                                        dbName, id, name) ));
     }
 
     public int getMaxRetention()
@@ -168,7 +118,11 @@ public class Metric
     {
         if( retentionPolicies != null )
         {
-            return retentionPolicies.stream().reduce( ( a, b ) -> RetentionPolicy.higherPrecision( a, b ) );
+            RetentionPolicy highest = null;
+            for (RetentionPolicy retentionPolicy : retentionPolicies) {
+                highest = RetentionPolicy.higherPrecision(highest, retentionPolicy);
+            }
+            return Optional.ofNullable(highest);
         }
         else
         {
@@ -181,7 +135,7 @@ public class Metric
         if( retentionPolicies != null )
         {
             return retentionPolicies.stream().filter( p -> p.includes( from, now ) && p.includes( until, now ) )
-                            .reduce( ( a, b ) -> RetentionPolicy.higherPrecision( a, b ) );
+                            .reduce(RetentionPolicy::higherPrecision);
         }
         else
         {
@@ -204,7 +158,7 @@ public class Metric
     public boolean isLeaf() // identifies nodes that can have data points attached.
     {
         // number of children is not reliable - nonLeaf node can have 0 children after DELETE operation.
-        return retentionPolicies != null && retentionPolicies.size() > 0;
+        return retentionPolicies != null && !retentionPolicies.isEmpty();
         // another option to determine node that can have data points is to test for non-zero id. But long term we might change.
     }
 
@@ -213,13 +167,10 @@ public class Metric
     {
         if ( this == o )
             return true;
-        if ( !( o instanceof Metric ) )
+        if ( !(o instanceof Metric metric) )
             return false;
 
-        Metric metric = (Metric) o;
-
         return name.equals( metric.name );
-
     }
 
     @Override

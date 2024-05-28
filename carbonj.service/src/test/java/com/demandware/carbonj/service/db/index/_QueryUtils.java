@@ -29,7 +29,7 @@ public class _QueryUtils
         List<String> entries = Arrays.asList("abc-AAA_stg-xyz", "abc-AAA_mmm-xyz", "abc-AAA_prd-xyz", "abc-AAA_tst-xyz" );
         List<String> expected = Arrays.asList("abc-AAA_stg-xyz", "abc-AAA_prd-xyz", "abc-AAA_tst-xyz");
 
-        String[] patterns = QueryUtils.splitQuery(query);
-        assertEquals(expected, QueryUtils.filter( entries, patterns[0] ));
+        QueryPart[] patterns = QueryUtils.splitQuery(query);
+        assertEquals(expected, QueryUtils.filter( entries, patterns[0], null));
     }
 }

@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 
 import com.demandware.carbonj.service.db.model.IntervalValues;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 
 /**
  * Takes sorted staging file and generates aggregated data points for appropriate archive (database).
@@ -26,10 +25,10 @@ class IntervalProcessors
     private static final Logger log = LoggerFactory.getLogger( IntervalProcessors.class );
 
     private final MetricRegistry metricRegistry;
-    private IntervalProcessorTaskFactory taskFactory;
+    private final IntervalProcessorTaskFactory taskFactory;
     private final int emptyQueuePauseInMillis;
 
-    private ConcurrentMap<String, IntervalProcessor> map = new ConcurrentHashMap<>(  );
+    private final ConcurrentMap<String, IntervalProcessor> map = new ConcurrentHashMap<>();
 
     final private int batchSizePerTask;
     final private int queueSizePerDb;
@@ -49,7 +48,7 @@ class IntervalProcessors
     // synchronized to make sure that we don't end up with more than one running processor for the same dbName
     private synchronized IntervalProcessor intervalProcessorForDbName(String dbName)
     {
-        return map.computeIfAbsent( dbName, key -> startNewIntervalProcessor( key ) );
+        return map.computeIfAbsent( dbName, this::startNewIntervalProcessor);
     }
 
     private IntervalProcessor startNewIntervalProcessor(String dbName)
@@ -62,7 +61,7 @@ class IntervalProcessors
 
     public void shutdown()
     {
-        map.values().forEach( v -> v.close() );
+        map.values().forEach(IntervalProcessor::close);
     }
 
     public Stats processFile(SortedStagingFile stagingFile)
@@ -90,7 +89,7 @@ class IntervalProcessors
                     continue;
                 }
 
-                if( !ons.isPresent() ) // eof
+                if(ons.isEmpty()) // eof
                 {
                     break;
                 }
@@ -111,8 +110,7 @@ class IntervalProcessors
             log.error( "Unhandled error when processing staging file: [" + stagingFile + "]", t );
             // Don't attempt processing the rest of the files.
             // Recoverable errors at individual metric level should not be propagated to this level.
-            Throwables.propagate( t );
-            return null;
+            throw new RuntimeException(t);
         }
         finally
         {
@@ -120,7 +118,7 @@ class IntervalProcessors
         }
     }
 
-    static class Stats {
+    public static class Stats {
         int nLines;
         int nRecords;
         long time;

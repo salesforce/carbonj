@@ -6,7 +6,7 @@
  */
 package com.demandware.carbonj.service.db.points;
 
-class StagingFileRecord
+public class StagingFileRecord
 {
     public final StagingFileSet fileName;
     public final long metricId;
@@ -35,7 +35,7 @@ class StagingFileRecord
 
     double val()
     {
-        return Double.valueOf( strValue );
+        return Double.parseDouble( strValue );
     }
 
     @Override
