@@ -50,36 +50,28 @@ do
 
 	device=$( echo $stat | awk '{print $1}' )
 
-	r_iops=$( echo $stat | awk '{print $4}' )
+	r_iops=$( echo $stat | awk '{print $2}' )
 	message="$prefix.$device.read.iops $r_iops $time"
 	BLOB="$BLOB\n$message"
 
-	w_iops=$( echo $stat | awk '{print $5}' )
-	message="$prefix.$device.write.iops $w_iops $time"
-	BLOB="$BLOB\n$message"
-
-	r_kB=$( echo $stat | awk '{print $6}' )
+	r_kB=$( echo $stat | awk '{print $3}' )
 	message="$prefix.$device.read.kB $r_kB $time"
 	BLOB="$BLOB\n$message"
 
-	w_kB=$( echo $stat | awk '{print $7}' )
-	message="$prefix.$device.write.kB $w_kB $time"
-	BLOB="$BLOB\n$message"
-
-	await=$( echo $stat | awk '{print $10}' )
-	message="$prefix.$device.await $await $time"
-	BLOB="$BLOB\n$message"
-
-	r_await=$( echo $stat | awk '{print $11}' )
+	r_await=$( echo $stat | awk '{print $6}' )
 	message="$prefix.$device.read.await $r_await $time"
+	BLOB="$BLOB\n$message"
+
+	w_iops=$( echo $stat | awk '{print $8}' )
+	message="$prefix.$device.write.iops $w_iops $time"
+	BLOB="$BLOB\n$message"
+
+	w_kB=$( echo $stat | awk '{print $9}' )
+	message="$prefix.$device.write.kB $w_kB $time"
 	BLOB="$BLOB\n$message"
 
 	w_await=$( echo $stat | awk '{print $12}' )
 	message="$prefix.$device.write.await $w_await $time"
-	BLOB="$BLOB\n$message"
-
-	svc=$( echo $stat | awk '{print $13}' )
-	message="$prefix.$device.svc $svc $time"
 	BLOB="$BLOB\n$message"
 
 done
