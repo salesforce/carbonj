@@ -126,6 +126,15 @@ echo $JAVA_OPTS $JAVA_OPTS_OVERRIDE
 
 env >> /etc/environment
 
+# Confirm iostat version to ensure iolog.sh executes successfully
+version=$(iostat -V | grep -oP 'sysstat version \K[\d.]+')
+if [ "$version" = "12.5.4" ]; then
+    echo "sysstat version is 12.5.4"
+else
+    echo "Unexpected sysstat version $version.  Expected 12.5.4. Confirm iostat output is compatible with /app/bin/iolog.sh"
+    exit 1
+fi
+
 # no logs on disk
 crontab -l | { cat; echo "* */6 * * * /app/bin/logCleanup.sh ${SERVICEDIR}/log/ 7 >/dev/null 2>&1"; } | crontab -
 crontab -l | { cat; echo "*/1 * * * * /app/bin/fdlog.sh"; } | crontab -
