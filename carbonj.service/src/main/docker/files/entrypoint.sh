@@ -128,10 +128,10 @@ env >> /etc/environment
 
 # Confirm iostat version to ensure iolog.sh executes successfully
 version=$(iostat -V | grep -oP 'sysstat version \K[\d.]+')
-if [ "$version" = "12.5.4" ]; then
-    echo "sysstat version is 12.5.4"
+if [ "$version" = "12.5.5" ]; then
+    echo "sysstat version is 12.5.5"
 else
-    echo "Unexpected sysstat version $version.  Expected 12.5.4. Confirm iostat output is compatible with /app/bin/iolog.sh"
+    echo "Unexpected sysstat version $version.  Expected 12.5.5. Confirm iostat output is compatible with /app/bin/iolog.sh"
     exit 1
 fi
 
