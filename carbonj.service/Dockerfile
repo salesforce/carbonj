@@ -20,6 +20,9 @@ RUN yum update -y && \
   yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
   yum install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/pcp-conf-6.2.1-1.el9.x86_64.rpm && \
   yum install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/pcp-libs-6.2.1-1.el9.x86_64.rpm  && \
+  #
+  # If sysstat version is updated, confirm iolog.sh execution and update associated version check in entrypoint.sh
+  #
   yum install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/sysstat-12.5.4-7.el9.x86_64.rpm && \
   yum install -y https://repo.almalinux.org/almalinux/9/extras/x86_64/os/Packages/epel-release-9-5.el9.noarch.rpm && \
   yum install -y https://dl.fedoraproject.org/pub/epel/9/Everything/x86_64/Packages/p/perl-URI-Encode-1.1.1-17.el9.noarch.rpm && \
