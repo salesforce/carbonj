@@ -40,6 +40,8 @@ public class CacheStatsReporter implements StatsAware
         this.cache = cache;
         this.statsSnapshot = cache != null ? cache.stats() : null;
 
+        log.info("Create CacheStatsReporter {} with max size {} with cache object {}", name, maxSize, cache);
+
         register( "maxSize", ( ) -> this.maxSize );
         register( "size", () -> cache != null ? this.cache.size() : 0);
         if( statsSnapshot != null )
@@ -84,6 +86,6 @@ public class CacheStatsReporter implements StatsAware
 
     public void close()
     {
-        metricNames.forEach( m ->  metricRegistry.remove(m));
+        metricNames.forEach(metricRegistry::remove);
     }
 }
