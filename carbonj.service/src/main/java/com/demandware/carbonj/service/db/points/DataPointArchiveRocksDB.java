@@ -563,7 +563,7 @@ class DataPointArchiveRocksDB
                 log.info("Rocks DB {} opened in secondary mode", dbName);
                 scheduledExecutorService.scheduleAtFixedRate(
                         new SyncPrimaryDbTask(db, dbDir, catchUpTimer, catchUpTimerError, rocksdbConfig.catchupRetry),
-                        60, 60, TimeUnit.SECONDS);
+                        60, dbName.startsWith("60s") ? 60 : 60 * 30, TimeUnit.SECONDS);
             } else {
                 db = TtlDB.open(options, dbDir.getAbsolutePath(), ttl, false);
                 writeOptions.setDisableWAL( rocksdbConfig.disableWAL );
