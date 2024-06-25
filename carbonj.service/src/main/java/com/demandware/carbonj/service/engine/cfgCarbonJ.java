@@ -450,13 +450,13 @@ public class cfgCarbonJ
         s.scheduleWithFixedDelay( () -> {
             if (a != null) a.dumpStats();
             if (pbl != null) pbl.dumpStats();
-            if (qbl != null) qbl.dumpStats(); // Check
+            if (qbl != null) qbl.dumpStats();
             if (pal != null) pal.dumpStats();
-            if (r != null) r.dumpStats(); // Check
+            if (r != null) r.dumpStats();
             if (auditLog != null) auditLog.dumpStats();
             if ( db != null ) db.dumpStats();
-            if (nettyServer != null) nettyServer.dumpStats(); // Check
-            if (strCache != null) strCache.dumpStats(); // Check
+            if (nettyServer != null) nettyServer.dumpStats();
+            if (strCache != null) strCache.dumpStats();
             if ( accu != null ) accu.dumpStats();
         }, 60, 60, TimeUnit.SECONDS );
         return null;
