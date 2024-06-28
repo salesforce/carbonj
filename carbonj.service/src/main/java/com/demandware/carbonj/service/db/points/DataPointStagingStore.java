@@ -183,12 +183,12 @@ public class DataPointStagingStore
                         received.getCount(), drop.getCount(), saved.getCount()));
     }
 
-    public void add( String dbName, int from, long metricId, double val )
+    public void add( String dbName, int from, long metricId, double val, String metricName )
     {
         received.mark();
 
         StagingFileSet stagingFile = stagingFileSetProvider.get( dbName, from );
-        StagingFileRecord r = new StagingFileRecord( stagingFile, metricId, DataPoint.strValue(val) );
+        StagingFileRecord r = new StagingFileRecord( stagingFile, metricId, DataPoint.strValue(val), metricName );
 
         if ( queue.offer( r ) ) //TODO: slow down instead of dropping?
         {
