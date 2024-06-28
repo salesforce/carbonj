@@ -141,17 +141,18 @@ public class StagingFiles
     private StagingFile reopen( StagingFileSet fs, int seq)
     {
         File f = new File( dir, fs.nameForUnsorted(fs.id, seq) );
+        Preconditions.checkState( f.exists() );
         return openStagingFile(f, fs.dbName);
     }
 
     private StagingFile open(StagingFileSet fs)
     {
         File f = new File( dir, fs.getNextUnsortedFileName( dir ) );
+        Preconditions.checkState( !f.exists() );
         return openStagingFile(f, fs.dbName);
     }
 
     private StagingFile openStagingFile(File f, String dbName) {
-        Preconditions.checkState( !f.exists() );
         StagingFile sf = new StagingFile(metricRegistry, f, sort, metricProvider, dbName);
         sf.open();
         return sf;
