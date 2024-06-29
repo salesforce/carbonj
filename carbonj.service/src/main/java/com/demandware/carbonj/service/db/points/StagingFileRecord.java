@@ -6,6 +6,8 @@
  */
 package com.demandware.carbonj.service.db.points;
 
+import com.demandware.carbonj.service.strings.StringsCache;
+
 public class StagingFileRecord
 {
     public final StagingFileSet fileName;
@@ -37,7 +39,7 @@ public class StagingFileRecord
             metricName = null;
         } else {
             strValue = line.substring(idStart, idEnd);
-            metricName = line.substring(idEnd + 1);
+            metricName = StringsCache.get(line.substring(idEnd + 1));
         }
     }
 
