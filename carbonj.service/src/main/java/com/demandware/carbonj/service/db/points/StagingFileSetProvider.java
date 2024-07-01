@@ -9,43 +9,34 @@ package com.demandware.carbonj.service.db.points;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
 public class StagingFileSetProvider
 {
-    private int cacheSize = 20; // 3 archive types, usually there will be only one (current) interval per archive.
-    private LoadingCache<String, StagingFileSet> cache = CacheBuilder.newBuilder()
+    private final int cacheSize = 300;
+
+    private final LoadingCache<String, StagingFileSet> cache = CacheBuilder.newBuilder()
                 .maximumSize( cacheSize )
                 .expireAfterWrite( 30,TimeUnit.MINUTES )
-                .build( new CacheLoader<String, StagingFileSet>()
-                    {
-                        @Override
-                        public StagingFileSet load( String key )
-                            throws Exception
-                        {
-                            return new StagingFileSet( key );
-                        }
-                    } );
+                .build(new CacheLoader<>() {
+                    @SuppressWarnings("NullableProblems")
+                    @Override
+                    public StagingFileSet load(String key) {
+                        return new StagingFileSet(key);
+                    }
+                } );
 
-
-    StagingFileSet get(String dbName, int from)
+    StagingFileSet get(String dbName, int from, int group)
     {
         try
         {
-            return cache.get( toId( dbName, from ) );
+            return cache.get(StagingFileSet.getId(dbName, from, group));
         }
         catch(ExecutionException e)
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException(e);
         }
-    }
-
-    //TODO: refactor - id formatting logic is in StagingFilesSet and here now.
-    private String toId(String dbName, int from)
-    {
-        return dbName + StagingFileSet.PARTS_DELIMITER + from;
     }
 }

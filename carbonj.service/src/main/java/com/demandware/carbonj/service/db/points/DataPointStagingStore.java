@@ -149,16 +149,9 @@ public class DataPointStagingStore
         log.info( "propagating points from staged files for db {}.", dbName );
         try
         {
-            List<SortedStagingFile> files = stagingFiles.collectEligibleFiles(dbName);
-            int count = 0;
-            for (SortedStagingFile file: files) {
-                executorCompletionService.submit(new IntervalProcessorTask(this, file));
-                count++;
-            }
+            List<Future<IntervalProcessors.Stats>> statsList = stagingFiles.collectEligibleFiles(dbName, this);
 
-            while (count > 0) {
-                Future<IntervalProcessors.Stats> result = executorCompletionService.take();
-                count--;
+            for (Future<IntervalProcessors.Stats> result : statsList) {
 
                 IntervalProcessors.Stats stats = result.get();
 
@@ -168,8 +161,9 @@ public class DataPointStagingStore
                         MetricRegistry.name("staging", "intervalprocessor", stats.dbName, "metrics", "raw")).inc(stats.nLines);
                 metricRegistry.counter(
                         MetricRegistry.name("staging", "intervalprocessor", stats.dbName, "metrics", "aggr")).inc(stats.nRecords);
+
+                log.info( String.format("finished propagating points from staged files. processed [%s] files.", stats.sortedStagingFile) );
             }
-            log.info( String.format("finished propagating points from staged files. processed [%s] files.", files.size()) );
         }
         catch(Throwable t)
         {
@@ -187,7 +181,7 @@ public class DataPointStagingStore
     {
         received.mark();
 
-        StagingFileSet stagingFile = stagingFileSetProvider.get( dbName, from );
+        StagingFileSet stagingFile = stagingFileSetProvider.get( dbName, from, (int) (metricId % 10));
         StagingFileRecord r = new StagingFileRecord( stagingFile, metricId, DataPoint.strValue(val), metricName );
 
         if ( queue.offer( r ) ) //TODO: slow down instead of dropping?
@@ -304,6 +298,9 @@ public class DataPointStagingStore
         this.intervalProcessors.shutdown();
     }
 
+    public Future<IntervalProcessors.Stats> submitIntervalProcessorTask(SortedStagingFile sortedFile) {
+        return this.executorCompletionService.submit(new IntervalProcessorTask(this, sortedFile));
+    }
 
     private static class IntervalProcessorTask implements Callable<IntervalProcessors.Stats> {
 

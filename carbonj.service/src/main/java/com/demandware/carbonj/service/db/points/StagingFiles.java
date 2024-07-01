@@ -11,6 +11,7 @@ import java.io.File;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.model.MetricProvider;
@@ -30,7 +31,7 @@ public class StagingFiles
     /**
      * Tracks current open files.
      */
-    private volatile ConcurrentMap<StagingFileSet, StagingFile> files = new ConcurrentHashMap<>();
+    private final ConcurrentMap<StagingFileSet, StagingFile> files = new ConcurrentHashMap<>();
 
     private final File dir;
 
@@ -109,9 +110,9 @@ public class StagingFiles
         }
     }
 
-    public List<SortedStagingFile> collectEligibleFiles(String dbName)
+    public List<Future<IntervalProcessors.Stats>> collectEligibleFiles(String dbName, DataPointStagingStore dataPointStagingStore)
     {
-        return fileSetCollector.collectEligibleFiles(files, dbName);
+        return fileSetCollector.collectEligibleFiles(files, dbName, dataPointStagingStore);
     }
 
     public void write(StagingFileRecord r)
