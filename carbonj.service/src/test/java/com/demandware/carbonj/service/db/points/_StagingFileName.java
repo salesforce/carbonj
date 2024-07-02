@@ -90,7 +90,9 @@ public class _StagingFileName extends BaseTest
     public void canBuildFileId()
     {
         StagingFileSet fn = new StagingFileSet( "5m7d", 100000);
-        assertAttributes( fn, "5m7d-100000", "5m7d", 100000);
+        assertAttributes( fn, "5m7d-100000-2147483647", "5m7d", 100000);
+        fn = new StagingFileSet( "5m7d", 100000, 1);
+        assertAttributes( fn, "5m7d-100000-1", "5m7d", 100000);
     }
 
     private void assertAttributes( StagingFileSet fn, String fileId, String dbName, int from)

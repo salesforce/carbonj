@@ -116,6 +116,7 @@ public class SortedStagingFile
         }
 
         long metricId = r.metricId;
+        String metricName = r.metricName;
         List<Double> vals = new ArrayList<>();
 
         while ( true )
@@ -136,7 +137,12 @@ public class SortedStagingFile
             r = nextRecord();
         }
 
-        Metric m = metricProvider.forId( metricId );
+        Metric m;
+        if (metricName == null) {
+            m = metricProvider.forId(metricId);
+        } else {
+            m = metricProvider.forName(metricName);
+        }
         if( m == null )
         {
             throw new RuntimeException(String.format("Failed to find metric with metricId [%s].", metricId));

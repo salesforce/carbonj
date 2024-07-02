@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import com.google.common.base.Joiner;
-
 import com.demandware.carbonj.service.db.util.time.TimeSource;
 
 /**
@@ -58,6 +56,8 @@ public class StagingFileSet
      */
     final int from;
 
+    final int group;
+
     final private int hashCode;
 
     private int collectWhenUnmodifiedFor = 600;
@@ -66,31 +66,35 @@ public class StagingFileSet
 
     StagingFileSet(File stagingFile)
     {
-        String stagingFileName = stagingFile.getName();
-        this.id = stagingFileName.substring( 0, stagingFileName.indexOf( '.' ));
-
-        int delPos = id.indexOf( PARTS_DELIMITER );
-        dbName = id.substring( 0, id.indexOf( PARTS_DELIMITER ) );
-        from = Integer.parseInt( id.substring( delPos + 1 ) );
-        this.hashCode = calcHashCode();
+        this(stagingFile.getName().substring(0, stagingFile.getName().indexOf( '.' )));
     }
 
     public StagingFileSet( String id )
     {
         this.id = id;
-        int delPos = id.indexOf( PARTS_DELIMITER );
-        dbName = id.substring( 0, id.indexOf( PARTS_DELIMITER ) );
+        String[] elements = id.split(PARTS_DELIMITER);
+        dbName = elements[0];
+        from = Integer.parseInt(elements[1]);
+        group = elements.length > 2 ? Integer.parseInt(elements[2]) : Integer.MAX_VALUE;
         this.collectWhenUnmodifiedFor = getCollectionIntervalSeconds( dbName );
-        from = Integer.parseInt( id.substring( delPos + 1 ) );
         this.hashCode = calcHashCode();
     }
-    public StagingFileSet( String dbName, int from)
-    {
-        this.id = Joiner.on( PARTS_DELIMITER ).join( dbName, from );
+
+    public StagingFileSet( String dbName, int from) {
+        this(dbName, from, Integer.MAX_VALUE);
+    }
+
+    public StagingFileSet( String dbName, int from, int group) {
+        this.id = getId(dbName, from, group);
         this.dbName = dbName;
         this.from = from;
+        this.group = group;
         this.collectWhenUnmodifiedFor = getCollectionIntervalSeconds( dbName );
         this.hashCode = calcHashCode();
+    }
+
+    public static String getId(String dbName, int from, int group) {
+        return dbName + PARTS_DELIMITER + from + PARTS_DELIMITER + group;
     }
 
     private int getCollectionIntervalSeconds(String dbName)
@@ -160,19 +164,16 @@ public class StagingFileSet
     private Optional<Integer> extractSequence( Path path, String fileId, boolean sorted)
     {
         String name = path.getFileName().toString();
+        int dot = name.indexOf( '.' );
 
         // ignore unrelated file
-        if( !name.startsWith( fileId ) )
+        if (dot <= 0 || !name.substring(0, dot).equals( fileId ))
         {
             return Optional.empty();
         }
 
         // "<file-id>.<seq>" for unsorted files or "<file-id>.<seq>.s" for sorted files
-        int seqStart = name.indexOf( '.' ) + 1;
-        if( seqStart < 2 )
-        {
-            return Optional.empty();
-        }
+        int seqStart = dot + 1;
         String seq;
         if( sorted )
         {

@@ -12,6 +12,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Future;
 
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -27,9 +28,10 @@ public class StagingFileSetCollector
         this.dir = Preconditions.checkNotNull( dir );
     }
 
-    synchronized public List<SortedStagingFile> collectEligibleFiles(Map<StagingFileSet, StagingFile> files, String dbName)
+    synchronized public List<Future<IntervalProcessors.Stats>> collectEligibleFiles(
+            Map<StagingFileSet, StagingFile> files, String dbName, DataPointStagingStore dataPointStagingStore)
     {
-        List<SortedStagingFile> sortedFiles = new ArrayList<>();
+        List<Future<IntervalProcessors.Stats>> stats = new ArrayList<>();
         List<StagingFileSet> names = new ArrayList<>( files.keySet().stream().filter(fs -> fs.dbName.equals(dbName)).toList() );
         names.sort(Comparator.comparingInt(o -> o.from));
 
@@ -37,17 +39,16 @@ public class StagingFileSetCollector
                 .filter( fs -> fs.needsCollection( files.get( fs ).lastModified() ) )
                 .forEach( fs ->
                                 {
-                                    log.debug( "processing staging file: [" + fs + "]" );
+                                    log.info( "processing staging file: [" + fs + "]" );
                                     StagingFile f = files.remove( fs );
                                     f.close();
                                     Optional<String> lastSorted = fs.getLastSortedFileName( dir );
                                     log.debug( "sorting ..." );
                                     SortedStagingFile sortedFile = f.sort(lastSorted, dbName);
                                     log.debug("sorted file: [" + sortedFile + "]");
-                                    sortedFiles.add( sortedFile );
+                                    stats.add(dataPointStagingStore.submitIntervalProcessorTask(sortedFile));
                                 }
                 );
-        log.debug("sorted files: [" + sortedFiles + "]");
-        return sortedFiles;
+        return stats;
     }
 }

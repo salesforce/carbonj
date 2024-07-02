@@ -380,7 +380,7 @@ class DataPointStoreImpl
         // from also identifies interval in nextArchive for this data point
         int from = nextPolicy.interval( ts );
         if (stagingStore != null) {
-            stagingStore.add(dbName, from, metric.id, val);
+            stagingStore.add(dbName, from, metric.id, val, metric.name);
         }
     }
 

@@ -11,6 +11,7 @@ import java.io.File;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.model.MetricProvider;
@@ -30,7 +31,7 @@ public class StagingFiles
     /**
      * Tracks current open files.
      */
-    private volatile ConcurrentMap<StagingFileSet, StagingFile> files = new ConcurrentHashMap<>();
+    private final ConcurrentMap<StagingFileSet, StagingFile> files = new ConcurrentHashMap<>();
 
     private final File dir;
 
@@ -109,9 +110,9 @@ public class StagingFiles
         }
     }
 
-    public List<SortedStagingFile> collectEligibleFiles(String dbName)
+    public List<Future<IntervalProcessors.Stats>> collectEligibleFiles(String dbName, DataPointStagingStore dataPointStagingStore)
     {
-        return fileSetCollector.collectEligibleFiles(files, dbName);
+        return fileSetCollector.collectEligibleFiles(files, dbName, dataPointStagingStore);
     }
 
     public void write(StagingFileRecord r)
@@ -142,16 +143,18 @@ public class StagingFiles
     {
         File f = new File( dir, fs.nameForUnsorted(fs.id, seq) );
         Preconditions.checkState( f.exists() );
-        StagingFile sf = new StagingFile(metricRegistry, f, sort, metricProvider, fs.dbName);
-        sf.open();
-        return sf;
+        return openStagingFile(f, fs.dbName);
     }
 
     private StagingFile open(StagingFileSet fs)
     {
         File f = new File( dir, fs.getNextUnsortedFileName( dir ) );
         Preconditions.checkState( !f.exists() );
-        StagingFile sf = new StagingFile(metricRegistry, f, sort, metricProvider, fs.dbName);
+        return openStagingFile(f, fs.dbName);
+    }
+
+    private StagingFile openStagingFile(File f, String dbName) {
+        StagingFile sf = new StagingFile(metricRegistry, f, sort, metricProvider, dbName);
         sf.open();
         return sf;
     }

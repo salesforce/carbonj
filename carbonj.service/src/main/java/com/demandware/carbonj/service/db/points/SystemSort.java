@@ -32,7 +32,7 @@ class SystemSort implements StagingFilesSort
 
     private final long timeoutInSeconds;
 
-    private long bufSizeKb = 256000;
+    private long bufSizeKb = 1048576; // 1GiB
     private String tmpDir = "/tmp";
     private int parallel = 2;
 
