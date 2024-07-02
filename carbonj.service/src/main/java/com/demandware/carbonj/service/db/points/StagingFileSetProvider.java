@@ -15,7 +15,7 @@ import com.google.common.cache.LoadingCache;
 
 public class StagingFileSetProvider
 {
-    private final int cacheSize = 300;
+    private final int cacheSize = 1000;
 
     private final LoadingCache<String, StagingFileSet> cache = CacheBuilder.newBuilder()
                 .maximumSize( cacheSize )
