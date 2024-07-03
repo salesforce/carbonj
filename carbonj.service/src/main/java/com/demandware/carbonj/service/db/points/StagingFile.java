@@ -87,6 +87,8 @@ public class StagingFile implements Closeable
             bw.append( String.valueOf( r.metricId ) );
             bw.write( " " );
             bw.write( r.strValue );
+            bw.write( " " );
+            bw.write( r.metricName );
             bw.write( "\n");
             return true;
         }

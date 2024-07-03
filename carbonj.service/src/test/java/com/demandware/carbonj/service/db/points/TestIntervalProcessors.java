@@ -68,5 +68,13 @@ public class TestIntervalProcessors extends BaseTest {
                     Collections.emptyList(),
                     Collections.emptyList());
         }
+
+        @Override
+        public Metric forName(String metricName) {
+            return new Metric(metricName, 1,
+                    new AggregationPolicy(AggregationMethod.AVG, 1, null),
+                    Collections.emptyList(),
+                    Collections.emptyList());
+        }
     }
 }
