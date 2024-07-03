@@ -426,6 +426,12 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
     }
 
     @Override
+    public Metric forName( String metricName )
+    {
+        return getMetric( metricName );
+    }
+
+    @Override
     public void dumpStats()
     {
         Snapshot snapshot = insertNewMetricIdTimer.getSnapshot();
