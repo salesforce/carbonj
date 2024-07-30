@@ -35,6 +35,7 @@ RUN yum update -y && \
   pip3 install aiohttp && \
   chkconfig crond on && \
   systemctl enable crond.service && \
+  echo "carbonj" > /etc/cron.allow && \
   mkdir -p /app/bin/ && \
   wget https://github.com/krallin/tini/releases/download/v0.18.0/tini && \
   mv tini /sbin/tini && \
