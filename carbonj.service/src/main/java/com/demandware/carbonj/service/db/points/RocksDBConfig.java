@@ -25,8 +25,8 @@ public class RocksDBConfig
     @Value( "${rocksdb.targetFileSizeMultiplier:10}")
     int targetFileSizeMultiplier = 10;
 
-    @Value( "${rocksdb.levelZeroFileNumCompactionTrigger:4}")
-    int levelZeroFileNumCompactionTrigger = 4;
+    @Value( "${rocksdb.levelZeroFileNumCompactionTrigger:1}")
+    int levelZeroFileNumCompactionTrigger = 1;
 
     @Value( "${rocksdb.levelZeroSlowDownWriteTrigger:8}")
     int levelZeroSlowDownWritesTrigger = 8;
@@ -90,6 +90,9 @@ public class RocksDBConfig
 
     @Value("${rocksdb.object.cleaner.queue.size:100000}")
     int objectCleanerQueueSize = 100000;
+
+    @Value("${rocksdb.keepLogFileNum:10}")
+    int keepLogFileNum = 10;
 
     @Override
     public String toString()

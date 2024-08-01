@@ -97,7 +97,9 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
         TtlDB.loadLibrary();
 
-        Options options = new Options().setCompressionType( CompressionType.SNAPPY_COMPRESSION );
+        Options options = new Options()
+                .setCompressionType(CompressionType.SNAPPY_COMPRESSION)
+                .setKeepLogFileNum(10);
         BlockBasedTableConfig cfg = new BlockBasedTableConfig();
         // TODO: For backward compatibility, should move to latest 6 later
         cfg.setFormatVersion(5);

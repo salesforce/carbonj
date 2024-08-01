@@ -502,7 +502,9 @@ class DataPointArchiveRocksDB
     {
         log.info( "Opening rocksdb '" + dbName + "'. Config options: " + rocksdbConfig );
 
-        Options options = new Options().setMaxOpenFiles( -1 );
+        Options options = new Options()
+                .setMaxOpenFiles(-1)
+                .setKeepLogFileNum(rocksdbConfig.keepLogFileNum);
         BlockBasedTableConfig cfg = new BlockBasedTableConfig();
         // TODO: For backward compatibility, should move to latest 6 later
         cfg.setFormatVersion(5);
@@ -522,7 +524,6 @@ class DataPointArchiveRocksDB
                     // also check OS config will support this setting
                     .setIncreaseParallelism(rocksdbConfig.increaseParallelism)
                     .setMaxBackgroundJobs(rocksdbConfig.maxBackgroundCompactions + rocksdbConfig.maxBackgroundFlushes)
-                    // .setArenaBlockSize( )
                     .setMaxWriteBufferNumber(rocksdbConfig.maxWriteBufferNumber)
                     .setWriteBufferSize(rocksdbConfig.writeBufferSize)
                     .setTargetFileSizeBase(rocksdbConfig.targetFileSizeBase)
@@ -530,9 +531,10 @@ class DataPointArchiveRocksDB
                     .setNumLevels(rocksdbConfig.numLevels)
                     .setMaxBytesForLevelBase(rocksdbConfig.maxBytesForLevelBase)
                     .setMaxBytesForLevelMultiplier(rocksdbConfig.maxBytesForLevelMultiplier)
-                    .setLevelZeroFileNumCompactionTrigger(rocksdbConfig.levelZeroFileNumCompactionTrigger)
-                    .setLevelZeroSlowdownWritesTrigger(rocksdbConfig.levelZeroSlowDownWritesTrigger)
-                    .setLevelZeroStopWritesTrigger(rocksdbConfig.levelZeroStopWritesTrigger).setEnv(env)
+                    .setLevel0FileNumCompactionTrigger(rocksdbConfig.levelZeroFileNumCompactionTrigger)
+                    .setLevel0SlowdownWritesTrigger(rocksdbConfig.levelZeroSlowDownWritesTrigger)
+                    .setLevel0StopWritesTrigger(rocksdbConfig.levelZeroStopWritesTrigger)
+                    .setEnv(env)
                     .setMinWriteBufferNumberToMerge(rocksdbConfig.minWriteBufferNumberToMerge)
                     .optimizeLevelStyleCompaction()
                     .setCompactionPriority(CompactionPriority.MinOverlappingRatio)
