@@ -156,7 +156,7 @@ class DataPointArchiveRocksDB
         }
         catch ( Throwable t )
         {
-            Throwables.throwIfUnchecked(t);
+            throw new RuntimeException(t);
         }
 
     }
@@ -334,10 +334,10 @@ class DataPointArchiveRocksDB
                 }
             }
             int batchSize = batch.count();
-            final Timer.Context timerContext = batchWriteTimer.time();
-            db.write(writeOptions, batch);
-            savedRecordsMeter.mark( batchSize );
-            timerContext.stop();
+            try (Timer.Context ignored = batchWriteTimer.time()) {
+                db.write(writeOptions, batch);
+                savedRecordsMeter.mark(batchSize);
+            }
             return batchSize;
         }
         catch ( RocksDBException e )
@@ -502,7 +502,13 @@ class DataPointArchiveRocksDB
     {
         log.info( "Opening rocksdb '" + dbName + "'. Config options: " + rocksdbConfig );
 
-        Options options = new Options().setMaxOpenFiles( -1 );
+        Options options = new Options()
+                .setMaxOpenFiles(-1)
+                .setKeepLogFileNum(rocksdbConfig.keepLogFileNum);
+        BlockBasedTableConfig cfg = new BlockBasedTableConfig();
+        // TODO: For backward compatibility, should move to latest 6 later
+        cfg.setFormatVersion(5);
+
         if (rocksdbConfig.readOnly) {
             options.setCreateIfMissing(false);
         } else {
@@ -513,21 +519,22 @@ class DataPointArchiveRocksDB
 
             options
                     .setCreateIfMissing(true)
+                    .setCreateMissingColumnFamilies(true)
+                    .setAllowConcurrentMemtableWrite(true)
                     // also check OS config will support this setting
                     .setIncreaseParallelism(rocksdbConfig.increaseParallelism)
-                    .setMaxBackgroundCompactions(rocksdbConfig.maxBackgroundCompactions)
-                    .setMaxBackgroundFlushes(rocksdbConfig.maxBackgroundFlushes)
-                    // .setTableFormatConfig( cfg )
-                    // .setArenaBlockSize( )
+                    .setMaxBackgroundJobs(rocksdbConfig.maxBackgroundCompactions + rocksdbConfig.maxBackgroundFlushes)
                     .setMaxWriteBufferNumber(rocksdbConfig.maxWriteBufferNumber)
                     .setWriteBufferSize(rocksdbConfig.writeBufferSize)
                     .setTargetFileSizeBase(rocksdbConfig.targetFileSizeBase)
                     .setTargetFileSizeMultiplier(rocksdbConfig.targetFileSizeMultiplier)
-                    .setNumLevels(rocksdbConfig.numLevels).setMaxBytesForLevelBase(rocksdbConfig.maxBytesForLevelBase)
+                    .setNumLevels(rocksdbConfig.numLevels)
+                    .setMaxBytesForLevelBase(rocksdbConfig.maxBytesForLevelBase)
                     .setMaxBytesForLevelMultiplier(rocksdbConfig.maxBytesForLevelMultiplier)
-                    .setLevelZeroFileNumCompactionTrigger(rocksdbConfig.levelZeroFileNumCompactionTrigger)
-                    .setLevelZeroSlowdownWritesTrigger(rocksdbConfig.levelZeroSlowDownWritesTrigger)
-                    .setLevelZeroStopWritesTrigger(rocksdbConfig.levelZeroStopWritesTrigger).setEnv(env)
+                    .setLevel0FileNumCompactionTrigger(rocksdbConfig.levelZeroFileNumCompactionTrigger)
+                    .setLevel0SlowdownWritesTrigger(rocksdbConfig.levelZeroSlowDownWritesTrigger)
+                    .setLevel0StopWritesTrigger(rocksdbConfig.levelZeroStopWritesTrigger)
+                    .setEnv(env)
                     .setMinWriteBufferNumberToMerge(rocksdbConfig.minWriteBufferNumberToMerge)
                     .optimizeLevelStyleCompaction()
                     .setCompactionPriority(CompactionPriority.MinOverlappingRatio)
@@ -539,7 +546,6 @@ class DataPointArchiveRocksDB
             }
 
             if (rocksdbConfig.useBlockBasedTableConfig) {
-                BlockBasedTableConfig cfg = new BlockBasedTableConfig();
                 if (rocksdbConfig.useBloomFilter) {
                     BloomFilter filter = new BloomFilter(10);
                     cfg.setFilterPolicy(filter);
@@ -548,10 +554,9 @@ class DataPointArchiveRocksDB
                 cfg.setBlockSize(rocksdbConfig.blockSize);
                 cfg.setCacheIndexAndFilterBlocks(true);
                 cfg.setPinL0FilterAndIndexBlocksInCache(true);
-
-                options.setTableFormatConfig(cfg);
             }
         }
+        options.setTableFormatConfig(cfg);
 
         readOptions = new ReadOptions();
         writeOptions = new WriteOptions();

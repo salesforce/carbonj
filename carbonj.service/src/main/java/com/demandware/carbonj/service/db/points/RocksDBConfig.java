@@ -91,6 +91,9 @@ public class RocksDBConfig
     @Value("${rocksdb.object.cleaner.queue.size:100000}")
     int objectCleanerQueueSize = 100000;
 
+    @Value("${rocksdb.keepLogFileNum:10}")
+    int keepLogFileNum = 10;
+
     @Override
     public String toString()
     {

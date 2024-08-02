@@ -14,6 +14,7 @@ import com.demandware.carbonj.service.db.util.MetricUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.primitives.SignedBytes;
+import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.CompressionType;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
@@ -96,13 +97,19 @@ class IndexStoreRocksDB<K, R extends Record<K>>
 
         TtlDB.loadLibrary();
 
-        Options options = new Options().setCompressionType( CompressionType.SNAPPY_COMPRESSION );
+        Options options = new Options()
+                .setCompressionType(CompressionType.SNAPPY_COMPRESSION)
+                .setKeepLogFileNum(10);
+        BlockBasedTableConfig cfg = new BlockBasedTableConfig();
+        // TODO: For backward compatibility, should move to latest 6 later
+        cfg.setFormatVersion(5);
 
         try
         {
             if (rocksdbReadonly) {
-                options.setCreateIfMissing(false);
-                options.setMaxOpenFiles(-1);
+                options.setCreateIfMissing(false)
+                        .setMaxOpenFiles(-1)
+                        .setTableFormatConfig(cfg);
                 this.db = RocksDB.openAsSecondary(options, dbDir.getAbsolutePath(), secondaryDbDir.getAbsolutePath());
                 log.info("RocksDB metric index store in [{}] opened in secondary mode", dbDir);
                 scheduledExecutorService.scheduleAtFixedRate(
@@ -110,7 +117,10 @@ class IndexStoreRocksDB<K, R extends Record<K>>
                                 "index-name".equals(dbName) ? applicationEventPublisher : null),
                         60, 60, TimeUnit.SECONDS);
             } else {
-                options.setCreateIfMissing(true);
+                options.setCreateIfMissing(true)
+                        .setCreateMissingColumnFamilies(true)
+                        .setAllowConcurrentMemtableWrite(true)
+                        .setTableFormatConfig(cfg);
                 this.db = RocksDB.open(options, dbDir.getAbsolutePath());
                 log.info("RocksDB metric index store in [{}] opened in normal mode", dbDir);
             }
