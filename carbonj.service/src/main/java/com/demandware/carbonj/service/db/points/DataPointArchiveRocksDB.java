@@ -511,6 +511,8 @@ class DataPointArchiveRocksDB
 
         if (rocksdbConfig.readOnly) {
             options.setCreateIfMissing(false);
+            cfg.setBlockCache(new LRUCache(1024 * 1024 * 1024));
+            cfg.setFilterPolicy(new BloomFilter(10));
         } else {
             // TODO: these are just baseline options to get started. Revisit as part of tuning.
             Env env = Env.getDefault();
@@ -559,6 +561,7 @@ class DataPointArchiveRocksDB
         options.setTableFormatConfig(cfg);
 
         readOptions = new ReadOptions();
+        readOptions.setReadaheadSize(2 * 1024 * 1024);
         writeOptions = new WriteOptions();
         int ttl = policy.retention;
         try
