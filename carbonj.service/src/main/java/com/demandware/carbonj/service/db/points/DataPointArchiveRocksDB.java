@@ -415,7 +415,10 @@ class DataPointArchiveRocksDB
         }
         finally
         {
-            dispose( iter );
+            if ( iter != null ) {
+                iter.close();
+            }
+//            dispose( iter );
             if (snapshot != null) {
                 snapshot.close();
             }
@@ -508,7 +511,7 @@ class DataPointArchiveRocksDB
             }
 
             if (snapshot != null) {
-                cleaner.execute(() -> dispose(snapshot));
+                snapshot.close();
             }
         }
 
