@@ -384,12 +384,12 @@ class DataPointArchiveRocksDB
     {
         List<DataPointValue> points = new ArrayList<>();
         RocksIterator iter = null;
-        ReadOptions readOptions = new ReadOptions();
-        readOptions.setReadaheadSize(2 * 1024 * 1024);
-        Snapshot snapshot = rocksdbConfig.readOnly ? db.getSnapshot() : null;
-        if (snapshot != null) {
-            readOptions.setSnapshot(snapshot);
-        }
+//        ReadOptions readOptions = new ReadOptions();
+//        readOptions.setReadaheadSize(2 * 1024 * 1024);
+//        Snapshot snapshot = rocksdbConfig.readOnly ? db.getSnapshot() : null;
+//        if (snapshot != null) {
+//            readOptions.setSnapshot(snapshot);
+//        }
 
         try
         {
@@ -415,13 +415,13 @@ class DataPointArchiveRocksDB
         }
         finally
         {
-            if ( iter != null ) {
-                iter.close();
-            }
-//            dispose( iter );
-            if (snapshot != null) {
-                snapshot.close();
-            }
+//            if ( iter != null ) {
+//                iter.close();
+//            }
+            dispose( iter );
+//            if (snapshot != null) {
+//                snapshot.close();
+//            }
         }
 
         return points;
@@ -447,12 +447,12 @@ class DataPointArchiveRocksDB
         // TODO: use array instead
         List<Double> points = new ArrayList<>();
         RocksIterator iter = null;
-        ReadOptions readOptions = new ReadOptions();
-        readOptions.setReadaheadSize(2 * 1024 * 1024);
-        Snapshot snapshot = rocksdbConfig.readOnly ? db.getSnapshot() : null;
-        if (snapshot != null) {
-            readOptions.setSnapshot(snapshot);
-        }
+//        ReadOptions readOptions = new ReadOptions();
+//        readOptions.setReadaheadSize(2 * 1024 * 1024);
+//        Snapshot snapshot = rocksdbConfig.readOnly ? db.getSnapshot() : null;
+//        if (snapshot != null) {
+//            readOptions.setSnapshot(snapshot);
+//        }
 
         try
         {
@@ -504,15 +504,15 @@ class DataPointArchiveRocksDB
 
             if ( iter != null )
             {
-//                final RocksIterator iterToDispose = iter;
-//                // contains global lock. Dispose in a separate thread to avoid contention.
-//                cleaner.execute(() -> dispose(iterToDispose));
-                iter.close();
+                final RocksIterator iterToDispose = iter;
+                // contains global lock. Dispose in a separate thread to avoid contention.
+                cleaner.execute(() -> dispose(iterToDispose));
+//                iter.close();
             }
 
-            if (snapshot != null) {
-                snapshot.close();
-            }
+//            if (snapshot != null) {
+//                snapshot.close();
+//            }
         }
 
         return points;
@@ -585,7 +585,7 @@ class DataPointArchiveRocksDB
         options.setTableFormatConfig(cfg);
 
         readOptions = new ReadOptions();
-        readOptions.setReadaheadSize(2 * 1024 * 1024);
+        readOptions.setReadaheadSize(32 * 1024 * 1024);
         writeOptions = new WriteOptions();
         int ttl = policy.retention;
         try
