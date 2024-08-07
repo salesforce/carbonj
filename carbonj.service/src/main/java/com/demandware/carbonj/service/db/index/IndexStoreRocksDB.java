@@ -15,9 +15,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.primitives.SignedBytes;
 import org.rocksdb.BlockBasedTableConfig;
-import org.rocksdb.BloomFilter;
 import org.rocksdb.CompressionType;
-import org.rocksdb.LRUCache;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
@@ -109,8 +107,6 @@ class IndexStoreRocksDB<K, R extends Record<K>>
         try
         {
             if (rocksdbReadonly) {
-                cfg.setBlockCache(new LRUCache(128 * 1024 * 1024));
-                cfg.setFilterPolicy(new BloomFilter(10));
                 options.setCreateIfMissing(false)
                         .setMaxOpenFiles(-1)
                         .setTableFormatConfig(cfg);

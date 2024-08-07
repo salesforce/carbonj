@@ -39,6 +39,7 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
 import org.rocksdb.RocksObject;
+import org.rocksdb.Snapshot;
 import org.rocksdb.TtlDB;
 import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
@@ -383,6 +384,13 @@ class DataPointArchiveRocksDB
     {
         List<DataPointValue> points = new ArrayList<>();
         RocksIterator iter = null;
+        ReadOptions readOptions = new ReadOptions();
+        readOptions.setReadaheadSize(2 * 1024 * 1024);
+        Snapshot snapshot = rocksdbConfig.readOnly ? db.getSnapshot() : null;
+        if (snapshot != null) {
+            readOptions.setSnapshot(snapshot);
+        }
+
         try
         {
             iter = db.newIterator( readOptions );
@@ -408,6 +416,9 @@ class DataPointArchiveRocksDB
         finally
         {
             dispose( iter );
+            if (snapshot != null) {
+                snapshot.close();
+            }
         }
 
         return points;
@@ -433,6 +444,13 @@ class DataPointArchiveRocksDB
         // TODO: use array instead
         List<Double> points = new ArrayList<>();
         RocksIterator iter = null;
+        ReadOptions readOptions = new ReadOptions();
+        readOptions.setReadaheadSize(2 * 1024 * 1024);
+        Snapshot snapshot = rocksdbConfig.readOnly ? db.getSnapshot() : null;
+        if (snapshot != null) {
+            readOptions.setSnapshot(snapshot);
+        }
+
         try
         {
             // TODO: just to get started. Revisit as part of tuning.
@@ -483,9 +501,14 @@ class DataPointArchiveRocksDB
 
             if ( iter != null )
             {
-                final RocksIterator iterToDispose = iter;
-                // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute(() -> dispose(iterToDispose));
+//                final RocksIterator iterToDispose = iter;
+//                // contains global lock. Dispose in a separate thread to avoid contention.
+//                cleaner.execute(() -> dispose(iterToDispose));
+                iter.close();
+            }
+
+            if (snapshot != null) {
+                cleaner.execute(() -> dispose(snapshot));
             }
         }
 
@@ -511,8 +534,6 @@ class DataPointArchiveRocksDB
 
         if (rocksdbConfig.readOnly) {
             options.setCreateIfMissing(false);
-            cfg.setBlockCache(new LRUCache(1024 * 1024 * 1024));
-            cfg.setFilterPolicy(new BloomFilter(10));
         } else {
             // TODO: these are just baseline options to get started. Revisit as part of tuning.
             Env env = Env.getDefault();
