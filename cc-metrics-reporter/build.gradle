@@ -27,7 +27,7 @@ repositories {
 
 dependencies {
     implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.23.1'
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '2.0.13'
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '2.0.15'
     implementation group: 'com.google.guava', name: 'guava', version: '33.2.1-jre'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.26'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.26'
