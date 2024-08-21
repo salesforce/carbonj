@@ -2,7 +2,6 @@ buildscript {
     repositories {
         mavenCentral()
         mavenLocal()
-        jcenter()
     }
     dependencies {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:${springbootVersion}")
@@ -53,19 +52,16 @@ subprojects {
     }
 
     dependencies {
-        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.17.2'
-        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.17.2'
-        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.17.2'
-        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: '2.17.2'
-        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: '2.17.2'
-        implementation group: 'com.google.re2j', name: 're2j', version: '1.7'
-        testImplementation group: 'org.powermock', name: 'powermock-module-javaagent', version: '2.0.9'
-        testImplementation group: 'org.jacoco', name: 'org.jacoco.agent', version: '0.8.12', classifier: 'runtime'
-        testImplementation group: 'org.powermock', name: 'powermock-core', version: '2.0.9'
-
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: "${jackson}"
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${jackson}"
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: "${jackson}"
+        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: "${jackson}"
+        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: "${jackson}"
+        implementation group: 'com.google.re2j', name: 're2j', version: "${re2j}"
+        testImplementation group: 'org.powermock', name: 'powermock-module-javaagent', version: "${powermock}"
+        testImplementation group: 'org.jacoco', name: 'org.jacoco.agent', version: "${jacoco}", classifier: 'runtime'
+        testImplementation group: 'org.powermock', name: 'powermock-core', version: "${powermock}"
         testImplementation("junit:junit")
 //        testImplementation("org.springframework.boot:spring-boot-starter-test")
     }
-
-
 }

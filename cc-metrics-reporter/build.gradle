@@ -1,13 +1,18 @@
 buildscript {
     repositories {
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
         mavenLocal()
         mavenCentral()
-        jcenter()
     }
     dependencies {
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
-        classpath 'net.researchgate:gradle-release:2.8.1'
     }
+}
+
+plugins {
+    id 'net.researchgate.release' version "${gradleRelease}"
 }
 
 apply plugin: 'java-library'
@@ -15,24 +20,21 @@ apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'maven-publish'
 apply plugin: 'maven-publish-auth'
-apply plugin: 'net.researchgate.release'
 apply plugin: 'distribution'
 
 repositories {
     mavenLocal()
     mavenCentral()
-    jcenter()
 }
 
-
 dependencies {
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.23.1'
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '2.0.16'
-    implementation group: 'com.google.guava', name: 'guava', version: '33.2.1-jre'
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.26'
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.26'
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.2.26'
-    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: "${log4j}"
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4j}"
+    implementation group: 'com.google.guava', name: 'guava', version: "${guava}"
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: "${metrics}"
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: "${metrics}"
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: "${metrics}"
+    testImplementation group: 'junit', name: 'junit', version: "${junit}"
 }
 
 release {

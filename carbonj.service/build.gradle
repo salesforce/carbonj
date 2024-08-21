@@ -3,22 +3,24 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 buildscript {
     repositories {
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
         mavenLocal()
         mavenCentral()
     }
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:${springbootVersion}"
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
-        classpath 'net.researchgate:gradle-release:2.8.1'
-        classpath 'com.netflix.nebula:gradle-ospackage-plugin:8.6.3'
     }
 }
 
 plugins {
     id "com.github.hierynomus.license"
     id 'maven-publish'
-    id 'net.researchgate.release'
     id 'org.springframework.boot'
+    id 'net.researchgate.release' version "${gradleRelease}"
+    id 'com.netflix.nebula.ospackage' version "${ospackage}"
 }
 
 license {
@@ -46,10 +48,7 @@ apply plugin: 'com.palantir.docker'
 apply plugin: 'org.sonarqube'
 apply plugin: 'maven-publish'
 apply plugin: 'maven-publish-auth'
-apply plugin: 'net.researchgate.release'
 apply plugin: 'distribution'
-apply plugin: 'nebula.rpm'
-
 
 ext {
     if (project.hasProperty('dockerRepo')) {
@@ -81,7 +80,6 @@ ext {
 repositories {
     mavenLocal()
     mavenCentral()
-    jcenter()
 }
 
 bootJar {
@@ -108,7 +106,7 @@ configurations {
 //    compile.exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
 }
 
-task rpm(type: Rpm) {
+ospackage {
 	packageName project.name
 	version "${project.hasProperty('versionSuffix') ? version + '_' + project.versionSuffix : version}"
     release "15"
@@ -160,8 +158,11 @@ distributions {
 afterReleaseBuild.dependsOn publish
 publish.dependsOn dockerPush
 publish.dependsOn build
-rpm.dependsOn bootJar
-publish.dependsOn rpm
+publish.dependsOn ospackage
+customDistTar.dependsOn bootJar
+customDistZip.dependsOn bootJar
+customDistTar.dependsOn jar
+customDistZip.dependsOn jar
 
 publishing {
     publications {
@@ -192,33 +193,32 @@ description = 'CarbonJ Service Implementation'
 dependencies {
     implementation project(':cc-metrics-reporter')
 //    compile group: 'com.sfcc.um', name: 'metrics_reporter', version:'0.0.2'
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.23.1'
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.23.1'
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-to-slf4j', version: '2.23.1'
-    implementation group: 'org.slf4j', name: 'slf4j-api'
-    implementation group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
-    implementation group: 'org.rocksdb', name: 'rocksdbjni', version: '9.4.0'
-    implementation group: 'com.google.code.gson', name: 'gson', version: '2.11.0'
-    implementation group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: '0.6.2'
-    implementation group: 'com.google.guava', name: 'guava', version: '33.2.1-jre'
-    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.16.0'
-    implementation group: 'commons-io', name: 'commons-io', version: '2.16.1'
-    implementation group: 'joda-time', name: 'joda-time', version: '2.12.7'
-    implementation group: 'io.netty', name: 'netty-all', version: '4.1.101.Final'
-    implementation group: 'net.razorvine', name: 'pickle', version: '1.5'
-    implementation group: 'org.python', name: 'jython-standalone', version: '2.7.3'
-    implementation group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.15.1'
-    implementation group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: '1.12.768'
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.26'
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.26'
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.2.26'
-    implementation group: 'org.msgpack', name: 'jackson-dataformat-msgpack', version: '0.9.8'
-    implementation 'jakarta.servlet:jakarta.servlet-api:6.1.0'
-    implementation 'org.eclipse.jetty:jetty-server'
-//    implementation 'org.mockito:mockito-core:4.11.0'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: "${log4j}"
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: "${log4j}"
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-to-slf4j', version: "${log4j}"
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4j}"
+    implementation group: 'javax.annotation', name: 'javax.annotation-api', version: "${annotationApi}"
+    implementation group: 'org.rocksdb', name: 'rocksdbjni', version: "${rocksdb}"
+    implementation group: 'com.google.code.gson', name: 'gson', version: "${gson}"
+    implementation group: 'com.google.code.externalsortinginjava', name: 'externalsortinginjava', version: "${externalsortinginjava}"
+    implementation group: 'com.google.guava', name: 'guava', version: "${guava}"
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: "${commonsLang3}"
+    implementation group: 'commons-io', name: 'commons-io', version: "${commonsIo}"
+    implementation group: 'joda-time', name: 'joda-time', version: "${jodaTime}"
+    implementation group: 'io.netty', name: 'netty-all', version: "${nettyAll}"
+    implementation group: 'net.razorvine', name: 'pickle', version: "${pickle}"
+    implementation group: 'org.python', name: 'jython-standalone', version: "${jythonStandalone}"
+    implementation group: 'com.amazonaws', name: 'amazon-kinesis-client', version: "${amazonKinesisClient}"
+    implementation group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: "${awsJavaSdkV1}"
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: "${metrics}"
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: "${metrics}"
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: "${metrics}"
+    implementation group: 'org.msgpack', name: 'jackson-dataformat-msgpack', version: "${msgpack}"
+    implementation "jakarta.servlet:jakarta.servlet-api:${servletApi}"
+    implementation "org.eclipse.jetty:jetty-server:${jettyServer}"
 
-    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
-    testImplementation group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
+    testImplementation group: 'junit', name: 'junit', version: "${junit}"
+    testImplementation group: 'org.hamcrest', name: 'hamcrest', version: "${hamcrest}"
 
     implementation (group:"org.springframework.boot", name:"spring-boot-starter-logging", version: "${springbootVersion}") {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
