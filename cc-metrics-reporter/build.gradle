@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
+        classpath "org.hibernate.build.gradle:gradle-maven-publish-auth:${mavenPublish}"
     }
 }
 
@@ -33,7 +33,7 @@ dependencies {
     implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: "${metrics}"
     implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: "${metrics}"
     implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: "${metrics}"
-    testImplementation group: 'junit', name: 'junit', version: "${junit}"
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: "${junit}"
 }
 
 release {
