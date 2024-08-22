@@ -48,7 +48,6 @@ apply plugin: 'com.palantir.docker'
 apply plugin: 'org.sonarqube'
 apply plugin: 'maven-publish'
 apply plugin: 'maven-publish-auth'
-apply plugin: 'distribution'
 
 ext {
     if (project.hasProperty('dockerRepo')) {
@@ -143,26 +142,10 @@ ospackage {
     }
 }
 
-distributions {
-    custom {
-//        baseName = project.name
-        contents {
-            from { 'build/libs' }
-            from { 'scripts/carbonj.sh' }
-            from { 'README.md' }
-        }
-    }
-}
-
 // for release automatically push released docker and mvn image to repo
 afterReleaseBuild.dependsOn publish
 publish.dependsOn dockerPush
 publish.dependsOn build
-publish.dependsOn ospackage
-customDistTar.dependsOn bootJar
-customDistZip.dependsOn bootJar
-customDistTar.dependsOn jar
-customDistZip.dependsOn jar
 
 publishing {
     publications {
