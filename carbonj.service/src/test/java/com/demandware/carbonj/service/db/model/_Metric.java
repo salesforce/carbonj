@@ -10,19 +10,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.demandware.carbonj.service.db.util.time.TimeSource;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class _Metric
 {
     int now;
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
         now = TimeSource.defaultTimeSource().getEpochSecond();
@@ -32,7 +30,7 @@ public class _Metric
     public void shouldReturnMaxRetentionIntervalWithZerosForNonLeafMetric()
     {
         Metric m = new Metric( "a.b", 1, null, new ArrayList<>(  ), Arrays.asList("ch1", "ch2") );
-        assertThat(m.getMaxRetentionInterval(now), equalTo(new Interval( 0, 0 )));
+        assertEquals(m.getMaxRetentionInterval(now), new Interval( 0, 0 ));
     }
 
     @Test
@@ -43,7 +41,6 @@ public class _Metric
         Interval interval = m.getMaxRetentionInterval(now);
 
         int expected = 2 * 365 * 24 * 60 * 60; // 2years in seconds.
-        assertThat(interval.end - interval.start, equalTo(expected));
-
+        assertEquals(interval.end - interval.start, expected);
     }
 }

@@ -8,7 +8,7 @@ package com.demandware.carbonj.service.engine;
 
 import com.demandware.carbonj.service.admin.CarbonjAdmin;
 import com.demandware.carbonj.service.db.model.MetricIndex;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public abstract class AbstractCarbonJ_StoreTest
@@ -26,7 +26,8 @@ public abstract class AbstractCarbonJ_StoreTest
 
     protected static final String DB_30M = "30m2y";
 
-    @Before public void before()
+    @BeforeEach
+    public void before()
     {
         dropData();
     }

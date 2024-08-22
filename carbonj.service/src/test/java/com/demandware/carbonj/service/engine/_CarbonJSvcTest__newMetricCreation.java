@@ -7,21 +7,24 @@
 package com.demandware.carbonj.service.engine;
 
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class _CarbonJSvcTest__newMetricCreation
                 extends AbstractCarbonJ_StoreTest
 {
-    @Test public void newMetricCreation()
+    @Test
+    public void newMetricCreation()
     {
-        Assert.assertFalse( cjClient.listMetrics( "*" ).contains( "test" ) );
+        assertFalse( cjClient.listMetrics( "*" ).contains( "test" ) );
 
         cjClient.send( "test", 1.0f, new DateTime() );
         drain();
 
-        _CarbonJSvcTest.assertEquals( Arrays.asList( "test" ), cjClient.listMetrics( "test" ) );
+        assertEquals(List.of("test"), cjClient.listMetrics( "test" ) );
     }
 }

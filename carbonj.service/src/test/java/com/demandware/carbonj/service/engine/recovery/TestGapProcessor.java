@@ -10,34 +10,39 @@ import com.amazonaws.services.kinesis.model.Record;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.DefaultSlotStrategy;
-import com.demandware.carbonj.service.engine.*;
+import com.demandware.carbonj.service.engine.DataPoint;
+import com.demandware.carbonj.service.engine.PointProcessor;
 import com.demandware.carbonj.service.engine.kinesis.DataPointCodec;
 import com.demandware.carbonj.service.engine.kinesis.DataPoints;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.OngoingStubbing;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(JUnit4.class)
 public class TestGapProcessor {
 
-    private MetricRegistry metricRegistry = new MetricRegistry();
+    private final MetricRegistry metricRegistry = new MetricRegistry();
 
     private int sequenceNumber = 0;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         sequenceNumber = 0;
     }
@@ -80,26 +85,26 @@ public class TestGapProcessor {
         gapProcessor.process();
 
         int noOfSubmissions = dataPointsList.size();
-        Assert.assertEquals(expectedPointProcessorSubmissions, noOfSubmissions);  // number of times point processor should have been called.
+        assertEquals(expectedPointProcessorSubmissions, noOfSubmissions);  // number of times point processor should have been called.
 
         long prevTimeStamp = -1;
         for (List<DataPoint> dataPoints: dataPointsList) {
             long timeStamp = dataPoints.get(0).ts * 1000L;
-            Assert.assertTrue(timeStamp >= prevTimeStamp);
+            assertTrue(timeStamp >= prevTimeStamp);
             prevTimeStamp = timeStamp;
         }
 
         // first time stamp in here should be filtered.  and it should be Fri Mar 16 01:39:39 EDT 2018
         List<DataPoint> firstProcessed = dataPointsList.get(0);
-        Assert.assertEquals(firstSubSize, firstProcessed.size());
+        assertEquals(firstSubSize, firstProcessed.size());
         // Assert.assertEquals(, firstProcessed.get(0).ts);
 
         for (int i = 2; i < noOfSubmissions - 4; i++) {
-            Assert.assertEquals(5, dataPointsList.get(i).size());
+            assertEquals(5, dataPointsList.get(i).size());
         }
 
         List<DataPoint> lastProcessed = dataPointsList.get(noOfSubmissions - 1);
-        Assert.assertEquals(lastSubSize, lastProcessed.size());
+        assertEquals(lastSubSize, lastProcessed.size());
         // Assert.assertEquals(, lastProcessed.get(2).ts);
     }
 
@@ -168,8 +173,8 @@ public class TestGapProcessor {
 
     private static class MockPointProcessor implements PointProcessor {
 
-        private List<List<DataPoint>> processedPoints;
-        private Accumulator accumulator;
+        private final List<List<DataPoint>> processedPoints;
+        private final Accumulator accumulator;
 
         private MockPointProcessor(List<List<DataPoint>> processedPoints) {
             this.processedPoints = processedPoints;
@@ -224,7 +229,7 @@ public class TestGapProcessor {
     public void testDataPointsInfo() {
         DataPoints dataPoints = generateDataPoints(9, 5, 4, 6, 7, 8);
         GapProcessor.DataPointsInfo dataPointsInfo = new GapProcessor.DataPointsInfo(dataPoints, new ShardInfoImpl("1"), 1);
-        Assert.assertEquals(4, dataPointsInfo.minTs);
-        Assert.assertEquals(9, dataPointsInfo.maxTs);
+        assertEquals(4, dataPointsInfo.minTs);
+        assertEquals(9, dataPointsInfo.maxTs);
     }
 }

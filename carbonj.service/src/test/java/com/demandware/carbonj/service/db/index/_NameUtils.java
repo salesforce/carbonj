@@ -6,12 +6,13 @@
  */
 package com.demandware.carbonj.service.db.index;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class _NameUtils
 {
@@ -21,50 +22,50 @@ public class _NameUtils
     public void testIsValid()
     {
         // testing empty case
-        assertThat( utils.isValid( "" ), equalTo( false ) );
+        assertFalse( utils.isValid( "" ) );
 
         // testing root rules
-        assertThat( utils.isValid( "root" ), equalTo( true ) );
-        assertThat( utils.isValid( "root.a.b.c" ), equalTo( false) );
+        assertTrue( utils.isValid( "root" ) );
+        assertFalse( utils.isValid( "root.a.b.c" ) );
 
         // testing [0-9a-zA-Z] case
-        assertThat( utils.isValid( "abc.123.Z9x" ), equalTo( true ) );
+        assertTrue( utils.isValid( "abc.123.Z9x" ) );
 
         // testing [.] rules
-        assertThat( utils.isValid( ".aaa" ), equalTo( false ) );
-        assertThat( utils.isValid( "abc..123" ), equalTo( false ) );
-        assertThat( utils.isValid( "abc.123." ), equalTo( false ) );
+        assertFalse( utils.isValid( ".aaa" ) );
+        assertFalse( utils.isValid( "abc..123" ) );
+        assertFalse( utils.isValid( "abc.123." ) );
 
         // testing special characters
-        assertThat( utils.isValid("_-:.=.%" ), equalTo( true ) );
-        assertThat( utils.isValid("&^" ), equalTo( false ) );
-        assertThat( utils.isValid("!@.#.$" ), equalTo( false ) );
+        assertTrue( utils.isValid("_-:.=.%" ) );
+        assertFalse( utils.isValid("&^" ) );
+        assertFalse( utils.isValid("!@.#.$" ) );
     }
 
     @Test
     public void testFirstSegmentForNameWithMultipleSegments()
     {
-        assertThat( utils.firstSegment( "aaaa.b.ccc" ), equalTo("aaaa") );
+        assertEquals( utils.firstSegment( "aaaa.b.ccc" ), "aaaa" );
     }
 
     @Test
     public void testFirstSegmentForNameWithSingleSegment()
     {
-        assertThat( utils.firstSegment( "a" ), equalTo( "a" ) );
+        assertEquals( utils.firstSegment( "a" ), "a" );
     }
 
     @Test
     public void testIsTopLevel()
     {
-        assertThat( utils.isTopLevel( "abc" ), equalTo( true ) );
-        assertThat( utils.isTopLevel( "a.b" ), equalTo( false ) );
+        assertTrue( utils.isTopLevel( "abc" ) );
+        assertFalse( utils.isTopLevel( "a.b" ) );
     }
 
     @Test
     public void testParentName()
     {
-        assertThat( utils.parentName( "abc" ), equalTo( Optional.empty() ) );
-        assertThat( utils.parentName( "a.b" ), equalTo( Optional.of( "a" ) ) );
-        assertThat( utils.parentName( "a.b.c" ), equalTo( Optional.of( "a.b" ) ) );
+        assertEquals( utils.parentName( "abc" ), Optional.empty() );
+        assertEquals( utils.parentName( "a.b" ), Optional.of( "a" ) );
+        assertEquals( utils.parentName( "a.b.c" ), Optional.of( "a.b" ) );
     }
 }

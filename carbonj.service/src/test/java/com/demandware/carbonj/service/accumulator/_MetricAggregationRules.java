@@ -8,18 +8,17 @@ package com.demandware.carbonj.service.accumulator;
 
 import static com.demandware.carbonj.service.accumulator.MetricAggregationMethod.SUM;
 import static com.demandware.carbonj.service.accumulator.MetricAggregationMethod.AVG;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.demandware.carbonj.service.accumulator.MetricAggregationRule.Result;
 import com.demandware.carbonj.service.util.TestFileUtils;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class _MetricAggregationRules
 {
@@ -28,7 +27,7 @@ public class _MetricAggregationRules
     MetricAggregationRules rules;
 
 
-    @Before
+    @BeforeEach
     public void setUp()
         throws Exception
     {
@@ -100,5 +99,4 @@ public class _MetricAggregationRules
         List<Result> expected = List.of(new Result("pi.response.count", AVG, true));
         assertEquals( rules.apply( name ), expected );
     }
-
 }

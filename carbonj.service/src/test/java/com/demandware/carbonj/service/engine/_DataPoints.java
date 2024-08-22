@@ -6,16 +6,10 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
-
-@RunWith(JUnit4.class)
 public class _DataPoints
 {
 

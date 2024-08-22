@@ -9,14 +9,10 @@ package com.demandware.carbonj.service.engine.recovery;
 import com.demandware.carbonj.service.accumulator.DefaultSlotStrategy;
 import com.demandware.carbonj.service.accumulator.SlotStrategy;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
-
+import org.junit.jupiter.api.Test;
 
 import java.util.Date;
 
-@RunWith(JUnit4.class)
 public class TestSlotStrategy {
 
     @Test

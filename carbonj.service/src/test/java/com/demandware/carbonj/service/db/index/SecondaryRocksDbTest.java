@@ -8,20 +8,18 @@ package com.demandware.carbonj.service.db.index;
 
 import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.MetricIndex;
-import com.google.common.io.Files;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
-import java.io.File;
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SecondaryRocksDbTest extends BaseIndexTest {
     private MetricIndex metricIndexReadonly;
 
     @Test
-    public void indexNameSyncTest() throws Exception {
+    public void indexNameSyncTest() {
         index.createLeafMetric("a.b.c.d");
         index.close();
         metricIndexReadonly = IndexUtils.metricIndexReadonly( dbDirFile, false );
@@ -42,7 +40,7 @@ public class SecondaryRocksDbTest extends BaseIndexTest {
         }
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         metricIndexReadonly.close();
     }

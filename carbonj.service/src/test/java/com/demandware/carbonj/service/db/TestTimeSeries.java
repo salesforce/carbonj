@@ -14,11 +14,8 @@ import com.demandware.carbonj.service.db.model.RetentionPolicy;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
 import com.demandware.carbonj.service.events.NoOpLogger;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,10 +23,10 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
-@Ignore
-@RunWith(JUnit4.class)
+@Disabled
 public class TestTimeSeries extends BaseTest {
 
     @Test
@@ -54,23 +51,23 @@ public class TestTimeSeries extends BaseTest {
                 (int) (now - TimeUnit.HOURS.toSeconds(2)),
                 (int) (now - TimeUnit.HOURS.toSeconds(1)), now, metrics);
 
-        Assert.assertEquals(0, numberOfDataPoints);
+        assertEquals(0, numberOfDataPoints);
 
         metrics.add(mock(Metric.class));
 
         numberOfDataPoints = timeSeriesStore.getEstimatedNumberOfDataPoints(
                 (int) (now - TimeUnit.HOURS.toSeconds(2)),
                 (int) (now - TimeUnit.HOURS.toSeconds(1)), now, metrics);
-        Assert.assertEquals(60, numberOfDataPoints);
+        assertEquals(60, numberOfDataPoints);
 
         numberOfDataPoints = timeSeriesStore.getEstimatedNumberOfDataPoints(
                 (int) (now - TimeUnit.HOURS.toSeconds(36)),
                 (int) (now - TimeUnit.HOURS.toSeconds(2)), now, metrics);
-        Assert.assertEquals(34 * 12, numberOfDataPoints);
+        assertEquals(34 * 12, numberOfDataPoints);
 
         numberOfDataPoints = timeSeriesStore.getEstimatedNumberOfDataPoints(
                 (int) (now - TimeUnit.DAYS.toSeconds(400)),
                 (int) (now - TimeUnit.HOURS.toSeconds(2)), now, metrics);
-        Assert.assertEquals(((400 * 24) - 2) * 2, numberOfDataPoints);
+        assertEquals(((400 * 24) - 2) * 2, numberOfDataPoints);
     }
 }

@@ -9,28 +9,19 @@ package com.demandware.carbonj.service.engine;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.admin.CarbonJClient;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
-import com.google.common.base.Throwables;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationContextInitializedEvent;
-import org.springframework.boot.context.event.ApplicationStartedEvent;
-import org.springframework.boot.context.event.ApplicationStartingEvent;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.event.EventListener;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.PostConstruct;
 import java.io.BufferedWriter;
@@ -40,7 +31,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-@RunWith(SpringRunner.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 @SpringBootTest
         (webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ContextConfiguration(
@@ -75,13 +69,13 @@ public class _SiteSpecificAccumulatorTest {
 
     @PostConstruct
     private void initializeCjClient() {
-        Assert.assertNotNull("jettyHost should not be null", jettyHost);
-        Assert.assertNotEquals("jettyDataPort should not be 0", jettyDataPort);
-        Assert.assertNotEquals("jettyHttpPort should not be 0", jettyHttpPort);
+        assertNotNull("jettyHost should not be null", jettyHost);
+        assertNotEquals("jettyDataPort should not be 0", jettyDataPort);
+        assertNotEquals("jettyHttpPort should not be 0", jettyHttpPort);
         cjClient = new CarbonJClient(jettyHost, jettyHttpPort, jettyDataPort);
     }
 
-    @Before
+    @BeforeEach
     public void start() throws IOException {
         // start carbonj in relay mode only
         Path aggregationRulesFilePath = Paths.get(aggregationRuleFilePath);
@@ -119,10 +113,10 @@ public class _SiteSpecificAccumulatorTest {
     }
 
     private void collectFlushedPoints(DataPoints dataPoints) {
-        Assert.assertEquals(1, dataPoints.size());
+        assertEquals(1, dataPoints.size());
         DataPoint dataPoint = dataPoints.get(0);
-        Assert.assertEquals("pod.ecom_site_ag.aagl.prd.us.order.value", dataPoint.name);
-        Assert.assertEquals(3, dataPoint.val, 0.1);
+        assertEquals("pod.ecom_site_ag.aagl.prd.us.order.value", dataPoint.name);
+        assertEquals(3, dataPoint.val, 0.1);
     }
 
     private void drain() {
@@ -135,7 +129,7 @@ public class _SiteSpecificAccumulatorTest {
         try {
             Thread.sleep(10 * 500 + 100);
         } catch (InterruptedException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 }

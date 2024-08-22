@@ -6,9 +6,6 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -18,14 +15,14 @@ import java.util.List;
 
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.strings.StringsCache;
-import org.junit.Before;
-import org.junit.Test;
 
 import com.demandware.carbonj.service.util.TestFileUtils;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class _MetricList
 {
     File configFile;
@@ -34,7 +31,7 @@ public class _MetricList
 
     private final MetricRegistry metricRegistry = new MetricRegistry();
 
-    @Before
+    @BeforeEach
     public void setUp()
         throws Exception
     {

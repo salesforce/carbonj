@@ -6,22 +6,14 @@
  */
 package com.demandware.carbonj.service.db.index;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.demandware.carbonj.service.db.model.RetentionPolicy;
+import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class _IndexEntrySerializer
 {
-    private NameRecordSerializer serializer = new NameRecordSerializer(false);
-
-    @Before
-    public void setUp()
-    {
-    }
+    private final NameRecordSerializer serializer = new NameRecordSerializer(false);
 
     @Test
     public void shouldSerializeNonLeafNodeWithoutChildNodes()
@@ -75,11 +67,10 @@ public class _IndexEntrySerializer
 
     private void assertIndexEntriesEqual( NameRecord e, NameRecord a)
     {
-        assertThat(e.getKey(), equalTo(a.getKey()));
-        assertThat(e.getId(), equalTo(a.getId()));
-        assertThat(e.isLeaf(), equalTo( a.isLeaf() ));
-        assertThat(e.getChildren(), equalTo(a.getChildren()));
-        assertThat(e.getRetentionPolicies(), equalTo(a.getRetentionPolicies()));
+        assertEquals(e.getKey(), a.getKey());
+        assertEquals(e.getId(), a.getId());
+        assertEquals(e.isLeaf(), a.isLeaf());
+        assertEquals(e.getChildren(), a.getChildren());
+        assertEquals(e.getRetentionPolicies(), a.getRetentionPolicies());
     }
-
 }

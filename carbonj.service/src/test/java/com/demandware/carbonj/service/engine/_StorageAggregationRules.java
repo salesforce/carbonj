@@ -6,18 +6,13 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertThat;
-
 import java.io.File;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.demandware.carbonj.service.util.TestFileUtils;
-import org.junit.runner.RunWith;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class _StorageAggregationRules
 {
@@ -26,7 +21,7 @@ public class _StorageAggregationRules
     StorageAggregationRules rules;
 
 
-    @Before
+    @BeforeEach
     public void setUp()
         throws Exception
     {
@@ -39,14 +34,14 @@ public class _StorageAggregationRules
     public void shouldApply()
     {
         String name = "pod1.ecom.aaba.aaba_prd.blade5-4.aaba_prd.FEATURE_TOGGLES.KeystoreAutoImportEnabled.count";
-        assertThat( rules.apply( name ), equalTo( AggregationMethod.SUM ) );
+        assertEquals( rules.apply( name ), AggregationMethod.SUM );
     }
 
     @Test
     public void shouldApply2()
     {
         String name = "pod1.ecom.aaba.aaba_prd.blade5-4.aaba_prd.FEATURE_TOGGLES.KeystoreAutoImportEnabled";
-        assertThat( rules.apply( name ), equalTo( AggregationMethod.AVG ) );
+        assertEquals( rules.apply( name ), AggregationMethod.AVG );
     }
 
 }

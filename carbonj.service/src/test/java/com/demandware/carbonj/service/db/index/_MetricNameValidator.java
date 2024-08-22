@@ -6,33 +6,22 @@
  */
 package com.demandware.carbonj.service.db.index;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import java.util.Arrays;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
-
-@RunWith( Parameterized.class)
 public class _MetricNameValidator
 {
-    @Parameter(0)
-    public String name;
-
-    @Parameter(1)
-    public boolean expected;
-
-    @Test
-    public void isValid()
+    @ParameterizedTest
+    @MethodSource("data")
+    public void isValid(String name, boolean expected)
     {
-        assertThat( new NameUtils("root").isValid( name ), is(expected));
+        assertEquals( new NameUtils("root").isValid( name ), expected);
     }
 
-    @Parameters(name= "{index}: isValid({0})={1}")
     public static Iterable<Object[]> data()
     {
         return Arrays.asList(new Object[][]
@@ -83,7 +72,6 @@ public class _MetricNameValidator
                         {"a.`", false},
                         {"a.|", false},
                         {"a.\\", false}
-
         });
     }
 }

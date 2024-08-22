@@ -10,21 +10,18 @@ import com.codahale.metrics.Counter;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
 import com.codahale.metrics.MetricRegistry;
 import net.razorvine.pickle.Pickler;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(JUnit4.class)
 public class TestPickleHandler {
 
     @Test
@@ -49,28 +46,24 @@ public class TestPickleHandler {
         PickleProtocolHandler pickleProtocolHandler = new PickleProtocolHandler(metricRegistry, consumer);
         pickleProtocolHandler.handle(new ByteArrayInputStream(pickledBytes));
 
-        Assert.assertEquals(2, consumer.metrics.size());
+        assertEquals(2, consumer.metrics.size());
 
         DataPoint dataPoint = consumer.metrics.get(0);
-        Assert.assertEquals(1.0, dataPoint.val, 0.001);
-        Assert.assertEquals("test.metric1", dataPoint.name);
+        assertEquals(1.0, dataPoint.val, 0.001);
+        assertEquals("test.metric1", dataPoint.name);
 
         dataPoint = consumer.metrics.get(1);
-        Assert.assertEquals(3.0, dataPoint.val, 0.001);
-        Assert.assertEquals("test.metric2", dataPoint.name);
+        assertEquals(3.0, dataPoint.val, 0.001);
+        assertEquals("test.metric2", dataPoint.name);
     }
 
     private static class MetricsConsumer implements Consumer<DataPoint> {
 
-        private List<DataPoint> metrics = new ArrayList<>();
+        private final List<DataPoint> metrics = new ArrayList<>();
 
         @Override
         public void accept(DataPoint dataPoint) {
             metrics.add(dataPoint);
-        }
-
-        List<DataPoint> getMetrics() {
-            return metrics;
         }
     }
 }

@@ -6,24 +6,16 @@
  */
 package com.demandware.carbonj.service.db.index;
 
+import org.junit.jupiter.api.Test;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import static org.junit.Assert.assertEquals;
-
-//TODO: make it a parameterized test
-//@RunWith( Parameterized.class)
 public class _QueryFilter
 {
-//    @Parameterized.Parameter(0)
-//    public String query;
-//
-//    @Parameterized.Parameter(1)
-//    public boolean expected;
-
     @Test
     public void selectWithStartInOneLevel()
     {

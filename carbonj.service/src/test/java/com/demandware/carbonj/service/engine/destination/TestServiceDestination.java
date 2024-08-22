@@ -8,23 +8,18 @@ package com.demandware.carbonj.service.engine.destination;
 
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.engine.DataPoint;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.mockito.Mockito.*;
-//import static org.powermock.api.mockito.PowerMockito.mock;
-//import static org.powermock.api.mockito.PowerMockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-
-@RunWith(JUnit4.class)
 public class TestServiceDestination {
 
-    private MetricRegistry metricRegistry = new MetricRegistry();
+    private final MetricRegistry metricRegistry = new MetricRegistry();
 
     @Test
     public void testLoadBalancingAndClosure() {
@@ -67,7 +62,7 @@ public class TestServiceDestination {
                 .thenReturn(new ListBackedDestination[] {new ListBackedDestination(dest1List),
                         new ListBackedDestination(dest2List), new ListBackedDestination(dest3List)})
                 .thenReturn(new ListBackedDestination[] {new ListBackedDestination(dest4List),
-                new ListBackedDestination(dest5List)});
+                        new ListBackedDestination(dest5List)});
         LineProtocolDestinationsService serviceDestination =
                 new LineProtocolDestinationsService(metricRegistry, "relay", "relay-headless", -1,
                         mockDestinationFetcher);
@@ -99,12 +94,12 @@ public class TestServiceDestination {
 
     private void verify(List<DataPoint> list1, List<DataPoint> list2, List<DataPoint> list3, int length1, int length2,
                         int length3) {
-        Assert.assertEquals(length1, list1.size());
-        Assert.assertEquals(length2, list2.size());
-        Assert.assertEquals(length3, list3.size());
+        assertEquals(length1, list1.size());
+        assertEquals(length2, list2.size());
+        assertEquals(length3, list3.size());
     }
 
-    private class ListBackedDestination implements  LineProtocolDestination {
+    private static class ListBackedDestination implements  LineProtocolDestination {
 
         private final List<DataPoint> dataPoints;
 

@@ -20,17 +20,16 @@ import com.demandware.carbonj.service.engine.DataPoints;
 import com.demandware.carbonj.service.engine.Query;
 import com.demandware.carbonj.service.events.NoOpLogger;
 import org.apache.commons.io.FileUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(JUnit4.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class Test60s30dTimeSeries extends BaseTest {
 
     private static final boolean longId = true;
@@ -39,7 +38,7 @@ public class Test60s30dTimeSeries extends BaseTest {
     public void test60s30dTimeSeries() throws Exception {
         long currentTime = Clock.systemUTC().millis();
         File dbDirFile = new File("/tmp/" + currentTime);
-        Assert.assertTrue(dbDirFile.mkdirs());
+        assertTrue(dbDirFile.mkdirs());
         File metricStoreConfFile = new File(dbDirFile, "metric-store.conf");
         List<String> metricStoreConfigs = new ArrayList<>();
         metricStoreConfigs.add("metrics.store.retentions=60s:30d");
@@ -65,20 +64,20 @@ public class Test60s30dTimeSeries extends BaseTest {
         points.add(new DataPoint("a.b.c", 123, (int)(currentTime / 1000)));
         timeSeriesStore.accept(new DataPoints(points));
         Metric metric = timeSeriesStore.getMetric("a.b.c");
-        Assert.assertEquals(2, metric.id);
-        Assert.assertEquals(1, metric.getRetentionPolicies().size());
-        Assert.assertTrue(metric.getRetentionPolicies().get(0).is60s30d());
-        Assert.assertTrue(new File(dbDirFile, "60s30d").exists());
-        Assert.assertTrue(new File(new File(dbDirFile, "60s30d"), "LOG").exists());
+        assertEquals(2, metric.id);
+        assertEquals(1, metric.getRetentionPolicies().size());
+        assertTrue(metric.getRetentionPolicies().get(0).is60s30d());
+        assertTrue(new File(dbDirFile, "60s30d").exists());
+        assertTrue(new File(new File(dbDirFile, "60s30d"), "LOG").exists());
         long now = Clock.systemUTC().millis();
         List<Series> series = timeSeriesStore.fetchSeriesData(new Query("a.b.c", (int)(currentTime / 1000),
                 (int)(currentTime / 1000) + 10, (int)(now / 1000), now));
-        Assert.assertEquals(1, series.size());
-        Assert.assertEquals("a.b.c", series.get(0).name);
-        Assert.assertEquals(60, series.get(0).step);
+        assertEquals(1, series.size());
+        assertEquals("a.b.c", series.get(0).name);
+        assertEquals(60, series.get(0).step);
         // This could be a query boundary issue
-        Assert.assertTrue(series.get(0).values.size() == 1 || series.get(0).values.size() == 2);
-        Assert.assertEquals(123, series.get(0).values.get(0).intValue());
+        assertTrue(series.get(0).values.size() == 1 || series.get(0).values.size() == 2);
+        assertEquals(123, series.get(0).values.get(0).intValue());
 
         dataPointStore.close();
         metricIndex.close();

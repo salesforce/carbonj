@@ -11,15 +11,16 @@ import com.demandware.carbonj.service.db.model.DataPointStore;
 import com.demandware.carbonj.service.db.model.MetricIndex;
 import com.demandware.carbonj.service.db.model.QueryCachePolicy;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
-import org.junit.Assert;
 
 import java.io.File;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DataPointStoreUtils {
     public static DataPointStore createDataPointStore(MetricRegistry metricRegistry, File dbDirFile, boolean longId,
                                                       MetricIndex metricIndex) {
         File stagingDir = new File(dbDirFile, "staging");
-        Assert.assertTrue(stagingDir.mkdirs());
+        assertTrue(stagingDir.mkdirs());
         StagingFiles sFiles = new StagingFiles(metricRegistry, stagingDir, new SystemSort(), metricIndex);
         DataPointArchiveFactory pointArchiveFactory = new DataPointArchiveFactory(metricRegistry, dbDirFile, new RocksDBConfig(), longId);
         DataPointStagingStore stagingStore = new DataPointStagingStore( metricRegistry, sFiles, 1000, 1, 1, 1, 100, 30, 3);

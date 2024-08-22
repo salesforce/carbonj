@@ -9,10 +9,8 @@ package com.demandware.carbonj.service.engine;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,12 +24,16 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Date;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.notNull;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.util.AssertionErrors.assertEquals;
+import static org.springframework.test.util.AssertionErrors.assertTrue;
 
-@RunWith(JUnit4.class)
 public class _ConfigServerUtil {
 
     private final String backupFile = "work/config-server-bkup.txt";
@@ -68,7 +70,7 @@ public class _ConfigServerUtil {
 
     private MetricRegistry metricRegistry;
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException
     {
         if ( Files.exists( backupFilePath ) )
@@ -124,9 +126,10 @@ public class _ConfigServerUtil {
         if (!Files.exists(backupFilePath)) {
             Files.createFile(backupFilePath);
         }
-        BufferedWriter writer = Files.newBufferedWriter(backupFilePath);
-        writer.write("");
-        writer.flush();
+        try (BufferedWriter writer = Files.newBufferedWriter(backupFilePath)) {
+            writer.write("");
+            writer.flush();
+        }
         objectMapper.writeValue(backupFilePath.toFile(), process);
         // Mock rest template
         RestTemplate restTemplate = mock(RestTemplate.class);

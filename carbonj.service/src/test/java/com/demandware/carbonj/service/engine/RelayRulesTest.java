@@ -8,17 +8,17 @@ package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.strings.StringsCache;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Objects;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RelayRulesTest {
 
-    @Before
+    @BeforeEach
     public void before() {
         new StringsCache(new MetricRegistry(), 5000000, 10000000, 180, 8);
         StringsCache.get("foo.bar");

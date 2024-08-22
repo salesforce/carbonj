@@ -6,8 +6,10 @@
  */
 package com.demandware.carbonj.service.db.model;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class _QueryCachePolicy
 {
@@ -21,27 +23,27 @@ public class _QueryCachePolicy
     {
 
         QueryCachePolicy qcp = new QueryCachePolicy( true, false, false, false );
-        Assert.assertTrue(qcp.useCache(_60s24h));
-        Assert.assertFalse(qcp.useCache( _60s30d ));
-        Assert.assertFalse(qcp.useCache( _5m7d ));
-        Assert.assertFalse(qcp.useCache( _30m2y ));
+        assertTrue(qcp.useCache(_60s24h));
+        assertFalse(qcp.useCache( _60s30d ));
+        assertFalse(qcp.useCache( _5m7d ));
+        assertFalse(qcp.useCache( _30m2y ));
     }
 
     @Test
     public void cacheDisabledForAll()
     {
         QueryCachePolicy qcp = new QueryCachePolicy( false, false, false, false );
-        Assert.assertFalse(qcp.useCache( _60s24h ));
-        Assert.assertFalse(qcp.useCache( _60s30d ));
-        Assert.assertFalse(qcp.useCache( _5m7d ));
-        Assert.assertFalse(qcp.useCache( _30m2y ));
+        assertFalse(qcp.useCache( _60s24h ));
+        assertFalse(qcp.useCache( _60s30d ));
+        assertFalse(qcp.useCache( _5m7d ));
+        assertFalse(qcp.useCache( _30m2y ));
     }
 
     @Test
     public void cacheDisabledForNull()
     {
         QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true );
-        Assert.assertFalse(qcp.useCache( null ));
+        assertFalse(qcp.useCache( null ));
     }
 
     @Test
@@ -49,7 +51,7 @@ public class _QueryCachePolicy
     {
         RetentionPolicy _120s2d = RetentionPolicy.getInstance( "120s:2d" );
         QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true );
-        Assert.assertFalse(qcp.useCache( _120s2d ));
+        assertFalse(qcp.useCache( _120s2d ));
     }
 
 
@@ -57,19 +59,19 @@ public class _QueryCachePolicy
     public void cacheEnabledForAll()
     {
         QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true );
-        Assert.assertTrue(qcp.useCache( _60s24h ));
-        Assert.assertTrue(qcp.useCache( _60s30d ));
-        Assert.assertTrue(qcp.useCache( _5m7d ));
-        Assert.assertTrue(qcp.useCache( _30m2y ));
+        assertTrue(qcp.useCache( _60s24h ));
+        assertTrue(qcp.useCache( _60s30d ));
+        assertTrue(qcp.useCache( _5m7d ));
+        assertTrue(qcp.useCache( _30m2y ));
     }
 
     @Test
     public void cacheDisabledFor30m2yOnly()
     {
         QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, false );
-        Assert.assertTrue(qcp.useCache( _60s24h ));
-        Assert.assertTrue(qcp.useCache( _60s30d ));
-        Assert.assertTrue(qcp.useCache( _5m7d ));
-        Assert.assertFalse(qcp.useCache( _30m2y ));
+        assertTrue(qcp.useCache( _60s24h ));
+        assertTrue(qcp.useCache( _60s30d ));
+        assertTrue(qcp.useCache( _5m7d ));
+        assertFalse(qcp.useCache( _30m2y ));
     }
 }
