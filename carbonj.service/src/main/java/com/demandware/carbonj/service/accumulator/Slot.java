@@ -75,7 +75,7 @@ public class Slot
             return;
         }
         AggregateFunction f = metrics.computeIfAbsent(key, k -> AggregateFunction.create(k, agg.getAggregationMethod()));
-        if (m.name.startsWith("pod222.ecom.bjmr.bjmr_prd") && m.name.endsWith("number-of-filters.max")) {
+        if (m.name != null && m.name.startsWith("pod222.ecom.bjmr.bjmr_prd") && m.name.endsWith("number-of-filters.max")) {
             log.warn("============");
             log.warn("Received metrics " + m.name);
             log.warn(f.getType() + " " + agg.getAggregationMethod().name() + " " + key);
