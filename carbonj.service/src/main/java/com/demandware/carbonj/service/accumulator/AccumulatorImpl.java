@@ -117,15 +117,6 @@ public class AccumulatorImpl implements StatsAware, Accumulator
         // one metric can map to 0..N aggregates
         List<MetricAggregate> aggregates = policy.getAggregates();
 
-        if (m.name.startsWith("pod222.ecom.bjmr.bjmr_prd") && m.name.endsWith("number-of-filters.max")) {
-            log.warn("============");
-            log.warn("Received metrics " + m.name);
-            for (MetricAggregate aggregate : aggregates) {
-                log.warn(aggregate.getAggregateName() + " " + aggregate.getAggregationMethod().name() + " " + aggregate.isDropOriginal());
-            }
-            log.warn("============");
-        }
-
         // no aggregates for this metric - done.
         if( aggregates.size() == 0 )
         {
