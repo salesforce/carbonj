@@ -921,6 +921,12 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
             return null;
         }
 
+        if (name != null && name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && name.endsWith("number-of-filters.max")) {
+            log.warn("============");
+            log.warn("createLeafMetric aggregated metric " + name);
+            log.warn("============");
+        }
+
         Metric m = getMetric( name );
         if ( m == null )
         {
@@ -930,6 +936,11 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                 m = getMetric( name );
                 if ( m == null )
                 {
+                    if (name != null && name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && name.endsWith("number-of-filters.max")) {
+                        log.warn("============");
+                        log.warn("insert aggregated metric " + name);
+                        log.warn("============");
+                    }
                     m = insert( name );
                 }
                 else

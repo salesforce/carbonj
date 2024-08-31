@@ -297,47 +297,16 @@ class DataPointArchiveRocksDB
         try {
             for (int i = 0, n = points.size(); i < n; i++) {
                 DataPoint p = points.get(i);
-                if (p.name != null && p.name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && p.name.endsWith("number-of-filters.max")) {
-                    log.warn("============");
-                    log.warn("Received aggregated metric " + p.name);
-                    log.warn(p.toString());
-                    log.warn("============");
-                }
                 if (!p.isValid()) {
-                    if (p.name != null && p.name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && p.name.endsWith("number-of-filters.max")) {
-                        log.warn("============");
-                        log.warn("Invalid aggregated metric " + p.name);
-                        log.warn(p.toString());
-                        log.warn("============");
-                    }
                     continue;
                 }
 
                 if (!p.hasMetricId()) {
-                    if (p.name != null && p.name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && p.name.endsWith("number-of-filters.max")) {
-                        log.warn("============");
-                        log.warn("No metric ID aggregated metric " + p.name);
-                        log.warn(p.toString());
-                        log.warn("============");
-                    }
                     continue;
                 }
 
                 if (!isWithinRetentionPeriod(p, now)) {
-                    if (p.name != null && p.name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && p.name.endsWith("number-of-filters.max")) {
-                        log.warn("============");
-                        log.warn("Outside retention period aggregated metric " + p.name);
-                        log.warn(p + " " + now);
-                        log.warn("============");
-                    }
                     continue;
-                }
-
-                if (p.name != null && p.name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && p.name.endsWith("number-of-filters.max")) {
-                    log.warn("============");
-                    log.warn("Valid aggregated metric " + p.name);
-                    log.warn(p.toString());
-                    log.warn("============");
                 }
 
                 Metric m = points.getMetric(i);
@@ -355,12 +324,6 @@ class DataPointArchiveRocksDB
                     int interval = policy.interval(p.ts);
                     byte[] key = DataPointRecord.toKeyBytes(p.metricId, interval, longId);
                     byte[] value = DataPointRecord.toValueBytes(p.val);
-                    if (p.name != null && p.name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && p.name.endsWith("number-of-filters.max")) {
-                        log.warn("============");
-                        log.warn("Put aggregated metric " + p.name);
-                        log.warn(p.toString());
-                        log.warn("============");
-                    }
                     batch.put(key, value);
                     String namespace = nameUtils.firstSegment(p.name);
                     if (!latencyByNamespaceMap.containsKey(namespace)) {
