@@ -75,12 +75,6 @@ public class Slot
             return;
         }
         AggregateFunction f = metrics.computeIfAbsent(key, k -> AggregateFunction.create(k, agg.getAggregationMethod()));
-        if (m.name != null && m.name.startsWith("pod222.ecom.bjmr.bjmr_prd") && m.name.endsWith("number-of-filters.max")) {
-            log.warn("============");
-            log.warn("Received metrics " + m.name);
-            log.warn(f.getType() + " " + agg.getAggregationMethod().name() + " " + key);
-            log.warn("============");
-        }
         f.add(m, now);
     }
 
@@ -107,6 +101,12 @@ public class Slot
                 if (af.getType() == AggregateFunction.Type.SINGLE_VALUE) {
                     DataPoint agg = new DataPoint(m.getKey(), af.apply(), ts);
                     points.add(agg);
+                    if (m.getKey() != null && m.getKey().startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && m.getKey().endsWith("number-of-filters.max")) {
+                        log.warn("============");
+                        log.warn("Received aggregated metric " + m.getKey());
+                        log.warn(agg.toString());
+                        log.warn("============");
+                    }
                 } else {
                     Map<String, Double> aggTypeToValue = af.getValues();
                     for (Map.Entry<String, Double> aggTypeValuePair: aggTypeToValue.entrySet()) {
