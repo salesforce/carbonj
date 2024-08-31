@@ -268,12 +268,6 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
             try {
                 DataPoint dp2 = new DataPoint(dp.name, dp.val, dp.ts, false);
                 dp.drop();
-                if (dp2.name != null && dp2.name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && dp2.name.endsWith("number-of-filters.max")) {
-                    log.warn("============");
-                    log.warn("Put aggregated metric " + dp2.name);
-                    log.warn(dp2.toString());
-                    log.warn("============");
-                }
                 serialTaskQueue.submit(() -> {
                     if (null != nameIndex.createLeafMetric(dp2.name)) {
                         this.accept(new DataPoints(List.of(dp2)));

@@ -101,12 +101,6 @@ public class Slot
                 if (af.getType() == AggregateFunction.Type.SINGLE_VALUE) {
                     DataPoint agg = new DataPoint(m.getKey(), af.apply(), ts);
                     points.add(agg);
-                    if (m.getKey() != null && m.getKey().startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && m.getKey().endsWith("number-of-filters.max")) {
-                        log.warn("============");
-                        log.warn("Received aggregated metric " + m.getKey());
-                        log.warn(agg.toString());
-                        log.warn("============");
-                    }
                 } else {
                     Map<String, Double> aggTypeToValue = af.getValues();
                     for (Map.Entry<String, Double> aggTypeValuePair: aggTypeToValue.entrySet()) {

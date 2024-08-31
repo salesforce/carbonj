@@ -309,6 +309,13 @@ class DataPointArchiveRocksDB
                     continue;
                 }
 
+                if (p.name != null && p.name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && p.name.endsWith("number-of-filters.max")) {
+                    log.warn("============");
+                    log.warn("Received aggregated metric " + p.name);
+                    log.warn(p.toString());
+                    log.warn("============");
+                }
+
                 Metric m = points.getMetric(i);
                 RetentionPolicy pointPolicy = points.getPolicy(i);
                 if (m == null || pointPolicy == null) {
@@ -324,6 +331,12 @@ class DataPointArchiveRocksDB
                     int interval = policy.interval(p.ts);
                     byte[] key = DataPointRecord.toKeyBytes(p.metricId, interval, longId);
                     byte[] value = DataPointRecord.toValueBytes(p.val);
+                    if (p.name != null && p.name.startsWith("pod222.ecom_ag.bjmr.bjmr_prd") && p.name.endsWith("number-of-filters.max")) {
+                        log.warn("============");
+                        log.warn("Put aggregated metric " + p.name);
+                        log.warn(p.toString());
+                        log.warn("============");
+                    }
                     batch.put(key, value);
                     String namespace = nameUtils.firstSegment(p.name);
                     if (!latencyByNamespaceMap.containsKey(namespace)) {
