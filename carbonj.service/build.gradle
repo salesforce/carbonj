@@ -9,7 +9,7 @@ buildscript {
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:${springbootVersion}"
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
-        classpath 'com.netflix.nebula:gradle-ospackage-plugin:8.6.3'
+        classpath 'com.netflix.nebula:gradle-ospackage-plugin:11.10.0'
     }
 }
 
