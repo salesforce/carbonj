@@ -6,8 +6,11 @@ buildscript {
     }
     dependencies {
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
-        classpath 'net.researchgate:gradle-release:2.8.1'
     }
+}
+
+plugins {
+    id 'net.researchgate.release' version "3.0.2"
 }
 
 apply plugin: 'java-library'
