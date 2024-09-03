@@ -174,7 +174,6 @@ release {
 description = 'CarbonJ Service Implementation'
 dependencies {
     implementation project(':cc-metrics-reporter')
-//    compile group: 'com.sfcc.um', name: 'metrics_reporter', version:'0.0.2'
     implementation group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: "${log4j}"
     implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: "${log4j}"
     implementation group: 'org.apache.logging.log4j', name: 'log4j-to-slf4j', version: "${log4j}"
