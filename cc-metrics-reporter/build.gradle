@@ -33,7 +33,7 @@ dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-api', version: '2.0.16'
     implementation group: 'com.google.guava', name: 'guava', version: '33.2.1-jre'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.26'
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.26'
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: '4.2.27'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '4.2.26'
     testImplementation group: 'junit', name: 'junit', version: '4.13.2'
 }
