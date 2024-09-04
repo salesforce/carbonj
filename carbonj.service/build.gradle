@@ -205,7 +205,7 @@ dependencies {
     implementation group: 'joda-time', name: 'joda-time', version: '2.12.7'
     implementation group: 'io.netty', name: 'netty-all', version: '4.1.101.Final'
     implementation group: 'net.razorvine', name: 'pickle', version: '1.5'
-    implementation group: 'org.python', name: 'jython-standalone', version: '2.7.3'
+    implementation group: 'org.python', name: 'jython-standalone', version: '2.7.4'
     implementation group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.15.2'
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-sts', version: '1.12.770'
     implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.26'
