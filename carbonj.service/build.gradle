@@ -203,7 +203,7 @@ dependencies {
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.16.0'
     implementation group: 'commons-io', name: 'commons-io', version: '2.16.1'
     implementation group: 'joda-time', name: 'joda-time', version: '2.12.7'
-    implementation group: 'io.netty', name: 'netty-all', version: '4.1.101.Final'
+    implementation group: 'io.netty', name: 'netty-all', version: '4.1.113.Final'
     implementation group: 'net.razorvine', name: 'pickle', version: '1.5'
     implementation group: 'org.python', name: 'jython-standalone', version: '2.7.3'
     implementation group: 'com.amazonaws', name: 'amazon-kinesis-client', version: '1.15.2'
