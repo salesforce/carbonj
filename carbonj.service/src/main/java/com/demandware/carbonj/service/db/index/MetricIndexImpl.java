@@ -21,6 +21,7 @@ import com.demandware.carbonj.service.db.model.TooManyMetricsFoundException;
 import com.demandware.carbonj.service.db.util.CacheStatsReporter;
 import com.demandware.carbonj.service.db.util.DatabaseMetrics;
 import com.demandware.carbonj.service.db.util.FileUtils;
+import com.demandware.carbonj.service.db.util.Quota;
 import com.demandware.carbonj.service.ns.NamespaceCounter;
 import com.demandware.carbonj.service.strings.StringsCache;
 import com.google.common.base.Preconditions;
@@ -153,6 +154,8 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
 
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
+    private final Quota invalidLeafMetricsReceivedLogQuota;
+
     private static class DeleteResult extends DeleteAPIResult
     {
         public List<Metric> metrics = new ArrayList<>();
@@ -170,7 +173,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                 expireAfterAccessInMinutes, nameUtils, aggrPolicySource, nameIndexQueryCacheMaxSize,
                 expireAfterWriteQueryCacheInSeconds, idCacheEnabled, longId,
                 new NamespaceCounter(metricRegistry, 7200), false, true, 100,
-                nameIndexQueryPatternCacheMaxSize, expireAfterWriteQueryPatternCacheInSeconds);
+                nameIndexQueryPatternCacheMaxSize, expireAfterWriteQueryPatternCacheInSeconds, 10);
     }
 
     public MetricIndexImpl( MetricRegistry metricRegistry, String metricsStoreConfigFile,
@@ -184,7 +187,8 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                             boolean rocksdbReadonly,
                             boolean syncSecondaryDb,
                             int nameIndexKeyQueueSizeLimit,
-                            int nameIndexQueryPatternCacheMaxSize, int expireAfterWriteQueryPatternCacheInSeconds) {
+                            int nameIndexQueryPatternCacheMaxSize, int expireAfterWriteQueryPatternCacheInSeconds,
+                            int maxInvalidLeafMetricsLoggedPerMin) {
         this.metricRegistry = metricRegistry;
         this.metricsStoreConfigFile = metricsStoreConfigFile;
         this.nameUtils = Preconditions.checkNotNull(nameUtils);
@@ -201,6 +205,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
         this.rocksdbReadonly = rocksdbReadonly;
         this.syncSecondaryDb = syncSecondaryDb;
         this.nameIndexKeyQueueSizeLimit = nameIndexKeyQueueSizeLimit;
+        this.invalidLeafMetricsReceivedLogQuota = new Quota(maxInvalidLeafMetricsLoggedPerMin, 60);
 
         this.metricCache =
                 CacheBuilder.newBuilder().initialCapacity(nameIndexMaxCacheSize).maximumSize(nameIndexMaxCacheSize)
@@ -997,6 +1002,9 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                         String msg =
                             String.format( "Cannot create metric with name [%s] because [%s] is already a leaf", key,
                                 entryKey );
+                        if (invalidLeafMetricsReceivedLogQuota.allow()) {
+                            log.error(msg);
+                        }
                         throw new RuntimeException( msg );
                     }
                     // key already exists. may need to update list of children

@@ -82,6 +82,9 @@ public class cfgMetricIndex
     @Value("${metrics.store.sync.queue.size.limit:10000}")
     private int nameIndexKeyQueueSizeLimit = 10000;
 
+    @Value( "${log.invalidLeafMetrics.quota.min:10}" )
+    private int maxInvalidLeafMetricsLoggedPerMin;
+
     // TODO duplicated in different cfg beans
     @Value( "${app.servicedir:}" )
     private String serviceDir;
@@ -134,7 +137,7 @@ public class cfgMetricIndex
                 nameIndexMaxCacheSize, metricCacheExpireAfterAccessInMinutes, nameUtils, policySource,
                 nameIndexQueryCacheMaxSize, expireAfterWriteQueryCacheInSeconds, enableIdCache, longId,
                 namespaceCounter, rocksdbReadonly, syncSecondaryDb, nameIndexKeyQueueSizeLimit,
-                nameIndexQueryPatternCacheMaxSize, expireAfterWriteQueryPatternCacheInSeconds);
+                nameIndexQueryPatternCacheMaxSize, expireAfterWriteQueryPatternCacheInSeconds, maxInvalidLeafMetricsLoggedPerMin);
         s.scheduleWithFixedDelay(metricIndex::reload, 300, 300, TimeUnit.SECONDS);
         return metricIndex;
     }
