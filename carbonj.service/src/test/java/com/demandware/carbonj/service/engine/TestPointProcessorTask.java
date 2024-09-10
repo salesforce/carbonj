@@ -8,13 +8,13 @@ package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.ns.NamespaceCounter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.mock;
@@ -72,7 +72,7 @@ public class TestPointProcessorTask {
         return dataPoints -> {
             for (int i = 0; i < dataPoints.size(); i++) {
                 DataPoint point = dataPoints.get(i);
-                Assert.assertEquals("Datapoint (" + point.toString() + ") validity:" , expectValidPoints, point.isValid());
+                assertEquals(expectValidPoints, point.isValid(), "Datapoint (" + point.toString() + ") validity:");
             }
         };
     }

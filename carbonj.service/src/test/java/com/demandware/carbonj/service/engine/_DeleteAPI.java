@@ -9,14 +9,15 @@ package com.demandware.carbonj.service.engine;
 import com.demandware.carbonj.service.db.model.DeleteAPIResult;
 import com.demandware.carbonj.service.db.model.Metric;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class _DeleteAPI extends AbstractCarbonJ_StoreTest
 {
@@ -28,8 +29,8 @@ public class _DeleteAPI extends AbstractCarbonJ_StoreTest
         cjClient.send( "a.b.e.g", 1.0f, new DateTime() );
         drain();
 
-        DeleteAPIResult resultDelete1 = carbonjAdmin.deleteAPI("a.b.c", true, Collections.EMPTY_LIST);
-        DeleteAPIResult resultDelete2 = carbonjAdmin.deleteAPI("a.b.e", true, Collections.EMPTY_LIST);
+        DeleteAPIResult resultDelete1 = carbonjAdmin.deleteAPI("a.b.c", true, Collections.emptyList());
+        DeleteAPIResult resultDelete2 = carbonjAdmin.deleteAPI("a.b.e", true, Collections.emptyList());
 
         assertEquals( 1L, resultDelete1.getLeafCount() );
         assertEquals( 1L, resultDelete1.getTotalCount() );
@@ -72,7 +73,7 @@ public class _DeleteAPI extends AbstractCarbonJ_StoreTest
         cjClient.send( "a.b.c.l.m", 1.0f, new DateTime() );
         drain();
 
-        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("a.b", false, Arrays.asList("h"));
+        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("a.b", false, List.of("h"));
         assertEquals( 1L, resultDelete.getLeafCount() );
         assertEquals( 3L, resultDelete.getTotalCount() );
         assertEquals( Arrays.asList(  "a", "a.b", "a.b.e", "a.b.e.f", "a.b.e.f.h", "a.b.c", "a.b.c.l", "a.b.c.l.m"), carbonjAdmin.findAllMetrics( "a") );
@@ -88,7 +89,7 @@ public class _DeleteAPI extends AbstractCarbonJ_StoreTest
         cjClient.send( "a.b.c.g.f.c.g.c.g.k.f", 1.0f, new DateTime() );
         drain();
 
-        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("**.c.g.k", true, Collections.EMPTY_LIST );
+        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("**.c.g.k", true, Collections.emptyList() );
 
         assertEquals( 6L, resultDelete.getLeafCount() );
         assertEquals( 8L, resultDelete.getTotalCount() );
@@ -120,7 +121,7 @@ public class _DeleteAPI extends AbstractCarbonJ_StoreTest
         cjClient.send( "abc102.def.ghi.klm.nop", 1.0f, new DateTime() );
         drain();
 
-        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("abc*.*.*.*.*", true, Collections.EMPTY_LIST);
+        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("abc*.*.*.*.*", true, Collections.emptyList());
 
         assertEquals( 4L, resultDelete.getLeafCount() );
         assertEquals( 4L, resultDelete.getTotalCount() );
@@ -139,7 +140,7 @@ public class _DeleteAPI extends AbstractCarbonJ_StoreTest
         cjClient.send( "abc102.def.ghi.klm.nop4", 1.0f, new DateTime() );
         drain();
 
-        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("abc*.*.*.klm", true, Arrays.asList("nop1"));
+        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("abc*.*.*.klm", true, List.of("nop1"));
 
         assertEquals( 3L, resultDelete.getLeafCount() );
         assertEquals( 6L, resultDelete.getTotalCount() );
@@ -158,11 +159,11 @@ public class _DeleteAPI extends AbstractCarbonJ_StoreTest
         cjClient.send( "a.b.e.y.m.n", 1.0f, new DateTime() );
         drain();
 
-        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("a.b.e.f", true, Collections.EMPTY_LIST);
+        DeleteAPIResult resultDelete = carbonjAdmin.deleteAPI("a.b.e.f", true, Collections.emptyList());
         assertEquals( 2L, resultDelete.getLeafCount());
         assertEquals( 3L, resultDelete.getTotalCount() );
         Metric m = metricIndex.getMetric("a.b.e");
-        Assert.assertArrayEquals(Arrays.asList("x","y").toArray(),m.children().toArray() );
+        assertArrayEquals(Arrays.asList("x","y").toArray(),m.children().toArray() );
         assertEquals( Arrays.asList(  "a", "a.b", "a.b.e",  "a.b.e.x", "a.b.e.x.m", "a.b.e.x.m.n", "a.b.e.y", "a.b.e.y.m", "a.b.e.y.m.n"  ), carbonjAdmin.findAllMetrics( "a") );
     }
 }

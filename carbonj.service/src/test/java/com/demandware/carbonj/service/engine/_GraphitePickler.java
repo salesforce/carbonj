@@ -15,37 +15,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import com.demandware.carbonj.service.db.model.Interval;
 import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.RetentionPolicy;
 import com.demandware.carbonj.service.db.model.Series;
 import com.demandware.carbonj.service.db.util.time.TimeSource;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 
 import net.razorvine.pickle.PickleException;
 import net.razorvine.pickle.Pickler;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
-@RunWith (JUnit4.class)
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class _GraphitePickler
 {
-    private TimeSource timeSource = TimeSource.defaultTimeSource();
+    private final TimeSource timeSource = TimeSource.defaultTimeSource();
 
-    private Object[] tuple( Object... values )
-    {
-        return values != null ? values : new Object[0];
-    }
+    private static final List<Series> series = new ArrayList<>();
 
-    private static List<Series> series = new ArrayList<>();
-
-    @BeforeClass
+    @BeforeAll
     public static void setUpBeforeClass()
     {
         for ( int i = 0; i < 20000; ++i )
@@ -61,7 +53,7 @@ public class _GraphitePickler
     }
 
     @Test
-    @Ignore( "Generates string stream for comparison to pickling stream. Used for basic profiling." )
+    @Disabled( "Generates string stream for comparison to pickling stream. Used for basic profiling." )
     public void testStringStream() throws IOException
     {
         ByteArrayOutputStream seriesString = new ByteArrayOutputStream();
@@ -76,7 +68,7 @@ public class _GraphitePickler
     }
 
     @Test
-    @Ignore( "Tests pickling series stream with memoization. Used for basic profiling." )
+    @Disabled( "Tests pickling series stream with memoization. Used for basic profiling." )
     public void testPicklingLotsOfSeriesWithMemo() throws IOException
     {
         ByteArrayOutputStream seriesPickleOut = new ByteArrayOutputStream();
@@ -84,7 +76,7 @@ public class _GraphitePickler
     }
 
     @Test
-    @Ignore( "Tests pickling series stream without memoization. Used for basic profiling." )
+    @Disabled( "Tests pickling series stream without memoization. Used for basic profiling." )
     public void testPicklingLotsOfSeriesWithoutMemo() throws IOException
     {
         ByteArrayOutputStream seriesPickleOut = new ByteArrayOutputStream();
@@ -92,7 +84,7 @@ public class _GraphitePickler
     }
 
     @Test
-    @Ignore( "Tests pickling series with memoization. Used for basic profiling." )
+    @Disabled( "Tests pickling series with memoization. Used for basic profiling." )
     public void testOriginalPicklingLotsOfSeriesWithMemo() throws PickleException, IOException
     {
         List<Map<String, Object>> convertedSeries = new ArrayList<>();
@@ -113,7 +105,7 @@ public class _GraphitePickler
     }
 
     @Test
-    @Ignore( "Tests pickling series without memoization. Used for basic profiling." )
+    @Disabled( "Tests pickling series without memoization. Used for basic profiling." )
     public void testOriginalPicklingLotsOfSeriesWithoutMemo() throws PickleException, IOException
     {
         List<Map<String, Object>> convertedSeries = new ArrayList<>();
@@ -135,7 +127,7 @@ public class _GraphitePickler
 
 
     @Test
-    @Ignore
+    @Disabled
     public void testPickleMetricsListOutputStream() throws PickleException, IOException
     {
         List<Metric> nodes = new ArrayList<>();
@@ -149,9 +141,9 @@ public class _GraphitePickler
         {
             try
             {
-                Map<String, Object> entry = new HashMap();
+                Map<String, Object> entry = new HashMap<>();
                 Interval interval = node.getMaxRetentionInterval( timeSource.getEpochSecond() );
-                entry.put( "intervals", Collections.singletonList( tuple( interval.start, interval.end ) ) ); // TODO:
+                entry.put( "intervals", Collections.singletonList(interval.start) ); // TODO:
                                                                                                               // clean
                                                                                                               // it
                                                                                                               // up.
@@ -163,13 +155,13 @@ public class _GraphitePickler
             {
                 if ( node != null )
                 {
-                    System.out.println( String.format( "Failed to pickle data for metring [%s]", node.name ) );
+                    System.out.printf("Failed to pickle data for metring [%s]%n", node.name );
                 }
                 else
                 {
                     System.out.println( "node is null" );
                 }
-                Throwables.propagate( t );
+                throw new RuntimeException(t);
             }
         }
 
@@ -179,11 +171,11 @@ public class _GraphitePickler
         ByteArrayOutputStream metricsPickleOut = new ByteArrayOutputStream();
         new GraphitePickler().pickleMetrics( nodes, metricsPickleOut );
 
-        Assert.assertArrayEquals( originalPickleOut.toByteArray(), metricsPickleOut.toByteArray() );
+        assertArrayEquals( originalPickleOut.toByteArray(), metricsPickleOut.toByteArray() );
     }
 
     @Test
-    @Ignore
+    @Disabled
     public void testPickleSeriesListOutputStream() throws PickleException, IOException
     {
         List<Series> series = new ArrayList<>();
@@ -217,6 +209,6 @@ public class _GraphitePickler
         ByteArrayOutputStream seriesPickleOut = new ByteArrayOutputStream();
         new GraphitePickler( seriesPickleOut ).pickleSeriesList( series );
         
-        Assert.assertEquals( originalPickleOut.toByteArray().length, seriesPickleOut.toByteArray().length );
+        assertEquals( originalPickleOut.toByteArray().length, seriesPickleOut.toByteArray().length );
     }
 }

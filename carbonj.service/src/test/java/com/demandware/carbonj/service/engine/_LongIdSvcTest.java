@@ -10,30 +10,19 @@ package com.demandware.carbonj.service.engine;
 import com.demandware.carbonj.service.admin.CarbonJClient.DumpResult;
 import com.google.common.collect.ImmutableMap;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class _LongIdSvcTest extends CarbonJSvcLongIdTest
 {
-    @SuppressWarnings( { "rawtypes", "unchecked" } ) public static void assertEquals(Collection c1, Collection c2 )
-    {
-        Assert.assertEquals( new ArrayList( c1 ), new ArrayList( c2 ) );
-    }
-
-    @SuppressWarnings( { "rawtypes", "unchecked" } ) public static void assertEquals( String msg, Collection c1,
-                                                                                      Collection c2 )
-    {
-        Assert.assertEquals( msg, new ArrayList( c1 ), new ArrayList( c2 ) );
-    }
-
-    @SuppressWarnings( { "unchecked", "rawtypes" } ) public static void assertEqualsIgnoreOrder( Collection c1,
-                                                                                                 Collection c2 )
-    {
-        Assert.assertEquals( new TreeSet( c1 ), new TreeSet( c2 ) );
-    }
-
     protected int toBucketTime( DateTime dt )
     {
         // align to one minute resolution
@@ -50,33 +39,33 @@ public class _LongIdSvcTest extends CarbonJSvcLongIdTest
         assertEquals( Arrays.asList( "a.b.c", "a.b.d" ), cjClient.dumpNames( null ) );
         assertEquals( Arrays.asList( "a.b.c", "a.b.d" ), cjClient.dumpNames( "*" ) );
         assertEquals( Arrays.asList( "a.b.c", "a.b.d" ), cjClient.dumpNames( "a.*" ) );
-        assertEquals( Arrays.asList( "a.b.d" ), cjClient.dumpNames( "*.d" ) );
+        assertEquals(List.of("a.b.d"), cjClient.dumpNames( "*.d" ) );
 
-        assertEquals( Arrays.asList( "a.b.c" ), cjClient.dumpNames( null, null, "a.b.c", 1 ) );
-        assertEquals( Arrays.asList( "a.b.d" ), cjClient.dumpNames( null, null, "a.b.d", null ) );
+        assertEquals(List.of("a.b.c"), cjClient.dumpNames( null, null, "a.b.c", 1 ) );
+        assertEquals(List.of("a.b.d"), cjClient.dumpNames( null, null, "a.b.d", null ) );
     }
 
     @Test public void testCleanSeries_dryRun()
     {
-        Assert.assertTrue( cjClient.cleanSeries( null, null, null, null, true ).isEmpty() );
+        assertTrue( cjClient.cleanSeries( null, null, null, null, true ).isEmpty() );
         cjClient.send( "a.b.c", 1.0f, new DateTime().minusHours( 2 ) );
         cjClient.send( "a.b.d", 1.0f, new DateTime().minusHours( 1 ) );
         drain();
 
         assertEquals( Arrays.asList( "a.b.c", "a.b.d" ), cjClient.cleanSeries( "-10m", null, null, null, true ) );
-        assertEquals( "test filtering", Arrays.asList( "a.b.c" ),
-                cjClient.cleanSeries( "-10m", "*.c", null, null, true ) );
-        assertEquals( "test exclusion", Arrays.asList( "a.b.d" ),
-                cjClient.cleanSeries( "-10m", null, "*.c", null, true ) );
-        assertEquals( Arrays.asList( "a.b.c" ), cjClient.cleanSeries( "-10m", null, null, 1, true ) );
-        assertEquals( Arrays.asList( "a.b.c" ), cjClient.cleanSeries( "-90m", null, null, null, true ) );
-        assertEquals( Arrays.asList(), cjClient.cleanSeries( "-3h", null, null, null, true ) );
-        assertEquals( Arrays.asList(), cjClient.cleanSeries( "-30d", null, null, null, true ) );
+        assertEquals(List.of("a.b.c"),
+                cjClient.cleanSeries( "-10m", "*.c", null, null, true ), "test filtering" );
+        assertEquals(List.of("a.b.d"),
+                cjClient.cleanSeries( "-10m", null, "*.c", null, true ), "test exclusion" );
+        assertEquals(List.of("a.b.c"), cjClient.cleanSeries( "-10m", null, null, 1, true ) );
+        assertEquals(List.of("a.b.c"), cjClient.cleanSeries( "-90m", null, null, null, true ) );
+        assertEquals(List.of(), cjClient.cleanSeries( "-3h", null, null, null, true ) );
+        assertEquals(List.of(), cjClient.cleanSeries( "-30d", null, null, null, true ) );
     }
 
     @Test public void testCleanSeries()
     {
-        Assert.assertTrue( cjClient.cleanSeries( null, null, null, null, true ).isEmpty() );
+        assertTrue( cjClient.cleanSeries( null, null, null, null, true ).isEmpty() );
         cjClient.send( "a.b.1", 1.0f, new DateTime().minusHours( 2 ) );
         cjClient.send( "a.b.2", 1.0f, new DateTime().minusHours( 1 ) );
         cjClient.send( "a.b.3", 1.0f, new DateTime().minusHours( 2 ) );
@@ -126,9 +115,9 @@ public class _LongIdSvcTest extends CarbonJSvcLongIdTest
         assertEquals( dps, cjClient.dumpLines( "60s24h", null, null, 0, Integer.MAX_VALUE ) );
 
         // test filtering
-        assertEquals( Arrays.asList( dps.get( 0 ) ),
+        assertEquals(Collections.singletonList(dps.get(0)),
                 cjClient.dumpLines( "60s24h", null, null, 0, dps.get( 0 ).ts + 1 ) );
-        assertEquals( Arrays.asList( dps.get( 1 ) ),
+        assertEquals(Collections.singletonList(dps.get(1)),
                 cjClient.dumpLines( "60s24h", null, null, dps.get( 1 ).ts - 1, Integer.MAX_VALUE ) );
     }
 
@@ -168,7 +157,7 @@ public class _LongIdSvcTest extends CarbonJSvcLongIdTest
         assertEquals( Collections.EMPTY_LIST, cjClient.dumpSeries( "60s24h", 0, 1000, null, "*", 0, 0 ).data );
         assertEquals( Arrays.asList( dps.get( 1 ), dps.get( 3 ) ),
                 cjClient.dumpSeries( "60s24h", 0, 1000, null, "*.1", 0, 0 ).data );
-        assertEquals( Arrays.asList( dps.get( 3 ) ), cjClient.dumpSeries( "60s24h", 0, 1000, "b*", "*.1", 0, 0 ).data );
+        assertEquals(Collections.singletonList(dps.get(3)), cjClient.dumpSeries( "60s24h", 0, 1000, "b*", "*.1", 0, 0 ).data );
     }
 
     @Test public void testDumpSeries_cursor()
@@ -180,17 +169,17 @@ public class _LongIdSvcTest extends CarbonJSvcLongIdTest
         cjClient.send( dps );
         drain();
         DumpResult dr = cjClient.dumpSeries( "60s24h", 0, 1, "*", 0, 0 );
-        assertEquals( Arrays.asList( dps.get( 0 ) ), dr.data );
-        Assert.assertFalse( dr.isDone() );
+        assertEquals(Collections.singletonList(dps.get(0)), dr.data );
+        assertFalse( dr.isDone() );
         dr = cjClient.dumpSeries( "60s24h", dr.cursor, 2, "*", 0, 0 );
         assertEquals( Arrays.asList( dps.get( 1 ), dps.get( 2 ) ), dr.data );
-        Assert.assertFalse( dr.isDone() );
+        assertFalse( dr.isDone() );
         dr = cjClient.dumpSeries( "60s24h", dr.cursor, 2, "*", 0, 0 );
-        assertEquals( Arrays.asList( dps.get( 3 ) ), dr.data );
-        Assert.assertTrue( dr.isDone() );
+        assertEquals(Collections.singletonList(dps.get(3)), dr.data );
+        assertTrue( dr.isDone() );
         dr = cjClient.dumpSeries( "60s24h", dr.cursor, 2, "*", 0, 0 );
         assertEquals( Collections.EMPTY_LIST, dr.data );
-        Assert.assertTrue( dr.isDone() );
+        assertTrue( dr.isDone() );
     }
 
     @Test public void testDumpSeries_filterTime()
@@ -208,11 +197,11 @@ public class _LongIdSvcTest extends CarbonJSvcLongIdTest
         assertEquals( Collections.EMPTY_LIST, cjClient.dumpSeries( "60s24h", 0, 1000, null, -1, 0 ).data );
 
         // test filtering
-        assertEquals( Arrays.asList( dps.get( 0 ) ),
+        assertEquals(Collections.singletonList(dps.get(0)),
                 cjClient.dumpSeries( "60s24h", 0, 1000, null, dps.get( 0 ).ts - 1, dps.get( 1 ).ts - 1 ).data );
-        assertEquals( Arrays.asList( dps.get( 1 ) ),
+        assertEquals(Collections.singletonList(dps.get(1)),
                 cjClient.dumpSeries( "60s24h", 0, 1000, null, dps.get( 1 ).ts - 1, 0 ).data );
-        assertEquals( Arrays.asList( dps.get( 0 ) ), cjClient.dumpSeries( "60s24h", 0, 1000, null, 0,
+        assertEquals(Collections.singletonList(dps.get(0)), cjClient.dumpSeries( "60s24h", 0, 1000, null, 0,
                 dps.get( 1 ).ts - (int) ( System.currentTimeMillis() / 1000 ) - 1 ).data );
     }
 
@@ -236,8 +225,8 @@ public class _LongIdSvcTest extends CarbonJSvcLongIdTest
 
         assertEquals( Arrays.asList( "a", "b", "d" ), cjClient.listMetrics( "*" ) );
         assertEquals( Arrays.asList( "d.e.f", "d.e.g" ), cjClient.listMetrics( "*.*.*" ) );
-        assertEquals( Arrays.asList( "d.e.g" ), cjClient.listMetrics( "*.*.g" ) );
-        assertEquals( Arrays.asList( "b.c" ), cjClient.listMetrics( "b.*" ) );
+        assertEquals(List.of("d.e.g"), cjClient.listMetrics( "*.*.g" ) );
+        assertEquals(List.of("b.c"), cjClient.listMetrics( "b.*" ) );
     }
 
     @Test public void testData()
@@ -249,7 +238,7 @@ public class _LongIdSvcTest extends CarbonJSvcLongIdTest
         cjClient.send( "testData", 2.0f, dt1 );
         drain();
 
-        Assert.assertEquals( ImmutableMap.of( toBucketTime( dt0 ), 1.0d, toBucketTime( dt1 ), 2.0d ),
+        assertEquals( ImmutableMap.of( toBucketTime( dt0 ), 1.0d, toBucketTime( dt1 ), 2.0d ),
                 cjClient.listPoints( "testData", DB_60S ) );
     }
 
@@ -265,11 +254,11 @@ public class _LongIdSvcTest extends CarbonJSvcLongIdTest
 
         drain();
         Map<Integer, Double> result = cjClient.listPoints( "testData", DB_60S );
-        Assert.assertEquals( SIZE, result.size() );
+        assertEquals( SIZE, result.size() );
         double expected = 0f;
         for ( Double v : result.values() )
         {
-            Assert.assertEquals( expected++, v.doubleValue(), 0.1 );
+            assertEquals( expected++, v, 0.1 );
         }
     }
 
@@ -282,5 +271,4 @@ public class _LongIdSvcTest extends CarbonJSvcLongIdTest
         drain();
         System.out.println( cjClient.listPointsWithId( "60s24h", "0" ) );
     }
-
 }

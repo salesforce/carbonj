@@ -12,14 +12,12 @@ import com.demandware.carbonj.service.db.log.QueryStats;
 import com.demandware.carbonj.service.engine.Query;
 import com.demandware.carbonj.service.queue.QueueProcessor;
 import com.google.gson.JsonObject;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 
-@RunWith(JUnit4.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class TestCarbonjEventsLogger {
     MetricRegistry metricRegistry = new MetricRegistry();
 
@@ -39,14 +37,14 @@ public class TestCarbonjEventsLogger {
         Thread.sleep(2000);
 
         Collection<JsonObject> logEvents = queueProcessor.logEvents;
-        Assert.assertEquals(1, logEvents.size());
+        assertEquals(1, logEvents.size());
         JsonObject logEvent = logEvents.iterator().next();
 
-        Assert.assertEquals(Constants.QUERY_LOG_TYPE, logEvent.get("type").getAsString());
+        assertEquals(Constants.QUERY_LOG_TYPE, logEvent.get("type").getAsString());
         // Assert.assertEquals("carbonj", logEvent.get("domain").getAsString());
-        Assert.assertEquals("carbonj-p1-0", logEvent.get("pod").getAsString());
-        Assert.assertEquals("carbonj-a", logEvent.get("namespace").getAsString());
-        Assert.assertEquals(20, logEvent.get("noOfSeries").getAsInt());
+        assertEquals("carbonj-p1-0", logEvent.get("pod").getAsString());
+        assertEquals("carbonj-a", logEvent.get("namespace").getAsString());
+        assertEquals(20, logEvent.get("noOfSeries").getAsInt());
     }
 
     public static class MockQueueProcessor implements QueueProcessor<JsonObject> {

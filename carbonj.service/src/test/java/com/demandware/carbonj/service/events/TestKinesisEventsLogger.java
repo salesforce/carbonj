@@ -13,49 +13,47 @@ import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.queue.QueueProcessor;
 import com.salesforce.cc.infra.core.kinesis.Message;
 import com.salesforce.cc.infra.core.kinesis.PayloadCodec;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(JUnit4.class)
 public class TestKinesisEventsLogger {
 
-    private static final String EVENT = "UMONTP/1.0\n" +
-            "Domain:carbonj\n" +
-            "Payload-Version:1.0\n" +
-            "\n" +
-            "[  \n" +
-            "   {  \n" +
-            "      \"time\":1535742516669,\n" +
-            "      \"ipAddresses\":[  \n" +
-            "         \"216.58.194.206\",\n" +
-            "         \"2607:f8b0:4005:805:0:0:0:200e\"\n" +
-            "      ],\n" +
-            "      \"type\":\"dns\",\n" +
-            "      \"pod\":\"sponnusamy-ltm.internal.salesforce.com\",\n" +
-            "      \"namespace\":\"sponnusamy-ltm.internal.salesforce.com\"\n" +
-            "   }\n" +
-            "]";
+    private static final String EVENT = """
+            UMONTP/1.0
+            Domain:carbonj
+            Payload-Version:1.0
+
+            [ \s
+               { \s
+                  "time":1535742516669,
+                  "ipAddresses":[ \s
+                     "216.58.194.206",
+                     "2607:f8b0:4005:805:0:0:0:200e"
+                  ],
+                  "type":"dns",
+                  "pod":"sponnusamy-ltm.internal.salesforce.com",
+                  "namespace":"sponnusamy-ltm.internal.salesforce.com"
+               }
+            ]""";
 
     private List<byte[]> datae;
     private final MetricRegistry metricRegistry = new MetricRegistry();
 
-    @Before
+    @BeforeEach
     public void setUp() {
         datae = new LinkedList<>();
     }
@@ -69,10 +67,10 @@ public class TestKinesisEventsLogger {
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));
         byte[] encodedBytes = datae.get(0);
         Message message = PayloadCodec.decode(encodedBytes);
-        Assert.assertEquals("2.0", message.getHeader("Payload-Version"));
+        assertEquals("2.0", message.getHeader("Payload-Version"));
         Collection<byte[]> eventCollection = GzipPayloadV2Codec.getInstance().decode(message.getPayload());
-        Assert.assertEquals(1, eventCollection.size());
-        Assert.assertTrue(Arrays.equals(eventBytes, eventCollection.iterator().next()));
+        assertEquals(1, eventCollection.size());
+        assertArrayEquals(eventBytes, eventCollection.iterator().next());
     }
 
     private AmazonKinesis mockAmazonKinesis() {
@@ -84,7 +82,7 @@ public class TestKinesisEventsLogger {
     private static class PutRecordRequestArgMatcher
             implements ArgumentMatcher<PutRecordRequest>
     {
-        private List<byte[]> dataList;
+        private final List<byte[]> dataList;
 
         PutRecordRequestArgMatcher(List<byte[]> dataList)
         {
@@ -93,10 +91,8 @@ public class TestKinesisEventsLogger {
 
         @Override
         public boolean matches(PutRecordRequest argument) {
-            PutRecordRequest recordRequest = argument;
-            byte[] bytes = recordRequest.getData().array();
+            byte[] bytes = argument.getData().array();
             return dataList.add(bytes);
         }
     }
-
 }

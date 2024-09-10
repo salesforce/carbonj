@@ -2,7 +2,6 @@ buildscript {
     repositories {
         mavenCentral()
         mavenLocal()
-        jcenter()
     }
     dependencies {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:${springbootVersion}")
@@ -10,11 +9,11 @@ buildscript {
 }
 
 plugins {
-    id 'com.palantir.docker' version "0.36.0"
-    id "com.github.jk1.dependency-license-report" version "2.9"
-    id "com.github.hierynomus.license" version "0.16.1"
-    id "org.sonarqube" version "5.1.0.4882"
-    id 'net.researchgate.release' version "3.0.2"
+    id 'com.palantir.docker' version "${palantirDocker}"
+    id "com.github.jk1.dependency-license-report" version "${dependencyLicenseReport}"
+    id "com.github.hierynomus.license" version "${hierynomusLicense}"
+    id "org.sonarqube" version "${sonarqube}"
+    id 'net.researchgate.release' version "${gradleRelease}"
 }
 
 release {
@@ -53,19 +52,15 @@ subprojects {
     }
 
     dependencies {
-        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.17.2'
-        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.17.2'
-        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.17.2'
-        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: '2.17.2'
-        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: '2.17.2'
-        implementation group: 'com.google.re2j', name: 're2j', version: '1.7'
-        testImplementation group: 'org.powermock', name: 'powermock-module-javaagent', version: '2.0.9'
-        testImplementation group: 'org.jacoco', name: 'org.jacoco.agent', version: '0.8.12', classifier: 'runtime'
-        testImplementation group: 'org.powermock', name: 'powermock-core', version: '2.0.9'
-
-        testImplementation("junit:junit")
-//        testImplementation("org.springframework.boot:spring-boot-starter-test")
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: "${jackson}"
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${jackson}"
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: "${jackson}"
+        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-smile', version: "${jackson}"
+        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-cbor', version: "${jackson}"
+        implementation group: 'com.google.re2j', name: 're2j', version: "${re2j}"
+        testImplementation group: 'org.powermock', name: 'powermock-module-javaagent', version: "${powermock}"
+        testImplementation group: 'org.jacoco', name: 'org.jacoco.agent', version: "${jacoco}", classifier: 'runtime'
+        testImplementation group: 'org.powermock', name: 'powermock-core', version: "${powermock}"
+        testImplementation("org.junit.jupiter:junit-jupiter:${junit}")
     }
-
-
 }

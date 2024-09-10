@@ -9,15 +9,15 @@ package com.demandware.carbonj.service.engine.kcl;
 import com.amazonaws.services.kinesis.leases.impl.KinesisClientLease;
 import com.amazonaws.services.kinesis.leases.interfaces.ILeaseManager;
 import com.demandware.carbonj.service.engine.kinesis.kcl.MemLeaseManager;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(JUnit4.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class TestMemLeaseManager {
 
     private static final String OWNER = "owner";
@@ -28,33 +28,33 @@ public class TestMemLeaseManager {
         ILeaseManager<KinesisClientLease> leaseManager = new MemLeaseManager<>(1);
 
         // check if the lease table exists
-        Assert.assertFalse(leaseManager.leaseTableExists());
+        assertFalse(leaseManager.leaseTableExists());
 
         // create table if it not exists
-        Assert.assertTrue(leaseManager.createLeaseTableIfNotExists(10L, 10L));
+        assertTrue(leaseManager.createLeaseTableIfNotExists(10L, 10L));
 
         // check if the lease table exists
-        Assert.assertTrue(leaseManager.waitUntilLeaseTableExists(1, 10));
+        assertTrue(leaseManager.waitUntilLeaseTableExists(1, 10));
 
         // check if the lease table exists
-        Assert.assertTrue(leaseManager.leaseTableExists());
+        assertTrue(leaseManager.leaseTableExists());
 
         // check if the lease table is empty
-        Assert.assertTrue(leaseManager.isLeaseTableEmpty());
+        assertTrue(leaseManager.isLeaseTableEmpty());
 
-        Assert.assertEquals(0, leaseManager.listLeases().size());
+        assertEquals(0, leaseManager.listLeases().size());
 
         // create lease for 5 shards
         for (int i = 0; i < NO_OF_SHARDS; i++) {
             String shardId = "shard-" + i;
             KinesisClientLease lease = newKCLLease(shardId);
-            Assert.assertTrue(leaseManager.createLeaseIfNotExists(lease));
+            assertTrue(leaseManager.createLeaseIfNotExists(lease));
         }
 
         // check if the lease table is not empty
-        Assert.assertFalse(leaseManager.isLeaseTableEmpty());
+        assertFalse(leaseManager.isLeaseTableEmpty());
 
-        Assert.assertEquals(5, leaseManager.listLeases().size());
+        assertEquals(5, leaseManager.listLeases().size());
 
         verify(leaseManager, null, 0L);
 
@@ -87,10 +87,10 @@ public class TestMemLeaseManager {
         for (int i = 0; i < NO_OF_SHARDS; i++) {
             String shardId = "shard-" + i;
             KinesisClientLease lease = leaseManager.getLease(shardId);
-            Assert.assertEquals(expectedOwner, lease.getLeaseOwner());
-            Assert.assertEquals(expectedLeaseCounter, lease.getLeaseCounter());
+            assertEquals(expectedOwner, lease.getLeaseOwner());
+            assertEquals(expectedLeaseCounter, lease.getLeaseCounter());
         }
-        Assert.assertEquals(NO_OF_SHARDS, leaseManager.listLeases().size());
+        assertEquals(NO_OF_SHARDS, leaseManager.listLeases().size());
     }
 
     private static KinesisClientLease newKCLLease(String shardId) {

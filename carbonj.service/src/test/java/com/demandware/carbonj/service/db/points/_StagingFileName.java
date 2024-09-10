@@ -6,8 +6,8 @@
  */
 package com.demandware.carbonj.service.db.points;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.File;
@@ -15,11 +15,11 @@ import java.io.IOException;
 import java.util.Optional;
 
 import com.demandware.carbonj.service.BaseTest;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import com.demandware.carbonj.service.db.model.MetricProvider;
 import com.google.common.io.Files;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class _StagingFileName extends BaseTest
 {
@@ -43,7 +43,7 @@ public class _StagingFileName extends BaseTest
     // TODO fails on Jenkins for no apparent reason with
     // _StagingFileName.testGetLastSortedFileName:49 expected:<Optional[5m7d-100000.1.s]> but was:<Optional.empty>
     @Test
-    @Ignore
+    @Disabled
     public void testGetLastSortedFileName()
                     throws IOException
     {
@@ -53,15 +53,17 @@ public class _StagingFileName extends BaseTest
         assertEquals( "5m7d-100000.1", fn.getNextUnsortedFileName( dir ));
         File x = new File(dir, "5m7d-100000.1");
         assertTrue(x.createNewFile());
-        StagingFile stagingFile = new StagingFile(metricRegistry, x, sort(), mock( MetricProvider.class), fn.dbName );
-        stagingFile.sort( Optional.empty(), fn.dbName );
+        try (StagingFile stagingFile = new StagingFile(metricRegistry, x, sort(), mock(MetricProvider.class), fn.dbName)) {
+            stagingFile.sort(Optional.empty(), fn.dbName);
+        }
 
         assertEquals( Optional.of("5m7d-100000.1.s"), fn.getLastSortedFileName( dir ));
         assertEquals( "5m7d-100000.2", fn.getNextUnsortedFileName( dir ));
         File x2 = new File(dir, "5m7d-100000.2");
         assertTrue(x2.createNewFile());
-        StagingFile stagingFile2 = new StagingFile( metricRegistry, x2, sort(), mock( MetricProvider.class), fn.dbName );
-        stagingFile2.sort( Optional.of("5m7d-100000.1.s"), fn.dbName );
+        try (StagingFile stagingFile2 = new StagingFile(metricRegistry, x2, sort(), mock(MetricProvider.class), fn.dbName)) {
+            stagingFile2.sort(Optional.of("5m7d-100000.1.s"), fn.dbName);
+        }
         assertEquals( Optional.of("5m7d-100000.2.s"), fn.getLastSortedFileName( dir ));
     }
 

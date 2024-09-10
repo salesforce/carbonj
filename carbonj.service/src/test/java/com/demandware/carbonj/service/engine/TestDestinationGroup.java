@@ -8,17 +8,15 @@ package com.demandware.carbonj.service.engine;
 
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.engine.destination.LineProtocolDestination;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(SpringRunner.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class TestDestinationGroup
@@ -38,8 +36,8 @@ public class TestDestinationGroup
         destinationGroup.accept(new DataPoint("metrics1", 2, 1));
         destinationGroup.accept(new DataPoint("metrics2", 2, 1));
 
-        Assert.assertEquals(1, dest1.size());
-        Assert.assertEquals(1, dest2.size());
+        assertEquals(1, dest1.size());
+        assertEquals(1, dest2.size());
     }
 
     @Test
@@ -62,8 +60,7 @@ public class TestDestinationGroup
         while (i < 5) {
             destinationGroup.accept(new DataPoint("metric", 1, i++));
         }
-
-        Assert.assertEquals(5, i);
+        assertEquals(5, i);
     }
 
     private static class MemoryDestination implements LineProtocolDestination {

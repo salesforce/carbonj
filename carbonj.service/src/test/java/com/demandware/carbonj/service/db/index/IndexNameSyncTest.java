@@ -10,7 +10,7 @@ import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.RetentionPolicy;
 import com.demandware.carbonj.service.db.util.FileUtils;
 import com.google.common.cache.LoadingCache;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.time.Clock;
@@ -21,11 +21,11 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.demandware.carbonj.service.db.model.NullMetric.METRIC_NULL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IndexNameSyncTest extends BaseIndexTest {
     @Test

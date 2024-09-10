@@ -6,7 +6,7 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.codahale.metrics.*;
+import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.TimeSeriesStoreImpl;
 import com.demandware.carbonj.service.db.model.DataPointStore;
@@ -20,19 +20,15 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import net.razorvine.pickle.PickleException;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.mockito.*;
-import org.mockito.junit.*;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -40,23 +36,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class _GraphiteSeriesDataServlet {
-    @Rule
-    public TemporaryFolder tempFolder = new TemporaryFolder();
+    @TempDir
+    public File tempFolder;
     @Autowired
     private TimeSeriesStore timeSeriesStore;
 
     @Test
-    @Ignore("Used only for generating pickle stream of each series. Good for method profiling.")
+    @Disabled("Used only for generating pickle stream of each series. Good for method profiling.")
     public void testPickleStream()
             throws IOException {
         Preconditions.checkNotNull(timeSeriesStore);
@@ -67,7 +62,7 @@ public class _GraphiteSeriesDataServlet {
         String until = String.valueOf(now);
 
         // Streaming without creating series list
-        final File pickleStreamOutput = tempFolder.newFile("pickleStream");
+        final File pickleStreamOutput = new File(tempFolder, "pickleStream");
         FileOutputStream allStream = new FileOutputStream(pickleStreamOutput);
 
         GraphitePickler seriesStream = new GraphitePickler(false, allStream);
@@ -80,7 +75,7 @@ public class _GraphiteSeriesDataServlet {
     }
 
     @Test
-    @Ignore("Used only for generating pickle stream while generating a large series list. Good for method profiling.")
+    @Disabled("Used only for generating pickle stream while generating a large series list. Good for method profiling.")
     public void testPickleStreamWhenCreatingSeriesList()
             throws IOException {
         Preconditions.checkNotNull(timeSeriesStore);
@@ -91,7 +86,7 @@ public class _GraphiteSeriesDataServlet {
         String until = String.valueOf(now);
 
         // Streaming via series list
-        final File pickleOutput = tempFolder.newFile("pickleOutput");
+        final File pickleOutput = new File(tempFolder, "pickleOutput");
         FileOutputStream someStream = new FileOutputStream(pickleOutput);
         List<Series> series =
                 timeSeriesStore.fetchSeriesData(
@@ -113,7 +108,7 @@ public class _GraphiteSeriesDataServlet {
         String until = String.valueOf(now);
 
         // Streaming without creating series list
-        final File pickleStreamOutput = tempFolder.newFile("pickleStream");
+        final File pickleStreamOutput = new File(tempFolder, "pickleStream");
         FileOutputStream allStream = new FileOutputStream(pickleStreamOutput);
 
         GraphitePickler seriesStream = new GraphitePickler(false, allStream);
@@ -125,7 +120,7 @@ public class _GraphiteSeriesDataServlet {
         System.out.println(pickleStreamOutput.length());
 
         // Streaming via series list
-        final File pickleOutput = tempFolder.newFile("pickleOutput");
+        final File pickleOutput = new File(tempFolder, "pickleOutput");
         FileOutputStream someStream = new FileOutputStream(pickleOutput);
         List<Series> series =
                 timeSeriesStore.fetchSeriesData(new Query(target, Integer.parseInt(from), Integer.parseInt(until), now, System.currentTimeMillis()));
@@ -134,24 +129,22 @@ public class _GraphiteSeriesDataServlet {
         someStream.close();
         System.out.println(pickleOutput.length());
 
-        String streamResult = Files.toString(pickleStreamOutput, Charsets.UTF_8);
+        String streamResult = Files.asCharSource(pickleStreamOutput, Charsets.UTF_8).read();
 
-        String someStreamResult = Files.toString(pickleStreamOutput, Charsets.UTF_8);
+        String someStreamResult = Files.asCharSource(pickleStreamOutput, Charsets.UTF_8).read();
 
         assertEquals(streamResult, someStreamResult);
     }
 
     @Configuration
     public static class cfg {
-        final private int batchedSeriesSize = 10;
-        private int nTaskThreads = 10;
-        private int threadBlockingQueueSize = 1000;
-        private boolean batchedSeriesRetrieval = true;
-        private boolean dumpIndex = false;
-
-        private String dumpIndexFile = "index-data.out";
-
-        private int TEST_METRICS_SIZE = 100;
+        private final int batchedSeriesSize = 10;
+        private final int nTaskThreads = 10;
+        private final int threadBlockingQueueSize = 1000;
+        private final boolean batchedSeriesRetrieval = true;
+        private final boolean dumpIndex = false;
+        private final String dumpIndexFile = "index-data.out";
+        private final int TEST_METRICS_SIZE = 100;
 
         @Bean
         MetricIndex metricIndex() {
@@ -200,7 +193,7 @@ public class _GraphiteSeriesDataServlet {
 
         @Bean
         TimeSeriesStore store(MetricRegistry metricRegistry, MetricIndex nameIndex, DataPointStore pointStore, DatabaseMetrics dbMetrics) {
-            return new TimeSeriesStoreImpl(metricRegistry, nameIndex, new NoOpLogger(), TimeSeriesStoreImpl.newMainTaskQueue(nTaskThreads,
+            return new TimeSeriesStoreImpl(metricRegistry, nameIndex, new NoOpLogger<>(), TimeSeriesStoreImpl.newMainTaskQueue(nTaskThreads,
                     threadBlockingQueueSize), TimeSeriesStoreImpl.newMainTaskQueue(1,
                     2), TimeSeriesStoreImpl.newSerialTaskQueue(10), pointStore, dbMetrics,
                     batchedSeriesRetrieval,
@@ -208,5 +201,4 @@ public class _GraphiteSeriesDataServlet {
         }
 
     }
-
 }

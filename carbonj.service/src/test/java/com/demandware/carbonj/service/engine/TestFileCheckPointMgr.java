@@ -6,16 +6,13 @@
  */
 package com.demandware.carbonj.service.engine;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,17 +21,21 @@ import java.nio.file.Paths;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import static org.springframework.test.util.AssertionErrors.assertEquals;
+import static org.springframework.test.util.AssertionErrors.assertTrue;
+
 // TODO Not sure if we need to cleanup checkpoint.txt file before
 // Because this test fails if that file already exists
 // Hence ignoring
-@RunWith( SpringRunner.class ) @SpringBootTest @DirtiesContext( classMode = DirtiesContext.ClassMode.AFTER_CLASS )
-@Ignore
+@SpringBootTest @DirtiesContext( classMode = DirtiesContext.ClassMode.AFTER_CLASS )
+@Disabled
 public class TestFileCheckPointMgr
 {
 
     private static final Logger log = LoggerFactory.getLogger( TestFileCheckPointMgr.class );
 
-    @Before public void deleteFileIfExists()
+    @BeforeEach
+    public void deleteFileIfExists()
     {
         try
         {
@@ -49,21 +50,21 @@ public class TestFileCheckPointMgr
 
     }
 
-    @Test public void testBasic()
+    @Test
+    public void testBasic()
                     throws Exception
     {
         CheckPointMgr<Date> checkPointMgr = new FileCheckPointMgr( Paths.get( "/tmp" ), 60 );
         Date lastCheckPoint = checkPointMgr.lastCheckPoint();
         log.warn( "-------------- " + lastCheckPoint );
         log.warn( "-------------- " + new Date( System.currentTimeMillis() - TimeUnit.MINUTES.toMillis( 120 ) ) );
-        Assert.assertTrue("last Checkpoint is "+ lastCheckPoint + ", actual value is " +new Date( System.currentTimeMillis() - TimeUnit.MINUTES.toMillis( 60 ) ),  lastCheckPoint.before(
+        assertTrue("last Checkpoint is "+ lastCheckPoint + ", actual value is " +new Date( System.currentTimeMillis() - TimeUnit.MINUTES.toMillis( 60 ) ),  lastCheckPoint.before(
                         new Date( System.currentTimeMillis() - TimeUnit.MINUTES.toMillis( 60 ) ) ) );
         Date checkPoint1 = new Date();
         checkPointMgr.checkPoint( checkPoint1 );
-        Assert.assertEquals( "Expected value is "+ checkPoint1 +", Actual value is "+ checkPointMgr.lastCheckPoint(), checkPoint1, checkPointMgr.lastCheckPoint() );
+        assertEquals( "Expected value is "+ checkPoint1 +", Actual value is "+ checkPointMgr.lastCheckPoint(), checkPoint1, checkPointMgr.lastCheckPoint() );
         Date checkPoint2 = new Date();
         checkPointMgr.checkPoint( checkPoint2 );
-        Assert.assertEquals( "Expected value is "+ checkPoint2 +", Actual value is "+ checkPointMgr.lastCheckPoint(), checkPoint2, checkPointMgr.lastCheckPoint() );
-
+        assertEquals( "Expected value is "+ checkPoint2 +", Actual value is "+ checkPointMgr.lastCheckPoint(), checkPoint2, checkPointMgr.lastCheckPoint() );
     }
 }

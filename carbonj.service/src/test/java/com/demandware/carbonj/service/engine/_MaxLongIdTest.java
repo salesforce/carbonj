@@ -9,13 +9,13 @@ package com.demandware.carbonj.service.engine;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.model.Metric;
 import org.joda.time.DateTime;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class _MaxLongIdTest extends CarbonJSvcLongIdTest
 {

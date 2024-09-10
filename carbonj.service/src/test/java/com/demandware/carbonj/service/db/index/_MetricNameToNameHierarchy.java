@@ -6,31 +6,22 @@
  */
 package com.demandware.carbonj.service.db.index;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertThat;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-@RunWith( Parameterized.class)
 public class _MetricNameToNameHierarchy
 {
-    @Parameterized.Parameter(0)
-    public String name;
-
-    @Parameterized.Parameter(1)
-    public String[] names;
-
-    @Test
-    public void isValid()
+    @ParameterizedTest
+    @MethodSource("data")
+    public void isValid(String name, String[] names)
     {
-        assertThat( new NameUtils("root").metricNameHierarchy( name ), equalTo(names));
+        assertArrayEquals( new NameUtils("root").metricNameHierarchy( name ), names);
     }
 
-    @Parameterized.Parameters(name= "{index}: metricNameHierarchy({0})={1}")
     public static Iterable<Object[]> data()
     {
         return Arrays.asList(new Object[][]
@@ -44,5 +35,4 @@ public class _MetricNameToNameHierarchy
                             {"*.{pod1,pod2,pod3}.*", new String[] { "*", "*.{pod1,pod2,pod3}", "*.{pod1,pod2,pod3}.*"}}
                         });
     }
-
 }

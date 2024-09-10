@@ -9,23 +9,21 @@ package com.demandware.carbonj.service.db.points;
 import com.demandware.carbonj.service.BaseTest;
 import com.demandware.carbonj.service.db.model.*;
 import com.demandware.carbonj.service.engine.AggregationMethod;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(JUnit4.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class TestIntervalProcessors extends BaseTest {
 
     private static final String SORTED_STAGING_FILE_NAME = "30m2y-1559811600.1.s";
 
     @Test
-    @Ignore("This test requires a staging file that is 700M big. This is gonna be a hard sell for open-sourcing..")
+    @Disabled("This test requires a staging file that is 700M big. This is gonna be a hard sell for open-sourcing..")
     public void testFileReadingTime() {
 
         String testFile = ClassLoader.getSystemResource(SORTED_STAGING_FILE_NAME).getFile();
@@ -34,8 +32,8 @@ public class TestIntervalProcessors extends BaseTest {
         MetricProvider mockMetricProvider = mockMetricProvider();
         IntervalProcessors.Stats stats = intervalProcessors.processFile(new SortedStagingFile(new File(testFile), mockMetricProvider));
 
-        Assert.assertEquals(54622104, stats.nLines);
-        Assert.assertEquals(11518592, stats.nRecords);
+        assertEquals(54622104, stats.nLines);
+        assertEquals(11518592, stats.nRecords);
     }
 
     private MetricProvider mockMetricProvider() {

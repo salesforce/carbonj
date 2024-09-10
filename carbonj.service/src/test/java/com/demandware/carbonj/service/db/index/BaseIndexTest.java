@@ -8,12 +8,11 @@ package com.demandware.carbonj.service.db.index;
 
 import java.io.File;
 
-import org.junit.After;
-import org.junit.Before;
-
 import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.MetricIndex;
 import com.google.common.io.Files;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class BaseIndexTest
 {
@@ -21,7 +20,7 @@ public class BaseIndexTest
     MetricIndex index;
     NameUtils nameUtils;
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
         nameUtils = new NameUtils(InternalConfig.getRootEntryKey());
@@ -30,7 +29,7 @@ public class BaseIndexTest
         index.open();
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
         if( index != null )

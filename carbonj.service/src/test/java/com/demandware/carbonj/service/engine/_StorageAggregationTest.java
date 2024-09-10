@@ -6,9 +6,11 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.demandware.carbonj.service.db.model.StorageAggregationPolicySource;
 import org.joda.time.DateTime;
-import org.junit.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -17,11 +19,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toMap;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class _StorageAggregationTest {
 
@@ -33,9 +37,7 @@ public class _StorageAggregationTest {
 
     private static Path carbonjCheckpointDirPath;
 
-    private static final String DB_5M = "5m7d";
-
-    @BeforeClass
+    @BeforeAll
     public static void start() throws IOException {
         // Create conf for storage aggregation rules.
         storageAggregationRulesFilePath = Paths.get("/tmp/storage-aggregation.conf");
@@ -48,19 +50,19 @@ public class _StorageAggregationTest {
         carbonjDataDirPath = Paths.get("/tmp/carbonj-data");
         File carbonjDataDirFile = carbonjDataDirPath.toFile();
         deleteDirRecursivelyIfExists(carbonjDataDirPath);
-        assertTrue("Failed to create carbonj data dir: " + carbonjDataDirPath.toString(), carbonjDataDirFile.mkdirs());
+        assertTrue(carbonjDataDirFile.mkdirs(), "Failed to create carbonj data dir: " + carbonjDataDirPath.toString());
 
         // Create carbonj staging dir
         carbonjStagingDirPath = Paths.get("/tmp/carbonj-staging");
         File carbonjStagingDirFile = carbonjStagingDirPath.toFile();
         deleteDirRecursivelyIfExists(carbonjStagingDirPath);
-        assertTrue("Failed to create carbonj staging dir: " + carbonjStagingDirPath.toString(), carbonjStagingDirFile.mkdirs());
+        assertTrue(carbonjStagingDirFile.mkdirs(), "Failed to create carbonj staging dir: " + carbonjStagingDirPath.toString());
 
         // Create carbonj checkpoint dir
         carbonjCheckpointDirPath = Paths.get("/tmp/carbonj-checkpoint");
         File carbonjCheckpointDirFile = carbonjCheckpointDirPath.toFile();
         deleteDirRecursivelyIfExists(carbonjCheckpointDirPath);
-        assertTrue("Failed to create carbonj checkpoint dir: " + carbonjCheckpointDirPath.toString(), carbonjCheckpointDirFile.mkdirs());
+        assertTrue(carbonjCheckpointDirFile.mkdirs(), "Failed to create carbonj checkpoint dir: " + carbonjCheckpointDirPath.toString());
 
         // Start carbonj
         Map<String, String> properties = new HashMap<>();
@@ -73,7 +75,7 @@ public class _StorageAggregationTest {
 //        startCarbonJ(Collections.unmodifiableMap(properties));
     }
 
-    @AfterClass
+    @AfterAll
     public static void stop() throws IOException {
         Files.deleteIfExists(storageAggregationRulesFilePath);
         deleteDirRecursivelyIfExists(carbonjDataDirPath);
@@ -102,7 +104,7 @@ public class _StorageAggregationTest {
     }
 
     @Test
-    @Ignore("Not ready until run time can be reduced.")
+    @Disabled("Not ready until run time can be reduced.")
     public void testStorageAggregationMethods() throws InterruptedException {
 //        StorageAggregationPolicySource policySource = carbonj.getRuntime().__getInjectedApplicationContext()
 //                .getBean("storageAggregationPolicySource", StorageAggregationPolicySource.class);

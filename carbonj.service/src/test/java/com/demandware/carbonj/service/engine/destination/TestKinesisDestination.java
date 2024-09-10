@@ -8,14 +8,11 @@ package com.demandware.carbonj.service.engine.destination;
 
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.engine.DataPoint;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class TestKinesisDestination {
 
-    private MetricRegistry metricRegistry = new MetricRegistry();
+    private final MetricRegistry metricRegistry = new MetricRegistry();
 
     @Test
     public void testDestination() {

@@ -6,9 +6,7 @@
  */
 package com.demandware.carbonj.service.db.points;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.util.Collections;
@@ -18,10 +16,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.demandware.carbonj.service.BaseTest;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import com.demandware.carbonj.service.db.index.IndexUtils;
 import com.demandware.carbonj.service.db.model.DataPointStore;
@@ -33,6 +27,10 @@ import com.demandware.carbonj.service.db.model.Series;
 import com.demandware.carbonj.service.engine.DataPoint;
 import com.demandware.carbonj.service.engine.DataPoints;
 import com.google.common.io.Files;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  *
@@ -43,7 +41,7 @@ public class _Archives extends BaseTest
 
     private DataPointStore archives;
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
         File dbDirFile = Files.createTempDir();
@@ -53,7 +51,7 @@ public class _Archives extends BaseTest
         archives.open();
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
         index.close();
@@ -97,9 +95,9 @@ public class _Archives extends BaseTest
         Metric m1 = findOrCreate( p.name );
         insert( m1, p );
         Series s = archives.getSeries( m1, now, now, now );
-        assertThat( s.name, equalTo( m1.name ) );
-        assertThat( s.values.size(), equalTo( 1 ) );
-        assertThat( s.values.get( 0 ), equalTo( p.val ) );
+        assertEquals( s.name, m1.name );
+        assertEquals( s.values.size(), 1 );
+        assertEquals( s.values.get( 0 ), p.val );
         System.out.println( "now: " + now );
         System.out.println( "start: " + s.start );
         System.out.println( "end: " + s.end );
@@ -117,7 +115,7 @@ public class _Archives extends BaseTest
     }
 
     @Test
-    @Ignore
+    @Disabled
     public void lotsOfPointsWithNewMetrics()
         throws Exception
     {

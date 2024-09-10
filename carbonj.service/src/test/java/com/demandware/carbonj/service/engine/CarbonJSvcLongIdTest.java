@@ -10,13 +10,10 @@ import com.demandware.carbonj.service.admin.CarbonJClient;
 import com.demandware.carbonj.service.admin.CarbonjAdmin;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.MetricIndex;
-import com.google.common.base.Throwables;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,16 +21,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.PostConstruct;
 
-@RunWith( SpringRunner.class )
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 @SpringBootTest
         (webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("testLongId")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@FixMethodOrder( MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public abstract class CarbonJSvcLongIdTest extends AbstractCarbonJBaseTest
 {
     @Value( "${server.port}" ) int jettyHttpPort;
@@ -65,13 +63,13 @@ public abstract class CarbonJSvcLongIdTest extends AbstractCarbonJBaseTest
 
     @PostConstruct
     private void initializeCjClient() {
-        Assert.assertNotNull( "jettyHost should not be null", jettyHost );
-        Assert.assertNotEquals( "jettyDataPort should not be 0", jettyDataPort );
-        Assert.assertNotEquals( "jettyHttpPort should not be 0", jettyHttpPort );
+        assertNotNull( "jettyHost should not be null", jettyHost );
+        assertNotEquals( "jettyDataPort should not be 0", jettyDataPort );
+        assertNotEquals( "jettyHttpPort should not be 0", jettyHttpPort );
         cjClient = new CarbonJClient( jettyHost, jettyHttpPort, jettyDataPort );
     }
 
-    @Before
+    @BeforeEach
     public void before()
     {
         dropData();
@@ -83,7 +81,7 @@ public abstract class CarbonJSvcLongIdTest extends AbstractCarbonJBaseTest
         pointFilter.reset();
     }
 
-    @After
+    @AfterEach
     public void drain()
     {
         log.info("Starting to drain TimeSeriesStore...");
@@ -101,7 +99,7 @@ public abstract class CarbonJSvcLongIdTest extends AbstractCarbonJBaseTest
         }
         catch ( InterruptedException e )
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException(e);
         }
     }
 }

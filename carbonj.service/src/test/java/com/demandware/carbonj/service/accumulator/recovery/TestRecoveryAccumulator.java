@@ -7,30 +7,32 @@
 package com.demandware.carbonj.service.accumulator.recovery;
 
 import com.demandware.carbonj.service.BaseTest;
-import com.demandware.carbonj.service.accumulator.*;
+import com.demandware.carbonj.service.accumulator.DefaultSlotStrategy;
+import com.demandware.carbonj.service.accumulator.LatePointLogger;
+import com.demandware.carbonj.service.accumulator.MetricAggregate;
+import com.demandware.carbonj.service.accumulator.MetricAggregationMethod;
+import com.demandware.carbonj.service.accumulator.MetricAggregationPolicy;
+import com.demandware.carbonj.service.accumulator.MetricAggregationPolicyProvider;
 import com.demandware.carbonj.service.engine.DataPoint;
 import com.demandware.carbonj.service.engine.DataPoints;
 import com.demandware.carbonj.service.ns.NamespaceCounter;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(JUnit4.class)
 public class TestRecoveryAccumulator extends BaseTest {
 
     private AtomicInteger flushedPoints;
     private AtomicInteger latePoints;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         flushedPoints = new AtomicInteger(0);
         latePoints = new AtomicInteger(0);
@@ -65,14 +67,14 @@ public class TestRecoveryAccumulator extends BaseTest {
         // should be flushed forcefully.
 
         accumulator.rollUp(this::incrementFlushPoints, toMillis(946), false);
-        Assert.assertEquals(2, flushedPoints.get());
+        assertEquals(2, flushedPoints.get());
 
         accumulator.rollUp(this::incrementFlushPoints, toMillis(1100), true);
-        Assert.assertEquals(4, flushedPoints.get());
+        assertEquals(4, flushedPoints.get());
 
-        Assert.assertEquals(0, accumulator.getTimeSlots().size());
+        assertEquals(0, accumulator.getTimeSlots().size());
 
-        Assert.assertEquals(4, latePoints.get());
+        assertEquals(4, latePoints.get());
     }
 
     private long toMillis(int sec) {
@@ -88,10 +90,10 @@ public class TestRecoveryAccumulator extends BaseTest {
                               int expectedSlotsAfterFlush, int expectedTotalFlushedSoFar) {
         accumulator.add(new DataPoint("metric1", 1, timeInSecs));
         accumulator.add(new DataPoint("metric2", 1, timeInSecs));
-        Assert.assertEquals(expectedSlotsBeforeFlush, accumulator.getTimeSlots().size());
+        assertEquals(expectedSlotsBeforeFlush, accumulator.getTimeSlots().size());
         accumulator.rollUp(this::incrementFlushPoints, currentTimeInMillis, false);
-        Assert.assertEquals(expectedTotalFlushedSoFar, flushedPoints.get());
-        Assert.assertEquals(expectedSlotsAfterFlush, accumulator.getTimeSlots().size());
+        assertEquals(expectedTotalFlushedSoFar, flushedPoints.get());
+        assertEquals(expectedSlotsAfterFlush, accumulator.getTimeSlots().size());
         // Assert.assertEquals(expectedMaxClosedTs, accumulator.getMaxClosedSlotTs());
     }
 
@@ -113,11 +115,11 @@ public class TestRecoveryAccumulator extends BaseTest {
         accumulator.add(getDataPoint(40));
         accumulator.add(getDataPoint(120));
         accumulator.add(getDataPoint(180));
-        Assert.assertEquals(0, latePoints.get());
+        assertEquals(0, latePoints.get());
         accumulator.add(getDataPoint(20));
-        Assert.assertEquals(1, latePoints.get());
+        assertEquals(1, latePoints.get());
         accumulator.add(getDataPoint(130));
-        Assert.assertEquals(1, latePoints.get());
+        assertEquals(1, latePoints.get());
     }
 
     private DataPoint getDataPoint(int ts) {
@@ -126,7 +128,7 @@ public class TestRecoveryAccumulator extends BaseTest {
 
     private static class CountingLatePointLogger implements LatePointLogger {
 
-        private AtomicInteger latePoints;
+        private final AtomicInteger latePoints;
 
         private CountingLatePointLogger(AtomicInteger latePoints) {
             this.latePoints = latePoints;

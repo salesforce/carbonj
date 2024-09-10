@@ -8,12 +8,11 @@ package com.demandware.carbonj.service.accumulator;
 
 import static com.demandware.carbonj.service.accumulator.MetricAggregationMethod.LATENCY;
 import static com.demandware.carbonj.service.accumulator.MetricAggregationMethod.SUM;
-import static org.junit.Assert.assertEquals;
-
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.demandware.carbonj.service.accumulator.MetricAggregationRule.Result;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class _MetricAggregationRule
 {
@@ -24,7 +23,7 @@ public class _MetricAggregationRule
     private MetricAggregationRule ecom_agRequest_new_Rule;
 
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
         ecom_agRule =  MetricAggregationRule.parseDefinition( "<pod>.ecom_ag.<realm>.<tenant>.<metric> (60) = sum <pod>.ecom.<realm>.<tenant>.*.*.<<metric>>", 0, true );
@@ -56,6 +55,7 @@ public class _MetricAggregationRule
         assertEquals( ecom_agRequest_new_Rule.apply( name1 ), expected1 );
         assertEquals( ecom_agRequest_new_Rule.apply( name2 ), expected2 );
     }
+
     @Test
     public void shouldApply_ecom_ag_rule()
     {
@@ -97,5 +97,4 @@ public class _MetricAggregationRule
         Result expected = new Result(null, null, false );
         assertEquals( ocapiRule.apply( name ), expected );
     }
-
 }

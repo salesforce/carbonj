@@ -7,8 +7,8 @@
 package com.demandware.carbonj.service.engine;
 
 import org.apache.commons.io.FileUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Value;
 
 import javax.annotation.PostConstruct;
@@ -33,7 +33,8 @@ public class AbstractCarbonJBaseTest
         }
     }
 
-    @AfterClass public static void cleanup()
+    @AfterAll
+    public static void cleanup()
                     throws IOException
     {
         try
@@ -48,7 +49,8 @@ public class AbstractCarbonJBaseTest
         }
     }
 
-    @BeforeClass public static void init()
+    @BeforeAll
+    public static void init()
                     throws IOException
     {
         new File( serviceDirStatic, "work/carbonj-data" ).mkdirs();

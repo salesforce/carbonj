@@ -6,22 +6,16 @@
  */
 package com.demandware.carbonj.service.db.index;
 
-import java.io.File;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.io.Files;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import com.demandware.carbonj.service.db.model.Metric;
-import com.demandware.carbonj.service.db.model.MetricIndex;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  *
@@ -114,7 +108,7 @@ public class _NewIndex extends BaseIndexTest
     }
 
     @Test
-    @Ignore
+    @Disabled
     public void lotsOfMetrics() throws Exception
     {
         ExecutorService es = Executors.newFixedThreadPool( 32 );

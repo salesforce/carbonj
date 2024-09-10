@@ -9,20 +9,20 @@ package com.demandware.carbonj.service.engine;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.model.Metric;
 import org.joda.time.DateTime;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class _MaxIntTest extends AbstractCarbonJ_StoreTest
 {
     @Autowired
     private MetricRegistry metricRegistry;
 
-    private static final long maxLongId = (long)2147483647;
+    private static final long maxLongId = 2147483647;
     private static final int maxIntId = 2147483647;
 
     @Test
@@ -92,5 +92,4 @@ public class _MaxIntTest extends AbstractCarbonJ_StoreTest
     public void testLongIdSupportMetric() {
         assertEquals(0, metricRegistry.counter("metrics.store.longId").getCount());
     }
-
 }

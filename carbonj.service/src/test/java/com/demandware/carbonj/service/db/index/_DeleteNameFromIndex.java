@@ -7,17 +7,17 @@
 package com.demandware.carbonj.service.db.index;
 
 import com.demandware.carbonj.service.db.model.Metric;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyCollectionOf;
-import static org.hamcrest.core.IsCollectionContaining.hasItem;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for metric name delete operation from name index.
@@ -37,10 +37,10 @@ public class _DeleteNameFromIndex extends BaseIndexTest
 
         // delete
         List<Metric> deleted = index.deleteMetric( "a", false, false );
-        assertThat(deleted.size(), equalTo(1));
+        assertEquals(deleted.size(), 1);
 
         // verify it doesn't exist anymore
-        assertMetricsDoNotExist( asList("a"), asList(aMetric.id) );
+        assertMetricsDoNotExist(List.of("a"), List.of(aMetric.id));
 
         // verify that can create it again and different id will be assigned
         assertCanCreateAgain("a", aMetric.id);
@@ -58,9 +58,9 @@ public class _DeleteNameFromIndex extends BaseIndexTest
 
         Metric aMetric = findOrCreate( "a.b.c" );
         List<Metric> deleted = index.deleteMetric( "a", true, false );
-        assertThat(deleted.size(), equalTo(3));
+        assertEquals(deleted.size(), 3);
 
-        assertMetricsDoNotExist(asList("a", "a.b", "a.b.c"), asList(aMetric.id) );
+        assertMetricsDoNotExist(asList("a", "a.b", "a.b.c"), List.of(aMetric.id));
 
         assertCanCreateAgain("a.b.c", aMetric.id);
     }
@@ -74,7 +74,7 @@ public class _DeleteNameFromIndex extends BaseIndexTest
         Metric cMetric = findOrCreate( "a.b.c" );
         Metric dMetric = findOrCreate( "a.b.d" );
         List<Metric> deleted = index.deleteMetric( "a.b", true, false );
-        assertThat(deleted.size(), equalTo(3));
+        assertEquals(deleted.size(), 3);
 
         assertMetricsDoNotExist( asList("a.b", "a.b.c", "a.b.d"), asList(cMetric.id, dMetric.id));
 
@@ -90,9 +90,9 @@ public class _DeleteNameFromIndex extends BaseIndexTest
 
         Metric cMetric = findOrCreate( "a.b.c" );
         List<Metric> deleted = index.deleteMetric( "a.b.c", true, false );
-        assertThat(deleted.size(), equalTo(1));
+        assertEquals(deleted.size(), 1);
 
-        assertMetricsDoNotExist( asList("a.b.c"), asList(cMetric.id, cMetric.id));
+        assertMetricsDoNotExist(List.of("a.b.c"), asList(cMetric.id, cMetric.id));
 
         assertCanCreateAgain("a.b.c", cMetric.id);
     }
@@ -106,43 +106,43 @@ public class _DeleteNameFromIndex extends BaseIndexTest
         Metric cMetric = findOrCreate( "a.b.c" );
         Metric dMetric = findOrCreate( "a.b.d" );
         List<Metric> deleted = index.deleteMetric( "a.b", true, true );
-        assertThat(deleted.size(), equalTo(3));
+        assertEquals(deleted.size(), 3);
 
         assertMetricsExist( asList("a.b", "a.b.c", "a.b.d"), asList(cMetric.id, dMetric.id));
 
         // verify that previous metric will be reused
-        assertThat(findOrCreate( "a.b.c").id, equalTo(cMetric.id));
-        assertThat(findOrCreate( "a.b.d").id, equalTo(dMetric.id));
+        assertEquals(findOrCreate( "a.b.c").id, cMetric.id);
+        assertEquals(findOrCreate( "a.b.d").id, dMetric.id);
     }
 
 
     private void assertMetricsDoNotExist(List<String> names, List<Long> ids)
     {
-        ids.forEach( id -> assertThat( index.getMetric( id ), nullValue() ) );
+        ids.forEach( id -> assertNull( index.getMetric( id ) ) );
 
         names.forEach( name -> {
             if( nameUtils.isTopLevel(name) )
             {
-                assertThat(index.getTopLevelNames(), not(hasItem(name)));
+                assertFalse(index.getTopLevelNames().contains(name));
             }
 
-            assertThat(index.getMetric( name ), nullValue() );
-            assertThat(index.findMetrics( name ), emptyCollectionOf(Metric.class) );
+            assertNull(index.getMetric( name ));
+            assertTrue(index.findMetrics( name ).isEmpty());
         } );
     }
 
     private void assertMetricsExist(List<String> names, List<Long> ids)
     {
-        ids.forEach( id -> assertThat( index.getMetric( id ), not(nullValue()) ) );
+        ids.forEach( id -> assertNotNull( index.getMetric( id ) ));
 
         names.forEach( name -> {
             if( nameUtils.isTopLevel(name) )
             {
-                assertThat(index.getTopLevelNames(), hasItem(name));
+                assertTrue(index.getTopLevelNames().contains(name));
             }
 
-            assertThat(index.getMetric( name ), not(nullValue()) );
-            assertThat(index.findMetrics( name ), not(emptyCollectionOf(Metric.class)) );
+            assertNotNull(index.getMetric( name ));
+            assertFalse(index.findMetrics( name ).isEmpty() );
         } );
     }
 
@@ -151,8 +151,8 @@ public class _DeleteNameFromIndex extends BaseIndexTest
         Metric bMetric = findOrCreate( name );
         assertTrue(originalId < bMetric.id);
 
-        assertThat( index.getMetric( bMetric.id ), equalTo(bMetric) );
-        assertThat( index.getMetric( bMetric.name ), equalTo(bMetric) );
-        assertThat( index.findMetrics( bMetric.name ), equalTo( singletonList(bMetric) ) );
+        assertEquals( index.getMetric( bMetric.id ), bMetric );
+        assertEquals( index.getMetric( bMetric.name ), bMetric );
+        assertEquals( index.findMetrics( bMetric.name ), singletonList(bMetric) );
     }
 }

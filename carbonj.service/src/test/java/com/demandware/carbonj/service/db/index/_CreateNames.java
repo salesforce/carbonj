@@ -8,25 +8,24 @@ package com.demandware.carbonj.service.db.index;
 
 import java.io.File;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.demandware.carbonj.service.db.model.Metric;
 import com.demandware.carbonj.service.db.model.MetricIndex;
 import com.google.common.io.Files;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class _CreateNames {
     File dbDirFile;
     MetricIndex index;
     NameUtils nameUtils;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         nameUtils = new NameUtils(InternalConfig.getRootEntryKey());
         dbDirFile = Files.createTempDir();
@@ -35,7 +34,7 @@ public class _CreateNames {
         ((MetricIndexImpl) index).parseDbProperties("estimate-num-keys", null);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         if ( index != null ) {
             index.close();

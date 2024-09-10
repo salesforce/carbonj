@@ -6,12 +6,10 @@
  */
 package com.demandware.carbonj.service.accumulator;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class TestDefaultSlotStrategy {
 
     @Test
@@ -27,12 +25,12 @@ public class TestDefaultSlotStrategy {
     }
 
     private void verify(SlotStrategy slotStrategy, int metricTs, int expectedSlotTs,  int expectedSlotStartTs, int expectedSlotEndTs) {
-        Assert.assertEquals(expectedSlotTs, slotStrategy.getSlotTs(metricTs));
-        Assert.assertEquals(expectedSlotStartTs, slotStrategy.getStartTs(metricTs));
-        Assert.assertEquals(expectedSlotEndTs, slotStrategy.getEndTs(metricTs));
+        assertEquals(expectedSlotTs, slotStrategy.getSlotTs(metricTs));
+        assertEquals(expectedSlotStartTs, slotStrategy.getStartTs(metricTs));
+        assertEquals(expectedSlotEndTs, slotStrategy.getEndTs(metricTs));
     }
 
     private void verify(SlotStrategy slotStrategy, int metricTs, int expectedSlotTs) {
-        Assert.assertEquals(expectedSlotTs, slotStrategy.getSlotTs(metricTs));
+        assertEquals(expectedSlotTs, slotStrategy.getSlotTs(metricTs));
     }
 }

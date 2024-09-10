@@ -6,10 +6,8 @@
  */
 package com.demandware.carbonj.service.util;
 
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -19,8 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
-@RunWith(JUnit4.class)
-@Ignore
+@Disabled
 public class TestStatsd {
     
     @Test
