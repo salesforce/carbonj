@@ -5,7 +5,7 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 #
 
-FROM registry.access.redhat.com/ubi9/ubi:9.4-1214
+FROM registry.access.redhat.com/ubi9/ubi:9.4-1214.1725849297
 ARG DEPENDENCY=build/docker/dependency
 ARG VERSION=latest
 
