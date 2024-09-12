@@ -24,8 +24,8 @@ public class Util
 
     private static GraphiteReporter graphiteReporter = null;
 
-    public static String getGraphiteMetricPrefix( String graphiteMetricsPrefix, int podId, String groupId,
-                                                  String version )
+    public static String getGraphiteMetricPrefix( String graphiteMetricsPrefix, boolean graphitePrefixIncludeHostname,
+                                                  int podId, String groupId, String version )
                     throws UnknownHostException
     {
         String fqdn = InetAddress.getLocalHost().getHostName();
@@ -39,6 +39,10 @@ public class Util
         else if ( StringUtils.isEmpty( graphiteMetricsPrefix ) )
         {
             graphiteMetricsPrefix = "um.dev.carbonj." + hostname;
+        }
+        else if ( graphitePrefixIncludeHostname )
+        {
+            graphiteMetricsPrefix = graphiteMetricsPrefix + "." + hostname;
         }
         return graphiteMetricsPrefix;
     }

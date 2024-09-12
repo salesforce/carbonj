@@ -58,6 +58,8 @@ import java.util.concurrent.TimeUnit;
 
     @Value( "${graphite.prefix:}" ) private String graphitePrefix;
 
+    @Value( "${graphite.prefix.includeHostname:false}" ) private boolean graphitePrefixIncludeHostname;
+
     @Value( "${dw.podId:-1}" ) private int podId;
 
     @Value( "${dw.groupId:}" ) private String groupId;
@@ -82,7 +84,8 @@ import java.util.concurrent.TimeUnit;
         {
             GraphiteReporter graphiteReporter =
                             Util.getGraphiteReporter( metricRegistry, graphiteHost, graphitePort, graphiteTransport,
-                                            Util.getGraphiteMetricPrefix( graphitePrefix, podId, groupId, svcVersion ) );
+                                            Util.getGraphiteMetricPrefix( graphitePrefix, graphitePrefixIncludeHostname,
+                                                    podId, groupId, svcVersion ) );
             if ( graphiteReporter != null )
             {
                 graphiteReporter.start( 60, TimeUnit.SECONDS );
