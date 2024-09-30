@@ -36,7 +36,7 @@ RUN yum update -y && \
   chkconfig crond on && \
   systemctl enable crond.service && \
   mkdir -p /app/bin/ && \
-  wget https://github.com/krallin/tini/releases/download/v0.18.0/tini && \
+  wget https://github.com/krallin/tini/releases/download/v0.19.0/tini && \
   mv tini /sbin/tini && \
   chmod +x /sbin/tini
 
@@ -48,7 +48,7 @@ COPY ${DEPENDENCY}/BOOT-INF/classes /app
 COPY ${DEPENDENCY}/entrypoint.sh ${DEPENDENCY}/onOutOfMemoryError.sh ${DEPENDENCY}/logCleanup.sh \
   ${DEPENDENCY}/deletemetrics.py ${DEPENDENCY}/disklog.sh ${DEPENDENCY}/fdlog.sh ${DEPENDENCY}/iolog.sh \
   ${DEPENDENCY}/reportGcMetrics.sh ${DEPENDENCY}/reportRocksDbMetrics.sh ${DEPENDENCY}/requestlog-stats.pl \
-  ${DEPENDENCY}/whisper.py ${DEPENDENCY}/cj-load.py /app/bin/
+  ${DEPENDENCY}/whisper.py ${DEPENDENCY}/cj-load.py ${DEPENDENCY}/check-invalid-namespaces.py /app/bin/
 RUN chmod ugo+x /app/bin/*
 # add java options file
 # default configs
