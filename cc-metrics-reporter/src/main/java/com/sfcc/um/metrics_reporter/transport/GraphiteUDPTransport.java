@@ -8,6 +8,7 @@ package com.sfcc.um.metrics_reporter.transport;
 
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
+import com.google.common.base.MoreObjects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -19,7 +20,7 @@ import java.net.InetSocketAddress;
 
 public class GraphiteUDPTransport extends AbstractGraphiteTransport
 {
-    private final InetSocketAddress address;
+    private InetSocketAddress address;
 
     private DatagramSocket socket;
 
@@ -29,13 +30,18 @@ public class GraphiteUDPTransport extends AbstractGraphiteTransport
 
     private int metricCounter;
 
-    private Logger LOG = LogManager.getLogger( getClass() );
+    private final String host;
+
+    private final int port;
+
+    private final Logger LOG = LogManager.getLogger( getClass() );
 
     GraphiteUDPTransport( String host, int port, int batchSize, MetricRegistry metricRegistry )
     {
         super(metricRegistry);
         this.batchSize = batchSize;
-        this.address = new InetSocketAddress( host, port );
+        this.host = host;
+        this.port = port;
     }
 
     /**
@@ -47,6 +53,8 @@ public class GraphiteUDPTransport extends AbstractGraphiteTransport
     @Override
     public GraphiteTransport open() throws IOException
     {
+        // Support IP address changes ar runtime
+        this.address = new InetSocketAddress( host, port );
         this.socket = new DatagramSocket( );
         return this;
     }
@@ -101,7 +109,7 @@ public class GraphiteUDPTransport extends AbstractGraphiteTransport
                     metricsCount().mark( metricCounter );
                 }
             }
-            catch ( IOException e )
+            catch ( Exception e )
             {
                 failureCount().mark();
                 LOG.error( "Failed sending UDP datagram to '{}'", address );
@@ -114,11 +122,36 @@ public class GraphiteUDPTransport extends AbstractGraphiteTransport
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
-        // send whatever is remaining of the last batch
-        sendPacket();
-        socket.close();
-        this.socket = null;
+        try
+        {
+            // send whatever is remaining of the last batch
+            sendPacket();
+        }
+        finally
+        {
+            try
+            {
+                socket.close();
+            }
+            finally
+            {
+                this.socket = null;
+            }
+        }
+    }
+
+    @Override
+    public String toString()
+    {
+        if ( address != null )
+        {
+            return MoreObjects.toStringHelper( this ).add( "address", address ).toString();
+        }
+        else
+        {
+            return MoreObjects.toStringHelper( this ).add( "host", host ).add( "port", port ).toString();
+        }
     }
 }
