@@ -26,11 +26,13 @@ RUN yum update -y && \
   yum install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/sysstat-12.5.4-7.el9.x86_64.rpm && \
   yum install -y https://repo.almalinux.org/almalinux/9/extras/x86_64/os/Packages/epel-release-9-5.el9.noarch.rpm && \
   yum install -y https://dl.fedoraproject.org/pub/epel/9/Everything/x86_64/Packages/p/perl-URI-Encode-1.1.1-17.el9.noarch.rpm && \
+  yum install -y https://rpmfind.net/linux/centos-stream/9-stream/BaseOS/x86_64/os/Packages/snappy-1.1.8-8.el9.x86_64.rpm && \
   yum update -y && \
   yum install -y zulu17-jdk python3 perl-Data-Dumper && \
   yum clean all && \
   dnf update && \
   dnf -y install chkconfig && \
+  dnf clean all && \
   pip3 install --upgrade pip && \
   pip3 install aiohttp && \
   chkconfig crond on && \

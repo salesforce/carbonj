@@ -57,6 +57,7 @@ def parse_args():
     parser.add_argument('--common-prefix', dest='common_prefix', help='Check IDs with the common prefix', default='')
     parser.add_argument('--skip-prefix', dest='skip_prefix', help='Comma separated prefixes to skip', default='')
     parser.add_argument('--no-dump', dest='no_dump', help='Whether to dump RocksDB or not', action='store_true')
+    parser.add_argument('--check-count', dest='check_count', type=int, help='The number of invalid checks', default='10')
     return parser.parse_args()
 
 
@@ -73,6 +74,7 @@ class RocksDbKeyDumper:
             self.common_prefix += '.'
         self.prefix_parts = len(self.common_prefix.split('.'))
         self.skip_prefixes = args.skip_prefix.split(',')
+        self.check_count = args.check_count
 
     def dump(self, include_value=True):
         if self.no_dump:
@@ -106,11 +108,12 @@ class RocksDbKeyDumper:
                 break
             last_key = key
 
-    def check_invalid_ids(self, limit=10):
+    def check_invalid_ids(self):
         invalid_id_count = 0
         stop = False
         checked_prefixes = []
-        files = glob.glob(f"/data/{self.db_name}_scan.*")
+        prefix = ''
+        files = sorted(glob.glob(f"/data/{self.db_name}_scan.*"))
         with open('/data/invalid_namespaces', 'a', buffering=1) as wf:
             for file in files:
                 if stop:
@@ -123,6 +126,7 @@ class RocksDbKeyDumper:
                             break
                         key, value = get_key_value(line)
                         name = bytes.fromhex(value[2:]).decode('utf-8')
+                        first = name.split('.')[0]
                         # Skip root check
                         if name == 'root':
                             continue
@@ -131,16 +135,10 @@ class RocksDbKeyDumper:
                                 continue
                             prefix = '.'.join(name.split('.')[:self.prefix_parts])
                             if prefix in checked_prefixes:
-                                # No need to check the same prefix again and again
-                                if invalid_id_count >= limit:
-                                    continue
-                            else:
-                                # Reset invalid ID count to check a new prefix
-                                invalid_id_count = 0
-                                checked_prefixes.append(prefix)
-                        first = name.split('.')[0]
-                        if first in self.skip_prefixes:
-                            continue
+                                continue
+                        else:
+                            if first in self.skip_prefixes:
+                                continue
 
                         logger.info('Checking namespace %s', name)
                         valid_id = False
@@ -151,12 +149,17 @@ class RocksDbKeyDumper:
                         if not valid_id:
                             wf.write(f"{name}\n")
                             invalid_id_count += 1
-                            if invalid_id_count >= limit:
+                            if invalid_id_count >= self.check_count:
+                                invalid_id_count = 0
                                 if self.common_prefix == '.':
-                                    invalid_id_count = 0
                                     self.skip_prefixes.append(first)
+                                else:
+                                    checked_prefixes.append(prefix)
                         else:
-                            self.skip_prefixes.append(first)
+                            if self.common_prefix == '.':
+                                self.skip_prefixes.append(first)
+                            else:
+                                checked_prefixes.append(prefix)
 
     def cleanup_files(self):
         files = glob.glob(f"/data/{self.db_name}_scan.*")
