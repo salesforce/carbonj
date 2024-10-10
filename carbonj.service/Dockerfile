@@ -50,7 +50,8 @@ COPY ${DEPENDENCY}/BOOT-INF/classes /app
 COPY ${DEPENDENCY}/entrypoint.sh ${DEPENDENCY}/onOutOfMemoryError.sh ${DEPENDENCY}/logCleanup.sh \
   ${DEPENDENCY}/deletemetrics.py ${DEPENDENCY}/disklog.sh ${DEPENDENCY}/fdlog.sh ${DEPENDENCY}/iolog.sh \
   ${DEPENDENCY}/reportGcMetrics.sh ${DEPENDENCY}/reportRocksDbMetrics.sh ${DEPENDENCY}/requestlog-stats.pl \
-  ${DEPENDENCY}/whisper.py ${DEPENDENCY}/cj-load.py ${DEPENDENCY}/check-invalid-namespaces.py /app/bin/
+  ${DEPENDENCY}/whisper.py ${DEPENDENCY}/cj-load.py ${DEPENDENCY}/check-invalid-namespaces.py \
+  ${DEPENDENCY}/delete-invalid-namespaces.py /app/bin/
 RUN chmod ugo+x /app/bin/*
 # add java options file
 # default configs
