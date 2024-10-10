@@ -1,4 +1,4 @@
-#! /usr/bin/env python3.6
+#! /usr/bin/env python3
 #
 # Copyright (c) 2018, salesforce.com, inc.
 # All rights reserved.

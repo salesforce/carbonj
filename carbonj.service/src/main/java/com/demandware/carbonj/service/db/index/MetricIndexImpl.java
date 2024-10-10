@@ -999,9 +999,7 @@ public class MetricIndexImpl implements MetricIndex, ApplicationListener<NameInd
                     {
                         DatabaseMetrics.invalidLeafMetricsReceived.mark();
                         cleanupAfterAbandonedInsert( leafEntry, paths, i + 1 );
-                        String msg =
-                            String.format( "Cannot create metric with name [%s] because [%s] is already a leaf", key,
-                                entryKey );
+                        String msg = String.format( "Cannot create metric with name [%s] because [%s] is already a leaf with ID [%d]", key, entryKey, e.getId());
                         if (invalidLeafMetricsReceivedLogQuota.allow()) {
                             log.error(msg);
                         }

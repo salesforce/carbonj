@@ -73,7 +73,7 @@ public class _CreateNames {
             index.createLeafMetric( "a.b.c.d" );
             fail("Expected exception");
         } catch(RuntimeException e) {
-            assertEquals("Cannot create metric with name [a.b.c.d] because [a.b.c] is already a leaf",
+            assertEquals("Cannot create metric with name [a.b.c.d] because [a.b.c] is already a leaf with ID [2]",
                 e.getMessage());
         }
         // 2. verify we didn't leave any partial nodes behind
@@ -98,7 +98,7 @@ public class _CreateNames {
             index.createLeafMetric( "a.b.c.d.e.f" );
             fail("Expected exception");
         } catch(RuntimeException e) {
-            assertEquals("Cannot create metric with name [a.b.c.d.e.f] because [a.b.c] is already a leaf",
+            assertEquals("Cannot create metric with name [a.b.c.d.e.f] because [a.b.c] is already a leaf with ID [2]",
                 e.getMessage());
         }
 
