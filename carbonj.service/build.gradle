@@ -43,7 +43,6 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'io.spring.dependency-management'
-apply plugin: 'com.palantir.docker'
 apply plugin: 'org.sonarqube'
 apply plugin: 'maven-publish'
 apply plugin: 'maven-publish-auth'
@@ -89,14 +88,32 @@ task unpack(type: Copy) {
     into("build/dependency")
 }
 
-docker {
-    print "name of the docker image is ${dockerRepo}${project.dockerGroup}:${project.version}"
-    name "${dockerRepo}${project.dockerGroup}:${project.version}"
-    tag 'docker', "${dockerRepo}${project.dockerGroup}:${project.version}"
-    files tasks.unpack.outputs, "src/main/docker/files"
-    copySpec.into("dependency")
-    buildArgs(['DEPENDENCY': "dependency", 'VERSION': "${project.version}"])
-    noCache true
+//docker {
+//    print "name of the docker image is ${dockerRepo}${project.dockerGroup}:${project.version}"
+//    name "${dockerRepo}${project.dockerGroup}:${project.version}"
+//    tag 'docker', "${dockerRepo}${project.dockerGroup}:${project.version}"
+//    files tasks.unpack.outputs, "src/main/docker/files"
+//    copySpec.into("dependency")
+//    buildArgs(['DEPENDENCY': "dependency", 'VERSION': "${project.version}"])
+//    noCache true
+//}
+
+tasks.register('dockerarm64', Exec) {
+    def command = getDockerBuildCmd("${dockerRepo}${project.dockerGroup}:${project.version}", "${project.version}")
+    doFirst {
+        logger.lifecycle("${command.join(' ')}")
+    }
+    commandLine 'bash', '-c', command.join(' ')
+}
+
+static def getDockerBuildCmd(String name, version) {
+    def buildCommandLine = ['docker', 'buildx', 'build', '--platform', 'linux/amd64,linux/arm64', '--builder', 'buildbase', '--push']
+    // When build docker image on Mac, pick up the right command for either Intel chips or Mac Silicon and comment out the above command
+//     def buildCommandLine = ['docker', 'build', '--platform', 'linux/amd64', '--builder', 'buildbase', '--load']
+    // def buildCommandLine = ['docker', 'build', '--platform', 'linux/arm64', '--builder', 'buildbase', '--load']
+    buildCommandLine.addAll('--build-arg', "VERSION=${version}")
+    buildCommandLine.addAll('-t', name, '.')
+    return buildCommandLine
 }
 
 configurations {
@@ -143,8 +160,9 @@ task rpm(type: Rpm) {
 
 // for release automatically push released docker and mvn image to repo
 afterReleaseBuild.dependsOn publish
-publish.dependsOn dockerPush
+//publish.dependsOn dockerPush
 publish.dependsOn build
+publish.dependsOn dockerarm64
 
 publishing {
     publications {

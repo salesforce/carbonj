@@ -27,4 +27,4 @@ jobs:
     - name: Release with Gradle
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: ./gradlew  -PdockerRepo=salesforce/ clean build -Prelease.useAutomaticVersion=true -x test :carbonj.service:release --info --stacktrace
+      run: docker buildx create --driver docker-container --driver-opt='image=moby/buildkit:buildx-stable-1' --name buildbase --platform linux/arm64,linux/amd64 && ./gradlew  -PdockerRepo=salesforce/ clean build -Prelease.useAutomaticVersion=true -x test :carbonj.service:release --info --stacktrace
