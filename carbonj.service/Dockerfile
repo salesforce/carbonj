@@ -6,7 +6,7 @@
 #
 
 FROM registry.access.redhat.com/ubi9/ubi:9.4-1214.1726694543
-ARG DEPENDENCY=src/main/docker/files
+ARG DEPENDENCY=build/dependency
 ARG VERSION=latest
 
 # install dependencies
@@ -43,7 +43,9 @@ RUN yum update -y && \
   chmod +x /sbin/tini
 
 # add java code
-COPY build/libs/carbonj.service-${VERSION}.jar /app
+COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
+COPY ${DEPENDENCY}/META-INF /app/META-INF
+COPY ${DEPENDENCY}/BOOT-INF/classes /app
 # add scripts
 COPY ${DEPENDENCY}/entrypoint.sh ${DEPENDENCY}/onOutOfMemoryError.sh ${DEPENDENCY}/logCleanup.sh \
   ${DEPENDENCY}/deletemetrics.py ${DEPENDENCY}/disklog.sh ${DEPENDENCY}/fdlog.sh ${DEPENDENCY}/iolog.sh \

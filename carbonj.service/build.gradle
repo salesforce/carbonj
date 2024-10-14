@@ -73,7 +73,6 @@ ext {
     }
 }
 
-
 repositories {
     mavenLocal()
     mavenCentral()
@@ -88,7 +87,13 @@ task unpack(type: Copy) {
     into("build/dependency")
 }
 
+task copyDockerFiles(type: Copy) {
+    from 'src/main/docker/files'
+    into 'build/dependency'
+}
+
 tasks.register('docker', Exec) {
+    dependsOn unpack, copyDockerFiles
     def command = getDockerBuildCmd("${dockerRepo}${project.dockerGroup}:${project.version}", "${project.version}")
     doFirst {
         logger.lifecycle("${command.join(' ')}")
