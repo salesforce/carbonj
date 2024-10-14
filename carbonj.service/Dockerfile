@@ -38,8 +38,8 @@ RUN yum update -y && \
   chkconfig crond on && \
   systemctl enable crond.service && \
   mkdir -p /app/bin/ && \
-  wget https://github.com/krallin/tini/releases/download/v0.19.0/tini && \
-  mv tini /sbin/tini && \
+  export ARCH=amd64 && if [ "$(uname -m)" = "aarch64" ]; then export ARCH=arm64; fi && \
+  wget https://github.com/krallin/tini/releases/download/v0.19.0/tini-${ARCH} -O /sbin/tini && \
   chmod +x /sbin/tini
 
 # add java code
