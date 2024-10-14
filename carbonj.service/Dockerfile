@@ -43,9 +43,6 @@ RUN yum update -y && \
   chmod +x /sbin/tini
 
 # add java code
-#COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
-#COPY ${DEPENDENCY}/META-INF /app/META-INF
-#COPY ${DEPENDENCY}/BOOT-INF/classes /app
 COPY build/libs/carbonj.service-${VERSION}.jar /app
 # add scripts
 COPY ${DEPENDENCY}/entrypoint.sh ${DEPENDENCY}/onOutOfMemoryError.sh ${DEPENDENCY}/logCleanup.sh \
