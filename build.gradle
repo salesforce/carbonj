@@ -9,7 +9,6 @@ buildscript {
 }
 
 plugins {
-    id 'com.palantir.docker' version "${palantirDocker}"
     id "com.github.jk1.dependency-license-report" version "${dependencyLicenseReport}"
     id "com.github.hierynomus.license" version "${hierynomusLicense}"
     id "org.sonarqube" version "${sonarqube}"

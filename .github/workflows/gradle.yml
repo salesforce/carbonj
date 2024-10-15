@@ -36,7 +36,7 @@ jobs:
     - name: Publish Docker container
       if: ${{ !contains(github.ref, 'dependabot') }}
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
-      run: ./gradlew -PdockerRepo=salesforce/ -x test publish  --info
+      run: docker buildx create --driver docker-container --driver-opt='image=moby/buildkit:buildx-stable-1' --name buildbase --platform linux/arm64,linux/amd64 && ./gradlew -PdockerRepo=salesforce/ -x test publish  --info
 #    - name: scan docker image
 #      if: ${{ !contains(github.ref, 'dependabot') }}
 #      uses: azure/container-scan@v0

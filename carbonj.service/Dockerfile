@@ -6,7 +6,7 @@
 #
 
 FROM registry.access.redhat.com/ubi9/ubi:9.4-1214.1726694543
-ARG DEPENDENCY=build/docker/dependency
+ARG DEPENDENCY=build/dependency
 ARG VERSION=latest
 
 # install dependencies
@@ -18,15 +18,15 @@ RUN yum update -y && \
   yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel && \
   rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
   yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
-  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/pcp-conf-6.2.1-1.el9.x86_64.rpm && \
-  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/pcp-libs-6.2.1-1.el9.x86_64.rpm  && \
+  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-conf-6.2.1-1.el9.$(uname -m).rpm && \
+  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-libs-6.2.1-1.el9.$(uname -m).rpm  && \
   #
   # If sysstat version is updated, confirm iolog.sh execution and update associated version check in entrypoint.sh
   #
-  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/sysstat-12.5.4-7.el9.x86_64.rpm && \
-  yum install -y https://repo.almalinux.org/almalinux/9/extras/x86_64/os/Packages/epel-release-9-5.el9.noarch.rpm && \
-  yum install -y https://dl.fedoraproject.org/pub/epel/9/Everything/x86_64/Packages/p/perl-URI-Encode-1.1.1-17.el9.noarch.rpm && \
-  yum install -y https://rpmfind.net/linux/centos-stream/9-stream/BaseOS/x86_64/os/Packages/snappy-1.1.8-8.el9.x86_64.rpm && \
+  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/sysstat-12.5.4-7.el9.$(uname -m).rpm && \
+  yum install -y https://repo.almalinux.org/almalinux/9/extras/$(uname -m)/os/Packages/epel-release-9-5.el9.noarch.rpm && \
+  yum install -y https://dl.fedoraproject.org/pub/epel/9/Everything/$(uname -m)/Packages/p/perl-URI-Encode-1.1.1-17.el9.noarch.rpm && \
+  yum install -y https://rpmfind.net/linux/centos-stream/9-stream/BaseOS/$(uname -m)/os/Packages/snappy-1.1.8-8.el9.$(uname -m).rpm && \
   yum update -y && \
   yum install -y zulu17-jdk python3 perl-Data-Dumper && \
   yum clean all && \
@@ -38,8 +38,8 @@ RUN yum update -y && \
   chkconfig crond on && \
   systemctl enable crond.service && \
   mkdir -p /app/bin/ && \
-  wget https://github.com/krallin/tini/releases/download/v0.19.0/tini && \
-  mv tini /sbin/tini && \
+  export ARCH=amd64 && if [ "$(uname -m)" = "aarch64" ]; then export ARCH=arm64; fi && \
+  wget https://github.com/krallin/tini/releases/download/v0.19.0/tini-${ARCH} -O /sbin/tini && \
   chmod +x /sbin/tini
 
 # add java code
