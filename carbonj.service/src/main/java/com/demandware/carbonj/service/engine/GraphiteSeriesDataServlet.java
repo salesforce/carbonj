@@ -98,10 +98,6 @@ public class GraphiteSeriesDataServlet
         {
             now = Integer.parseInt( nowText );
         }
-        else if (msgpack)
-        {
-            now = Integer.parseInt( until );
-        }
 
         if( json )
         {
