@@ -140,6 +140,10 @@ public class PointProcessorTask implements Runnable
             return;
         }
 
+        if (t.name.equals( "pod311.ecom.aahv.aahv_prd.blade7-0.aahv_prd.logging.appenders.truncation.truncation_not_required.stacktrace_length.count" )) {
+            log.info( ">>>>>>> Found data point: {} <<<<<<<<", t );
+        }
+
         if ( aggregationEnabled )
         {
             accumulator.add( t );
