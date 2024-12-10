@@ -18,8 +18,8 @@ RUN yum update -y && \
   yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel && \
   rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
   yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
-  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-conf-6.2.1-1.el9.$(uname -m).rpm && \
-  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-libs-6.2.1-1.el9.$(uname -m).rpm  && \
+  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-conf-6.2.2-6.el9.$(uname -m).rpm && \
+  yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-libs-6.2.2-6.el9.$(uname -m).rpm  && \
   #
   # If sysstat version is updated, confirm iolog.sh execution and update associated version check in entrypoint.sh
   #
