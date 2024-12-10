@@ -6,7 +6,6 @@
  */
 package com.demandware.carbonj.service.engine.recovery;
 
-import com.amazonaws.services.kinesis.model.Record;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -17,8 +16,17 @@ import com.demandware.carbonj.service.engine.kinesis.DataPointCodec;
 import com.demandware.carbonj.service.engine.kinesis.DataPoints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.kinesis.model.Record;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.Set;
 
 public class GapProcessor {
 
@@ -91,7 +99,7 @@ public class GapProcessor {
         // take each record from the queue and check if it is not greater than end time.
         // if it is,  we are done.
         // else, process them.  after that,  get the next record from the shard and push it to the priority queue.
-        while (queue.size() > 0) {
+        while (!queue.isEmpty()) {
             DataPointsInfo dataPointsInfo = queue.poll();
 
             DataPoints dataPoints = dataPointsInfo.dataPoints;
@@ -148,7 +156,7 @@ public class GapProcessor {
                 }
             }
 
-            if (dataPoints.getDataPoints().size() > 0) {
+            if (!dataPoints.getDataPoints().isEmpty()) {
                 processRecordsWithRetries(dataPoints);
             }
 
@@ -188,15 +196,15 @@ public class GapProcessor {
         Record record = recordAndIterator.getRecord();
         String iterator = recordAndIterator.getIterator();
 
-        shardToTrackingInfoMap.put(shardInfo, new RecordTrackingInfo(record.getSequenceNumber(), iterator));
+        shardToTrackingInfoMap.put(shardInfo, new RecordTrackingInfo(record.sequenceNumber(), iterator));
 
-        DataPoints dataPoints = codec.decode(record.getData().array());
+        DataPoints dataPoints = codec.decode(record.data().asByteArray());
 
-        DataPointsInfo dataPointsInfo = new DataPointsInfo(dataPoints, shardInfo, record.getApproximateArrivalTimestamp().getTime());
+        DataPointsInfo dataPointsInfo = new DataPointsInfo(dataPoints, shardInfo, record.approximateArrivalTimestamp().getEpochSecond());
 
         if (log.isDebugEnabled())
         {
-            log.debug( String.format( "Recovery: fetched %s : %tc record; Record min timestamp: %tc", shardInfo, record.getApproximateArrivalTimestamp(), new Date(
+            log.debug( String.format( "Recovery: fetched %s : %tc record; Record min timestamp: %tc", shardInfo, Date.from(record.approximateArrivalTimestamp()), new Date(
                             dataPointsInfo.minTs * 1000L ) ) );
         }
         return dataPointsInfo;
@@ -233,8 +241,8 @@ public class GapProcessor {
     }
 
     private static class RecordTrackingInfo {
-        private String lastSequenceNumber;
-        private String shardIterator;
+        private final String lastSequenceNumber;
+        private final String shardIterator;
 
         RecordTrackingInfo(String lastSequenceNumber, String shardIterator) {
             this.lastSequenceNumber = lastSequenceNumber;

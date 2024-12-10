@@ -6,25 +6,32 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateException;
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
-import com.amazonaws.services.kinesis.model.Record;
-import com.codahale.metrics.*;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.demandware.carbonj.service.engine.kinesis.DataPointCodec;
 import com.demandware.carbonj.service.engine.kinesis.DataPoints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.kinesis.exceptions.InvalidStateException;
+import software.amazon.kinesis.exceptions.ShutdownException;
+import software.amazon.kinesis.exceptions.ThrottlingException;
+import software.amazon.kinesis.lifecycle.events.InitializationInput;
+import software.amazon.kinesis.lifecycle.events.LeaseLostInput;
+import software.amazon.kinesis.lifecycle.events.ProcessRecordsInput;
+import software.amazon.kinesis.lifecycle.events.ShardEndedInput;
+import software.amazon.kinesis.lifecycle.events.ShutdownRequestedInput;
+import software.amazon.kinesis.processor.RecordProcessorCheckpointer;
+import software.amazon.kinesis.processor.ShardRecordProcessor;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 
-public class KinesisRecordProcessor implements IRecordProcessor {
+public class KinesisRecordProcessor implements ShardRecordProcessor {
 
-    private static Logger log = LoggerFactory.getLogger(KinesisRecordProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(KinesisRecordProcessor.class);
 
     private final MetricRegistry metricRegistry;
 
@@ -78,16 +85,17 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         leaseLostCount = metricRegistry.counter(MetricRegistry.name("kinesis", "lostLease"));
     }
 
-    public void initialize(String shardId) {
-        log.info("Initializing record processor for shard: " + shardId);
-        this.kinesisShardId = shardId;
+    @Override
+    public void initialize(InitializationInput initializationInput) {
+        this.kinesisShardId = initializationInput.shardId();
+        log.info("Initializing record processor for shard: " + this.kinesisShardId);
 
         // metrics to track number of records received per shard.
         MetricRegistry registry = metricRegistry;
         recordsFetchedPerShardCounter = registerCounter(registry,
-                MetricRegistry.name("kinesis", kinesisStreamName, shardId, "received"));
+                MetricRegistry.name("kinesis", kinesisStreamName, this.kinesisShardId, "received"));
         noOfFetchesPerShardCounter = registerCounter(registry,
-                MetricRegistry.name("kinesis", kinesisStreamName, shardId, "fetch"));
+                MetricRegistry.name("kinesis", kinesisStreamName, this.kinesisShardId, "fetch"));
     }
 
     private Counter registerCounter(MetricRegistry registry, String counterName) {
@@ -95,21 +103,23 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         return registry.counter(counterName);
     }
 
-    public void processRecords(List<Record> records, IRecordProcessorCheckpointer checkpointer) {
+    @Override
+    public void processRecords(ProcessRecordsInput processRecordsInput) {
+        List<KinesisClientRecord> records = processRecordsInput.records();
         recordsFetchedPerShardCounter.inc(records.size());
         noOfFetchesPerShardCounter.inc();
 
         processRecordsWithRetries(records);
         // Checkpoint once every checkpoint interval.
         if (System.currentTimeMillis() > nextCheckpointTimeInMillis) {
-            checkpoint(checkpointer);
+            checkpoint(processRecordsInput.checkpointer());
             nextCheckpointTimeInMillis = System.currentTimeMillis() + kinesisConfig.getCheckPointIntervalMillis();
         }
     }
 
-    private void processRecordsWithRetries(List<Record> records) {
+    private void processRecordsWithRetries(List<KinesisClientRecord> records) {
         long receiveTimeStamp = System.currentTimeMillis();
-        for (Record record : records) {
+        for (KinesisClientRecord record : records) {
             final Timer.Context timerContext = consumerTimer.time();
             boolean processedSuccessfully = false;
             for (int i = 0; i < NUM_RETRIES; i++) {
@@ -140,9 +150,10 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         }
     }
 
-    private void processSingleRecord(Record record, long receiveTimeStamp) {
-        ByteBuffer data = record.getData();
-        DataPoints dataPoints = codec.decode(data.array());
+    private void processSingleRecord(KinesisClientRecord record, long receiveTimeStamp) {
+        byte[] array = new byte[record.data().remaining()];
+        record.data().get(array);
+        DataPoints dataPoints = codec.decode(array);
         List<DataPoint> dataPointList = dataPoints.getDataPoints();
 
         long latencyTime = receiveTimeStamp - dataPoints.getTimeStamp();
@@ -155,16 +166,13 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         pointProcessor.process(dataPointList);
     }
 
-    // @Override
-    public void shutdown(IRecordProcessorCheckpointer checkpointer, ShutdownReason reason) {
+    @Override
+    public void shutdownRequested(ShutdownRequestedInput shutdownRequestedInput) {
         log.info("Shutting down record processor for shard: " + kinesisShardId);
-        // Important to checkpoint after reaching end of shard, so we can start processing data from child shards.
-        if (reason == ShutdownReason.TERMINATE) {
-            checkpoint(checkpointer);
-        }
+        checkpoint(shutdownRequestedInput.checkpointer());
     }
 
-    private void checkpoint(IRecordProcessorCheckpointer checkpointer) {
+    private void checkpoint(RecordProcessorCheckpointer checkpointer) {
         for (int i = 0; i < NUM_RETRIES; i++) {
             try {
                 checkpointer.checkpoint();
@@ -192,5 +200,19 @@ public class KinesisRecordProcessor implements IRecordProcessor {
             }
         }
     }
-}
 
+    @Override
+    public void leaseLost(LeaseLostInput leaseLostInput) {
+        log.warn("Lease has been lost. No longer able to checkpoint.");
+    }
+
+    @Override
+    public void shardEnded(ShardEndedInput shardEndedInput) {
+        try {
+            shardEndedInput.checkpointer().checkpoint();
+            log.info("Shard completed and checkpoint written.");
+        } catch (InvalidStateException | ShutdownException e) {
+            log.error("Shard ended. Problem writing checkpoint.", e);
+        }
+    }
+}

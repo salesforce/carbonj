@@ -6,9 +6,6 @@
  */
 package com.demandware.carbonj.service.events;
 
-import com.amazonaws.services.kinesis.AmazonKinesis;
-import com.amazonaws.services.kinesis.model.PutRecordRequest;
-import com.amazonaws.services.kinesis.model.PutRecordResult;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.queue.QueueProcessor;
 import com.salesforce.cc.infra.core.kinesis.Message;
@@ -17,11 +14,15 @@ import com.salesforce.cc.infra.core.kinesis.PayloadCodec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
+import software.amazon.awssdk.services.kinesis.model.PutRecordRequest;
+import software.amazon.awssdk.services.kinesis.model.PutRecordResponse;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -73,9 +74,10 @@ public class TestKinesisEventsLogger {
         assertArrayEquals(eventBytes, eventCollection.iterator().next());
     }
 
-    private AmazonKinesis mockAmazonKinesis() {
-        AmazonKinesis mockKinesisClient = mock(AmazonKinesis.class);
-        when(mockKinesisClient.putRecord(argThat(new PutRecordRequestArgMatcher(datae)))).thenReturn(new PutRecordResult().withShardId("1"));
+    private KinesisAsyncClient mockAmazonKinesis() {
+        KinesisAsyncClient mockKinesisClient = mock(KinesisAsyncClient.class);
+        when(mockKinesisClient.putRecord(argThat(new PutRecordRequestArgMatcher(datae))))
+                .thenReturn(CompletableFuture.completedFuture(PutRecordResponse.builder().shardId("1").build()));
         return mockKinesisClient;
     }
 
@@ -91,7 +93,7 @@ public class TestKinesisEventsLogger {
 
         @Override
         public boolean matches(PutRecordRequest argument) {
-            byte[] bytes = argument.getData().array();
+            byte[] bytes = argument.data().asByteArray();
             return dataList.add(bytes);
         }
     }
