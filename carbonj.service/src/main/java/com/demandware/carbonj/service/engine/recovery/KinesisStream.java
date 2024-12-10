@@ -11,11 +11,11 @@ import java.util.Set;
 
 public interface KinesisStream {
 
-    Set<ShardInfo> getShards();
+    Set<ShardInfo> getShards() throws InterruptedException;
 
     RecordAndIterator getNextRecord(ShardInfo shardInfo, String shardIterator, String lastSequenceNumber) throws InterruptedException;
 
-    String getShardIterator(ShardInfo shardInfo, Date startTimeStamp);
+    String getShardIterator(ShardInfo shardInfo, Date startTimeStamp) throws InterruptedException;
 
-    String getShardIterator(ShardInfo shardInfo, String sequenceNumber);
+    String getShardIterator(ShardInfo shardInfo, String sequenceNumber) throws InterruptedException;
 }

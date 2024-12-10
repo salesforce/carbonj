@@ -6,15 +6,12 @@
  */
 package com.demandware.carbonj.service.engine.kinesis;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.cfgAccumulator;
 import com.demandware.carbonj.service.engine.CheckPointMgr;
 import com.demandware.carbonj.service.engine.DynamoDbCheckPointMgr;
 import com.demandware.carbonj.service.engine.FileCheckPointMgr;
 import com.demandware.carbonj.service.engine.KinesisConfig;
-import com.demandware.carbonj.service.engine.cfgCarbonJ;
 import com.demandware.carbonj.service.engine.cfgKinesis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 
 import java.nio.file.Paths;
 import java.util.Date;
@@ -44,6 +42,8 @@ public class cfgCheckPointMgr {
 
     @Value( "${metrics.store.checkPoint.table.provisioned.throughput:2}" ) private int
             checkPointTableProvisionedThroughput;
+
+    @Value("${metrics.store.checkPoint.dynamodb.timeout:30}") private int checkPointDynamodbTimout;
 
     private static final Logger log = LoggerFactory.getLogger( cfgCheckPointMgr.class );
 
@@ -66,9 +66,9 @@ public class cfgCheckPointMgr {
         if ( checkPointProvider.equalsIgnoreCase( "dynamodb" ) )
         {
             log.info( "Creating Dynamo DB Checkpoint Mgr" );
-            AmazonDynamoDB dynamoDbClient = AmazonDynamoDBClientBuilder.standard().build();
-            checkPointMgr = new DynamoDbCheckPointMgr( dynamoDbClient, checkPointApplicationName,
-                    defaultCheckPointOffset, checkPointTableProvisionedThroughput );
+            DynamoDbAsyncClient dynamoDbClient = DynamoDbAsyncClient.builder().build();
+            checkPointMgr = new DynamoDbCheckPointMgr(dynamoDbClient, checkPointApplicationName,
+                    defaultCheckPointOffset, checkPointTableProvisionedThroughput, checkPointDynamodbTimout);
         }
         else
         {

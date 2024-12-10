@@ -6,7 +6,6 @@
  */
 package com.demandware.carbonj.service.engine.recovery;
 
-import com.amazonaws.services.kinesis.model.Record;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.DefaultSlotStrategy;
@@ -17,9 +16,11 @@ import com.demandware.carbonj.service.engine.kinesis.DataPoints;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.OngoingStubbing;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kinesis.model.Record;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -136,10 +137,11 @@ public class TestGapProcessor {
                 int recordSeqNum = sequenceNumber++;
                 String sequenceNumberStr = Integer.toString(recordSeqNum);
                 seqNumToDataPoints.put(sequenceNumberStr, dataPoints);
-                Record record = new Record()
-                        .withData(ByteBuffer.wrap(sequenceNumberStr.getBytes(StandardCharsets.US_ASCII)))
-                        .withSequenceNumber(sequenceNumberStr)
-                        .withApproximateArrivalTimestamp(new Date(recordEndTime));
+                Record record = Record.builder()
+                        .data(SdkBytes.fromByteArray(sequenceNumberStr.getBytes(StandardCharsets.US_ASCII)))
+                        .sequenceNumber(sequenceNumberStr)
+                        .approximateArrivalTimestamp(Instant.ofEpochMilli(recordEndTime))
+                        .build();
                 RecordAndIterator recordAndIterator = new RecordAndIterator(record, sequenceNumberStr);
                 whenTemplate = whenTemplate.thenReturn(recordAndIterator);
 
