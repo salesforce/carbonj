@@ -6,7 +6,7 @@
  */
 package com.demandware.carbonj.service.engine.recovery;
 
-import com.amazonaws.services.kinesis.model.Record;
+import software.amazon.awssdk.services.kinesis.model.Record;
 
 class RecordAndIterator {
 

@@ -12,6 +12,13 @@ import com.demandware.carbonj.service.db.util.FileUtils;
 import com.demandware.carbonj.service.ns.NamespaceCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
+import software.amazon.kinesis.common.ConfigsBuilder;
+import software.amazon.kinesis.common.InitialPositionInStreamExtended;
+import software.amazon.kinesis.processor.SingleStreamTracker;
+import software.amazon.kinesis.processor.StreamTracker;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,6 +32,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Consumers {
@@ -36,32 +44,40 @@ public class Consumers {
     private final PointProcessor pointProcessor;
 
     private final KinesisConfig kinesisConfig;
-    private final CheckPointMgr<Date> checkPointMgr;
 
     private final ConsumerRules consumerRules;
 
     private final Map<String, KinesisConsumer> consumers;
 
-    private final String kinesisConsumerRegion;
-
-    private final PointProcessor recoveryPointProcessor;
-
     private final NamespaceCounter namespaceCounter;
 
     private final File indexNameSyncDir;
 
-    Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor, File rulesFile,
-              KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion,
-              NamespaceCounter namespaceCounter, File indexNameSyncDir) {
+    private final String activeProfile;
+
+    private final KinesisAsyncClient kinesisAsyncClient;
+
+    private final DynamoDbAsyncClient dynamoDbAsyncClient;
+
+    private final CloudWatchAsyncClient cloudWatchAsyncClient;
+
+    private final int kinesisConsumerRetroSeconds;
+
+    Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, File rulesFile, KinesisConfig kinesisConfig,
+              NamespaceCounter namespaceCounter, File indexNameSyncDir, String activeProfile,
+              KinesisAsyncClient kinesisAsyncClient, DynamoDbAsyncClient dynamoDbAsyncClient,
+              CloudWatchAsyncClient cloudWatchAsyncClient, int kinesisConsumerRetroSeconds) {
 
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
-        this.recoveryPointProcessor = recoveryPointProcessor;
         this.kinesisConfig = kinesisConfig;
-        this.checkPointMgr = checkPointMgr;
-        this.kinesisConsumerRegion = kinesisConsumerRegion;
         this.namespaceCounter = namespaceCounter;
         this.indexNameSyncDir = indexNameSyncDir;
+        this.activeProfile = activeProfile;
+        this.kinesisAsyncClient = kinesisAsyncClient;
+        this.dynamoDbAsyncClient = dynamoDbAsyncClient;
+        this.cloudWatchAsyncClient = cloudWatchAsyncClient;
+        this.kinesisConsumerRetroSeconds = kinesisConsumerRetroSeconds;
         consumers = new ConcurrentHashMap<>();
         consumerRules = new ConsumerRules(rulesFile);
         reload();
@@ -113,6 +129,7 @@ public class Consumers {
         /* create new consumers */
         // we use the host name to generate the kinesis application name as they are stable for stable set pods.
         String hostName = getHostName();
+        Date kinesisConsumerRetroDate = new Date(System.currentTimeMillis() - kinesisConsumerRetroSeconds * 1000L);
         for (String consumerName : newRules) {
             log.info(String.format("Creating new consumer with kinesis stream name: %s", consumerName));
 
@@ -139,8 +156,12 @@ public class Consumers {
                 }
 
                 Counter initRetryCounter = metricRegistry.counter(MetricRegistry.name("kinesis.consumer." + kinesisStreamName + ".initRetryCounter"));
-                KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, recoveryPointProcessor, kinesisStreamName,
-                        kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter, kinesisConsumerRegion);
+                StreamTracker streamTracker = new SingleStreamTracker(kinesisStreamName,
+                        InitialPositionInStreamExtended.newInitialPositionAtTimestamp(kinesisConsumerRetroDate));
+                ConfigsBuilder configsBuilder = new ConfigsBuilder(streamTracker, kinesisApplicationName, kinesisAsyncClient,
+                        dynamoDbAsyncClient, cloudWatchAsyncClient, UUID.randomUUID().toString(),
+                        new KinesisRecordProcessorFactory(metricRegistry, pointProcessor, kinesisConfig, kinesisStreamName));
+                KinesisConsumer kinesisConsumer = new KinesisConsumer(kinesisStreamName, kinesisApplicationName, initRetryCounter, configsBuilder);
                 log.info(String.format("New Consumer created with name %s", kinesisStreamName));
                 newConsumers.add(consumerName);
                 consumers.put(consumerName, kinesisConsumer);
@@ -171,7 +192,7 @@ public class Consumers {
     }
 
     private String getKinesisApplicationName(String streamName, String hostName)  {
-        return streamName + "-" + hostName;
+        return streamName + "-" + hostName + "-" + activeProfile;
     }
 
     private void close(Set<String> consumerSet) {

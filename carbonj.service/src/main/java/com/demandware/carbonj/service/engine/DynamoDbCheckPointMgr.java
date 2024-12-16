@@ -6,23 +6,25 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.KeyType;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
-import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableResponse;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public class DynamoDbCheckPointMgr implements CheckPointMgr<Date> {
@@ -31,71 +33,74 @@ public class DynamoDbCheckPointMgr implements CheckPointMgr<Date> {
     private final String tableName;
     private final int defaultOffsetMins;
 
-    private final AmazonDynamoDB client;
-    private final DynamoDB dynamoDB;
+    private final DynamoDbAsyncClient client;
+    private final int checkPointDynamodbTimout;
 
-    public DynamoDbCheckPointMgr(AmazonDynamoDB client, String kinesisApplicationName, int defaultOffsetMins,
-                                 int provisionedThroughput) throws Exception {
+    public DynamoDbCheckPointMgr(DynamoDbAsyncClient client, String kinesisApplicationName, int defaultOffsetMins,
+                                 int provisionedThroughput, int checkPointDynamodbTimout) throws Exception {
         this.client = client;
-        this.dynamoDB = new DynamoDB(client);
         this.defaultOffsetMins = defaultOffsetMins;
         this.tableName = "checkpoints-" + kinesisApplicationName;
-        if (!DynamoDbUtils.isTablePresent(dynamoDB, tableName)) {
+        this.checkPointDynamodbTimout = checkPointDynamodbTimout;
+        if (!DynamoDbUtils.isTablePresent(client, tableName, checkPointDynamodbTimout)) {
             createTable(tableName, provisionedThroughput);
         }
     }
 
     private void createTable(String tableName, int provisionedThroughput) throws Exception {
-        CreateTableRequest request = new CreateTableRequest()
-                .withAttributeDefinitions(
-                        new AttributeDefinition("checkPointType", ScalarAttributeType.S))
-                .withKeySchema(
-                        new KeySchemaElement("checkPointType", KeyType.HASH))
-                .withProvisionedThroughput(
-                        new ProvisionedThroughput((long)provisionedThroughput, (long)provisionedThroughput))
-                .withTableName(tableName);
+        CreateTableRequest request = CreateTableRequest.builder()
+                .tableName(tableName)
+                .attributeDefinitions(AttributeDefinition.builder().attributeName("checkPointType").attributeType(ScalarAttributeType.S).build())
+                .keySchema(KeySchemaElement.builder().attributeName("checkPointType").keyType(KeyType.HASH).build())
+                .provisionedThroughput(ProvisionedThroughput.builder()
+                        .readCapacityUnits((long)provisionedThroughput)
+                        .writeCapacityUnits((long)provisionedThroughput)
+                        .build())
+                .build();
         log.info("Issuing CreateTable request for " + tableName);
-        Table newlyCreatedTable = dynamoDB.createTable(request);
+        CompletableFuture<CreateTableResponse> createTableResponse = this.client.createTable(request);
         log.info("Waiting for " + tableName + " to be created...this may take a while...");
-        newlyCreatedTable.waitForActive();
+        createTableResponse.get(checkPointDynamodbTimout, TimeUnit.SECONDS);
     }
 
     @Override
     public void checkPoint(Date checkPoint) throws Exception {
-        Table table = dynamoDB.getTable(tableName);
 
-        HashMap<String, String> expressionAttributeNames = new HashMap<>();
+        Map<String, String> expressionAttributeNames = new HashMap<>();
         expressionAttributeNames.put("#V", "checkPointValue");
 
-        HashMap<String, Object> expressionAttributeValues = new HashMap<>();
-        expressionAttributeValues.put(":val1", checkPoint.getTime());
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+        expressionAttributeValues.put(":val1", AttributeValue.builder().n(String.valueOf(checkPoint.getTime())).build());
 
-        table.updateItem(
-                "checkPointType",          // key attribute name
-                "timestamp",           // key attribute value
-                "set #V = :val1", // UpdateExpression
-                expressionAttributeNames,
-                expressionAttributeValues);
+        client.updateItem(UpdateItemRequest.builder()
+                        .tableName(tableName)
+                        .key(Map.of("checkPointType", AttributeValue.builder().s("timestamp").build()))
+                        .updateExpression("set #V = :val1")
+                        .expressionAttributeNames(expressionAttributeNames)
+                        .expressionAttributeValues(expressionAttributeValues).build());
     }
 
     @Override
     public Date lastCheckPoint() throws Exception {
-        HashMap<String, AttributeValue> keyToGet = new HashMap<String, AttributeValue>();
-        keyToGet.put( "checkPointType", new AttributeValue( "timestamp") );
-        GetItemRequest request = new GetItemRequest()
-                .withKey( keyToGet )
-                .withTableName( tableName );
 
-        Map<String, AttributeValue> item = client.getItem( request ).getItem();
-        if( item == null ) {
+        GetItemRequest request = GetItemRequest.builder()
+                .tableName(tableName)
+                .key(Map.of("checkPointType", AttributeValue.builder().s("timestamp").build()))
+                .build();
+
+        GetItemResponse getItemResponse = this.client.getItem(request).get(checkPointDynamodbTimout, TimeUnit.SECONDS);
+
+        if (!getItemResponse.hasItem()) {
             return getDefaultCheckPoint();
         }
-        String value = item.get( "checkPointValue" ).getN();
+
+        Map<String, AttributeValue> item = getItemResponse.item();
+        String value = item.get("checkPointValue").n();
         if( value == null ) {
             return getDefaultCheckPoint();
         }
 
-        return new Date( Long.parseLong( value ) );
+        return new Date(Long.parseLong(value));
     }
 
     private Date getDefaultCheckPoint() {
@@ -104,4 +109,3 @@ public class DynamoDbCheckPointMgr implements CheckPointMgr<Date> {
         return checkPoint;
     }
 }
-

@@ -49,6 +49,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
@@ -63,7 +66,8 @@ import static com.demandware.carbonj.service.config.ConfigUtils.locateConfigFile
 
 @Configuration
 @Import( { cfgMetric.class, cfgTimeSeriesStorage.class, cfgHostnameOverride.class, cfgCentralThreadPools.class,
-                cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class, cfgCheckPointMgr.class } )
+        cfgStrings.class, cfgAccumulator.class, cfgNamespaces.class, cfgKinesis.class, cfgEventBus.class,
+        cfgCheckPointMgr.class, cfgAws.class } )
 public class cfgCarbonJ
 {
     private static final Logger log = LoggerFactory.getLogger( cfgCarbonJ.class );
@@ -175,9 +179,6 @@ public class cfgCarbonJ
     @Value( "${metrics.store.dataDir:data}" )
     private String dataDir = null;
 
-    @Value( "${kinesis.consumer.region:us-east-1}" )
-    private String kinesisConsumerRegion = "us-east-1";
-
     @Value( "${kinesis.relay.region:us-east-1}" )
     private String kinesisRelayRegion = "us-east-1";
 
@@ -186,11 +187,6 @@ public class cfgCarbonJ
     @Value( "${kinesis.relay.account:}" ) private String kinesisRelayAccount;
 
     @Value( "${kinesis.relay.role:}" ) private String kinesisRelayRole;
-
-    /**
-     * Config server properties
-     */
-    @Value( "${configServer.enabled:false}" ) private boolean configServerEnabled;
 
     @Value( "${configServer.registrationSeconds:30}" ) private int configServerRegistrationSeconds;
 
@@ -206,6 +202,12 @@ public class cfgCarbonJ
 
     @Value("${metrics.store.sync.secondary.db:false}")
     private boolean syncSecondaryDb;
+
+    @Value("${spring.profiles.active:prd}")
+    private String activeProfile;
+
+    @Value("${kinesis.consumer.retroSeconds:600}")
+    private int kinesisConsumerRetroSeconds = 600;
 
     @Bean
     public RestTemplate restTemplate() {
@@ -413,18 +415,24 @@ public class cfgCarbonJ
 
     @Autowired( required = false ) CheckPointMgr<Date> checkPointMgr;
 
+    @Autowired
+    private KinesisAsyncClient kinesisAsyncClient;
+
+    @Autowired
+    private DynamoDbAsyncClient dynamoDbAsyncClient;
+
+    @Autowired
+    private CloudWatchAsyncClient cloudWatchAsyncClient;
+
     @Bean
     @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
-    Consumers consumer( PointProcessor pointProcessor,
-                              @Qualifier( "recoveryPointProcessor" ) PointProcessor recoveryPointProcessor,
-                              ScheduledExecutorService s, KinesisConfig kinesisConfig, NamespaceCounter nsCounter )
-    {
+    Consumers consumer( PointProcessor pointProcessor, ScheduledExecutorService s, KinesisConfig kinesisConfig, NamespaceCounter nsCounter) {
         if ( kinesisConfig.isKinesisConsumerEnabled() )
         {
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
-            Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
-                    kinesisConfig, checkPointMgr, kinesisConsumerRegion,
-                    nsCounter, dataDir == null ? null : new File(dataDir, "index-name-sync"));
+            Consumers consumer = new Consumers( metricRegistry, pointProcessor, rulesFile, kinesisConfig,
+                    nsCounter, dataDir == null ? null : new File(dataDir, "index-name-sync"), activeProfile,
+                    kinesisAsyncClient, dynamoDbAsyncClient, cloudWatchAsyncClient, kinesisConsumerRetroSeconds);
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
             if (syncSecondaryDb) {
                 s.scheduleWithFixedDelay( consumer::syncNamespaces, 60, 60, TimeUnit.SECONDS );

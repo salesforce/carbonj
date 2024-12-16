@@ -6,12 +6,11 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -27,8 +26,8 @@ public class TestDynamoDbCheckPointMgr {
     @Test
     @Disabled // ignoring because it is calling AWS API and it should not be
     public void testBasic() throws Exception {
-        AmazonDynamoDB dynamoDbClient = AmazonDynamoDBClientBuilder.standard().build();
-        CheckPointMgr<Date> checkPointMgr = new DynamoDbCheckPointMgr(dynamoDbClient, "test", 60, 1);
+        DynamoDbAsyncClient dynamoDbClient = DynamoDbAsyncClient.builder().build();
+        CheckPointMgr<Date> checkPointMgr = new DynamoDbCheckPointMgr(dynamoDbClient, "test", 60, 1, 30);
         Date lastCheckPoint = checkPointMgr.lastCheckPoint();
         assertTrue(lastCheckPoint.before(new Date(System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(60))));
         Date checkPoint1 = new Date(System.currentTimeMillis());
