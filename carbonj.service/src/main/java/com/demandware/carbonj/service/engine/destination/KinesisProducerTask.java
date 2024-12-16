@@ -116,7 +116,7 @@ public class KinesisProducerTask
                 // log.info("Message sent.ShardId is " + putRecordResult.getShardId());
             } else {
                 metricsDropped.mark();
-                log.error("Couldn't process record " + putRecordRequest + ". Skipping the record.");
+                log.error("Couldn't process record {}. Skipping the record.", putRecordRequest);
             }
         } catch(Throwable e) {
             log.error(e.getMessage(),e);

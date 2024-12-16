@@ -179,9 +179,6 @@ public class cfgCarbonJ
     @Value( "${metrics.store.dataDir:data}" )
     private String dataDir = null;
 
-    @Value( "${kinesis.consumer.region:us-east-1}" )
-    private String kinesisConsumerRegion = "us-east-1";
-
     @Value( "${kinesis.relay.region:us-east-1}" )
     private String kinesisRelayRegion = "us-east-1";
 
@@ -190,11 +187,6 @@ public class cfgCarbonJ
     @Value( "${kinesis.relay.account:}" ) private String kinesisRelayAccount;
 
     @Value( "${kinesis.relay.role:}" ) private String kinesisRelayRole;
-
-    /**
-     * Config server properties
-     */
-    @Value( "${configServer.enabled:false}" ) private boolean configServerEnabled;
 
     @Value( "${configServer.registrationSeconds:30}" ) private int configServerRegistrationSeconds;
 
@@ -213,6 +205,9 @@ public class cfgCarbonJ
 
     @Value("${spring.profiles.active:prd}")
     private String activeProfile;
+
+    @Value("${kinesis.consumer.retroSeconds:600}")
+    private int kinesisConsumerRetroSeconds = 600;
 
     @Bean
     public RestTemplate restTemplate() {
@@ -431,17 +426,13 @@ public class cfgCarbonJ
 
     @Bean
     @ConditionalOnProperty(name = "rocksdb.readonly", havingValue = "false", matchIfMissing = true)
-    Consumers consumer( PointProcessor pointProcessor,
-                              @Qualifier( "recoveryPointProcessor" ) PointProcessor recoveryPointProcessor,
-                              ScheduledExecutorService s, KinesisConfig kinesisConfig, NamespaceCounter nsCounter )
-    {
+    Consumers consumer( PointProcessor pointProcessor, ScheduledExecutorService s, KinesisConfig kinesisConfig, NamespaceCounter nsCounter) {
         if ( kinesisConfig.isKinesisConsumerEnabled() )
         {
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
-            Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
-                    kinesisConfig, checkPointMgr, kinesisConsumerRegion,
+            Consumers consumer = new Consumers( metricRegistry, pointProcessor, rulesFile, kinesisConfig,
                     nsCounter, dataDir == null ? null : new File(dataDir, "index-name-sync"), activeProfile,
-                    kinesisAsyncClient, dynamoDbAsyncClient, cloudWatchAsyncClient);
+                    kinesisAsyncClient, dynamoDbAsyncClient, cloudWatchAsyncClient, kinesisConsumerRetroSeconds);
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
             if (syncSecondaryDb) {
                 s.scheduleWithFixedDelay( consumer::syncNamespaces, 60, 60, TimeUnit.SECONDS );

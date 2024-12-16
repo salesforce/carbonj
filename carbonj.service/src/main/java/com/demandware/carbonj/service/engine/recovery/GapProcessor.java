@@ -200,7 +200,7 @@ public class GapProcessor {
 
         DataPoints dataPoints = codec.decode(record.data().asByteArray());
 
-        DataPointsInfo dataPointsInfo = new DataPointsInfo(dataPoints, shardInfo, record.approximateArrivalTimestamp().getEpochSecond());
+        DataPointsInfo dataPointsInfo = new DataPointsInfo(dataPoints, shardInfo, record.approximateArrivalTimestamp().toEpochMilli());
 
         if (log.isDebugEnabled())
         {

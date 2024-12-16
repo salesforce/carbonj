@@ -16,7 +16,6 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 import software.amazon.kinesis.common.ConfigsBuilder;
-import software.amazon.kinesis.common.InitialPositionInStream;
 import software.amazon.kinesis.common.InitialPositionInStreamExtended;
 import software.amazon.kinesis.processor.SingleStreamTracker;
 import software.amazon.kinesis.processor.StreamTracker;
@@ -45,15 +44,10 @@ public class Consumers {
     private final PointProcessor pointProcessor;
 
     private final KinesisConfig kinesisConfig;
-    private final CheckPointMgr<Date> checkPointMgr;
 
     private final ConsumerRules consumerRules;
 
     private final Map<String, KinesisConsumer> consumers;
-
-    private final String kinesisConsumerRegion;
-
-    private final PointProcessor recoveryPointProcessor;
 
     private final NamespaceCounter namespaceCounter;
 
@@ -67,23 +61,23 @@ public class Consumers {
 
     private final CloudWatchAsyncClient cloudWatchAsyncClient;
 
-    Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor, File rulesFile,
-              KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion,
+    private final int kinesisConsumerRetroSeconds;
+
+    Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, File rulesFile, KinesisConfig kinesisConfig,
               NamespaceCounter namespaceCounter, File indexNameSyncDir, String activeProfile,
-              KinesisAsyncClient kinesisAsyncClient, DynamoDbAsyncClient dynamoDbAsyncClient, CloudWatchAsyncClient cloudWatchAsyncClient) {
+              KinesisAsyncClient kinesisAsyncClient, DynamoDbAsyncClient dynamoDbAsyncClient,
+              CloudWatchAsyncClient cloudWatchAsyncClient, int kinesisConsumerRetroSeconds) {
 
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
-        this.recoveryPointProcessor = recoveryPointProcessor;
         this.kinesisConfig = kinesisConfig;
-        this.checkPointMgr = checkPointMgr;
-        this.kinesisConsumerRegion = kinesisConsumerRegion;
         this.namespaceCounter = namespaceCounter;
         this.indexNameSyncDir = indexNameSyncDir;
         this.activeProfile = activeProfile;
         this.kinesisAsyncClient = kinesisAsyncClient;
         this.dynamoDbAsyncClient = dynamoDbAsyncClient;
         this.cloudWatchAsyncClient = cloudWatchAsyncClient;
+        this.kinesisConsumerRetroSeconds = kinesisConsumerRetroSeconds;
         consumers = new ConcurrentHashMap<>();
         consumerRules = new ConsumerRules(rulesFile);
         reload();
@@ -135,6 +129,7 @@ public class Consumers {
         /* create new consumers */
         // we use the host name to generate the kinesis application name as they are stable for stable set pods.
         String hostName = getHostName();
+        Date kinesisConsumerRetroDate = new Date(System.currentTimeMillis() - kinesisConsumerRetroSeconds * 1000L);
         for (String consumerName : newRules) {
             log.info(String.format("Creating new consumer with kinesis stream name: %s", consumerName));
 
@@ -162,7 +157,7 @@ public class Consumers {
 
                 Counter initRetryCounter = metricRegistry.counter(MetricRegistry.name("kinesis.consumer." + kinesisStreamName + ".initRetryCounter"));
                 StreamTracker streamTracker = new SingleStreamTracker(kinesisStreamName,
-                        InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.TRIM_HORIZON));
+                        InitialPositionInStreamExtended.newInitialPositionAtTimestamp(kinesisConsumerRetroDate));
                 ConfigsBuilder configsBuilder = new ConfigsBuilder(streamTracker, kinesisApplicationName, kinesisAsyncClient,
                         dynamoDbAsyncClient, cloudWatchAsyncClient, UUID.randomUUID().toString(),
                         new KinesisRecordProcessorFactory(metricRegistry, pointProcessor, kinesisConfig, kinesisStreamName));
