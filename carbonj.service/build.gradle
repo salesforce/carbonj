@@ -40,6 +40,7 @@ task licenseCheckDockerFiles(type: com.hierynomus.gradle.license.tasks.LicenseFo
 licenseMain.dependsOn licenseCheckDockerFiles
 
 apply plugin: 'java'
+apply plugin: 'jacoco'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'io.spring.dependency-management'
@@ -234,6 +235,26 @@ test {
             '--add-opens', 'java.base/java.util=ALL-UNNAMED',
     ]
     environment "AWS_REGION", "us-east-1"
+}
+
+jacocoTestReport {
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = true
+    }
+}
+
+task printCoverageReport {
+    dependsOn jacocoTestReport
+    doLast {
+        def reportFile = file("${projectDir}/build/reports/jacoco/test/jacocoTestReport.csv")
+        if (reportFile.exists()) {
+            println reportFile.text
+        } else {
+            println "Coverage report not found!"
+        }
+    }
 }
 
 tasks.withType(Test) {

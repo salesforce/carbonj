@@ -20,7 +20,7 @@ jobs:
       if: ${{ !contains(github.ref, 'dependabot') }}
       run: echo "${{ secrets.SALESFORCE_DOCKER_HUB_SECRET }}" | docker login --username sholavanalli508 --password-stdin
     - name: Build with Gradle
-      run: ./gradlew build --info --stacktrace
+      run: ./gradlew build printCoverageReport --info --stacktrace
     - name: Publish Failure Test Report
       if: ${{ failure() }} # doesn't run unless it specifically grabs the failure condition of the previous step..
       uses: scacap/action-surefire-report@v1

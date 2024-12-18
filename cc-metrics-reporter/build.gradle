@@ -20,6 +20,7 @@ apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'maven-publish'
 apply plugin: 'maven-publish-auth'
+apply plugin: 'jacoco'
 
 repositories {
     mavenLocal()
@@ -59,4 +60,24 @@ publishing {
 
 test {
     useJUnitPlatform()
+}
+
+jacocoTestReport {
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = true
+    }
+}
+
+task printCoverageReport {
+    dependsOn jacocoTestReport
+    doLast {
+        def reportFile = file("${projectDir}/build/reports/jacoco/test/jacocoTestReport.csv")
+        if (reportFile.exists()) {
+            println reportFile.text
+        } else {
+            println "Coverage report not found!"
+        }
+    }
 }
