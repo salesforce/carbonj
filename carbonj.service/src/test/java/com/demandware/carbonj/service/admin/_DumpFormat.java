@@ -20,8 +20,10 @@ public class _DumpFormat
     @Test
     public void writeSeries()
     {
+        DataPointValue dataPointValue = new DataPointValue(100, 2.0f);
+        assertEquals("100 2", dataPointValue.toString());
         assertEquals( "abc|100|1|2",
-            DumpFormat.writeSeries( "abc", 1, List.of(new DataPointValue(100, 2.0f))) );
+            DumpFormat.writeSeries( "abc", 1, List.of(dataPointValue)));
         assertEquals( "abc|100|1|2.35",
             DumpFormat.writeSeries( "abc", 1, List.of(new DataPointValue(100, 2.351f))) );
         assertEquals(

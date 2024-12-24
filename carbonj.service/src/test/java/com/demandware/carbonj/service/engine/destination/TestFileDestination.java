@@ -42,6 +42,15 @@ public class TestFileDestination {
         checkMeter(metricRegistry, fileDestination.name + ".sent", 1L);
     }
 
+    @Test
+    public void testNegatives() throws Exception {
+        MetricRegistry metricRegistry = new MetricRegistry();
+        FileDestination fileDestination = new FileDestination(metricRegistry, "audit", "/invalid_dir/file_destination_test", 1);
+        Thread.sleep(500);
+        fileDestination.closeQuietly();
+    }
+
+
     private void checkMeter(MetricRegistry metricRegistry, String name, long expected) {
         Meter meter = metricRegistry.getMeters().get(name);
         assertNotNull(meter);

@@ -7,8 +7,8 @@
 package com.demandware.carbonj.service.accumulator.recovery;
 
 import com.demandware.carbonj.service.BaseTest;
+import com.demandware.carbonj.service.accumulator.CountingLatePointLogger;
 import com.demandware.carbonj.service.accumulator.DefaultSlotStrategy;
-import com.demandware.carbonj.service.accumulator.LatePointLogger;
 import com.demandware.carbonj.service.accumulator.MetricAggregate;
 import com.demandware.carbonj.service.accumulator.MetricAggregationMethod;
 import com.demandware.carbonj.service.accumulator.MetricAggregationPolicy;
@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -75,6 +76,13 @@ public class TestRecoveryAccumulator extends BaseTest {
         assertEquals(0, accumulator.getTimeSlots().size());
 
         assertEquals(4, latePoints.get());
+
+        assertEquals(240, accumulator.getMaxClosedSlotTs());
+        assertInstanceOf(DefaultSlotStrategy.class, accumulator.getSlotStrategy());
+        accumulator.refreshStats();
+        accumulator.dumpStats();
+        accumulator.reset();
+        assertEquals(0, accumulator.getMaxClosedSlotTs());
     }
 
     private long toMillis(int sec) {
@@ -124,19 +132,5 @@ public class TestRecoveryAccumulator extends BaseTest {
 
     private DataPoint getDataPoint(int ts) {
         return new DataPoint("metric", 1, ts);
-    }
-
-    private static class CountingLatePointLogger implements LatePointLogger {
-
-        private final AtomicInteger latePoints;
-
-        private CountingLatePointLogger(AtomicInteger latePoints) {
-            this.latePoints = latePoints;
-        }
-
-        @Override
-        public void logLatePoint(DataPoint m, long now, Reason r, String context) {
-            latePoints.incrementAndGet();
-        }
     }
 }

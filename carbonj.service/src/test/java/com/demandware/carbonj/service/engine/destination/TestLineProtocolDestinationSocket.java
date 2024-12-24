@@ -57,6 +57,16 @@ public class TestLineProtocolDestinationSocket {
         checkMeter(metricRegistry, lineProtocolDestinationSocket.name + ".sent", 1L);
     }
 
+    @Test
+    public void testNegatives() throws Exception {
+        DataPoint dataPoint = new DataPoint("foo.bar", 123, (int) (System.currentTimeMillis() / 1000));
+        MetricRegistry metricRegistry = new MetricRegistry();
+        LineProtocolDestinationSocket lineProtocolDestinationSocket =
+                new LineProtocolDestinationSocket(metricRegistry, "relay", "127.0.0.1", 777, 1, 1);
+        Thread.sleep(500);
+        lineProtocolDestinationSocket.closeQuietly();
+    }
+
     private void checkMeter(MetricRegistry metricRegistry, String name, long expected) {
         Meter meter = metricRegistry.getMeters().get(name);
         assertNotNull(meter);

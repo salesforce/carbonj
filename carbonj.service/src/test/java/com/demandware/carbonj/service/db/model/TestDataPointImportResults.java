@@ -6,14 +6,11 @@
  */
 package com.demandware.carbonj.service.db.model;
 
-public class MsgPackMetric
-{
-    final public String path;
-    final public boolean isLeaf;
+import org.junit.jupiter.api.Test;
 
-    public MsgPackMetric( Metric metric )
-    {
-        this.path = metric.name;
-        this.isLeaf = metric.isLeaf();
+public class TestDataPointImportResults {
+    @Test
+    public void test() {
+        DataPointImportResults dataPointImportResults = new DataPointImportResults("60s24h", 0, 0, 0, 0);
     }
 }

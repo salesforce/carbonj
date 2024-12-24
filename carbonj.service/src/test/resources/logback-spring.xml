@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (c) 2018, salesforce.com, inc.
+    All rights reserved.
+    SPDX-License-Identifier: BSD-3-Clause
+    For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+-->
+<configuration scan="true" scanPeriod="10 seconds">
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <property name="LOG_FILE" value="log/carbonj.log"/>
+    <property name="KINESIS_LOG_FILE" value="log/kinesis.log"/>
+<!--    <property name="LOG_FILE" value="${LOG_FILE:-${LOG_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}/}spring.log}"/>-->
+    <property name="CONSOLE_LOG_PATTERN" value="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    <property name="FILE_LOG_PATTERN" value="%d %p %c{1} [%t] %m%n"/>
+
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    <appender name="ROLLING-FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+        <file>${LOG_FILE}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>5</maxHistory>
+        </rollingPolicy>
+    </appender>
+    <appender name="KINESIS-FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+        <file>${KINESIS_LOG_FILE}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${KINESIS_LOG_FILE}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>5</maxHistory>
+        </rollingPolicy>
+    </appender>
+    <root level="DEBUG">
+        <appender-ref ref="ROLLING-FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
+    <logger name="com.demandware.carbonj.service.engine.recovery" level="DEBUG" additivity="false">
+        <appender-ref ref="ROLLING-FILE"/>
+    </logger>
+<!--
+separate kinesis log file
+-->
+    <logger name="com.amazonaws.services.kinesis" level="DEBUG" additivity="false">
+        <appender-ref ref="KINESIS-FILE"/>
+    </logger>
+    <logger name="com.demandware" level="INFO" additivity="false">
+        <appender-ref ref="ROLLING-FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+    <logger name="com.salesforce" level="INFO" additivity="false">
+        <appender-ref ref="ROLLING-FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+
+</configuration>
