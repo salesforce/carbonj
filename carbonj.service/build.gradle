@@ -226,6 +226,9 @@ dependencies {
     }
     implementation group:"org.springframework.boot", name:"spring-boot-starter-actuator", version: "${springbootVersion}"
     testImplementation group:"org.springframework.boot", name:"spring-boot-starter-test", version: "${springbootVersion}"
+    testImplementation "org.testcontainers:junit-jupiter:${testContainers}"
+    testImplementation "org.testcontainers:localstack:${testContainers}"
+    testImplementation "software.amazon.kinesis:amazon-kinesis-client:${kinesisClient}"
 }
 
 test {

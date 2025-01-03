@@ -132,7 +132,7 @@ public class Consumers {
                         kinesisApplicationName = kinesisApplicationNamePropValue;
                     }
                 } catch (FileNotFoundException e) {
-                    log.warn(" config/" + consumerCfgFile + "not found in the classpath ");
+                    log.warn(consumerCfgFile + " not found in the classpath ");
                     log.info(" Falling back to default values ");
                 } catch (Throwable e) {
                     log.error(e.getMessage(), e);

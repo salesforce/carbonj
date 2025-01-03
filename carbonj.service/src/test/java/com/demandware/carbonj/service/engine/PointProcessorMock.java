@@ -11,9 +11,11 @@ import com.demandware.carbonj.service.accumulator.Accumulator;
 import java.util.List;
 
 public class PointProcessorMock implements PointProcessor {
+    private int counter = 0;
+
     @Override
     public void process(List<DataPoint> points) {
-
+        counter += points.size();
     }
 
     @Override
@@ -38,6 +40,9 @@ public class PointProcessorMock implements PointProcessor {
 
     @Override
     public void dumpStats() {
+    }
 
+    public int getCounter() {
+        return counter;
     }
 }
