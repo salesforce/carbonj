@@ -12,6 +12,8 @@ import com.demandware.carbonj.service.engine.kinesis.DataPoints;
 import com.demandware.carbonj.service.engine.kinesis.GzipDataPointCodec;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -39,6 +41,8 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 
 @Testcontainers
 public class TestKinesisConsumer {
+
+    private static final Logger log = LoggerFactory.getLogger(TestKinesisConsumer.class);
 
     @Container
     public static LocalStackContainer localstack = new LocalStackContainer(
@@ -84,14 +88,15 @@ public class TestKinesisConsumer {
         assertEquals(STREAM_NAME, listStreamsResponse.streamNames().get(0));
 
         MetricRegistry metricRegistry = new MetricRegistry();
-        KinesisConfig kinesisConfig = new KinesisConfig(true, false, 60000, 60000, 60000,
+        KinesisConfig kinesisConfig = new KinesisConfig(true, true, 60000, 60000, 60000,
                 1, Path.of("/tmp/checkpoint"), 60, 60, "recoveryProvider", 1, 1, 1000);
         FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(Path.of("/tmp/checkpoint"), 5);
         PointProcessorMock pointProcessor = new PointProcessorMock();
         KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, pointProcessor,
                 STREAM_NAME, STREAM_NAME + "-app", kinesisConfig, checkPointMgr, metricRegistry.counter("kinesis-consumer-counter"),
                 Region.US_EAST_1.id(), localstack.getEndpointOverride(KINESIS).toString());
-        Thread.sleep(30000);
+        Thread.sleep(40000);
+        log.info("Start ingesting data points ...");
         int current = (int) (System.currentTimeMillis() / 1000);
         DataPoints dataPoints = new DataPoints(List.of(new DataPoint("foo.bar", 123.45, current)), current);
         DataPointCodec dataPointCodec = new GzipDataPointCodec();

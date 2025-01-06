@@ -24,6 +24,8 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Date;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.eq;
@@ -147,5 +149,22 @@ public class _ConfigServerUtil {
         verify(failureCounter, times(1)).inc(0);
         verify(failureCounter, times(1)).inc();
         verify(configLookupFailureCounter, times(1)).inc(0);
+    }
+
+    @Test
+    public void testOthers() {
+        ConfigServerUtil.ProcessConfig processConfig = new ConfigServerUtil.ProcessConfig();
+        assertTrue("Same object", processConfig.equals(processConfig));
+        assertFalse(processConfig.equals(new Object()));
+        assertTrue("Same object", processConfig.equals(new ConfigServerUtil.ProcessConfig()));
+        assertNotEquals(0, processConfig.hashCode());
+        assertEquals("The same toString", "ProcessConfig{id=0, name='null', processId='null', value='null', version=0, message='null', author='null', lastModifiedDate=null}", processConfig.toString());
+
+        ConfigServerUtil.Process process = new ConfigServerUtil.Process();
+        assertTrue("Same object", process.equals(process));
+        assertFalse(process.equals(new Object()));
+        assertTrue("Same object", process.equals(new ConfigServerUtil.Process()));
+        assertNotEquals(0, process.hashCode());
+        assertEquals("The same toString", "Process{id=0, uniqueId='null', host='null', firstRegistrationDate=null, lastRegistrationDate=null, processConfigs=null}", process.toString());
     }
 }

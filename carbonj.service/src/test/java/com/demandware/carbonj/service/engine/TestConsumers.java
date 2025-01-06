@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 
-@Testcontainers
 public class TestConsumers {
 
     @BeforeAll
@@ -43,5 +42,6 @@ public class TestConsumers {
         new KinesisRecordProcessorFactory(metricRegistry, new PointProcessorMock(), kinesisConfig, "test-stream");
         consumers.dumpStats();
         consumers.syncNamespaces();
+        consumers.reload();
     }
 }

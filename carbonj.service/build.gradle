@@ -233,7 +233,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    maxHeapSize = "2g"
+    maxHeapSize = "3g"
     jvmArgs = [
             '--add-opens', 'java.base/java.util=ALL-UNNAMED',
     ]

@@ -8,8 +8,11 @@ package com.demandware.carbonj.service.db.model;
 
 public class MsgPackMetric
 {
-    final public String path;
-    final public boolean isLeaf;
+    public String path;
+    public boolean isLeaf;
+
+    public MsgPackMetric() {
+    }
 
     public MsgPackMetric( Metric metric )
     {
