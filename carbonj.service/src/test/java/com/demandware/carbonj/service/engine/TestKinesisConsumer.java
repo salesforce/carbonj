@@ -34,6 +34,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import static com.demandware.carbonj.service.engine.TestUtils.setEnvironmentVariable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.CLOUDWATCH;
@@ -115,16 +116,5 @@ public class TestKinesisConsumer {
         assertTrue(count < 30);
         kinesisConsumer.dumpStats();
         kinesisConsumer.closeQuietly();
-    }
-
-    private static void setEnvironmentVariable(String key, String value) throws Exception {
-        // Use reflection to modify the internal environment map
-        Map<String, String> env = System.getenv();
-        Field field = env.getClass().getDeclaredField("m");
-        field.setAccessible(true);
-
-        @SuppressWarnings("unchecked")
-        Map<String, String> writableEnv = (Map<String, String>) field.get(env);
-        writableEnv.put(key, value);
     }
 }

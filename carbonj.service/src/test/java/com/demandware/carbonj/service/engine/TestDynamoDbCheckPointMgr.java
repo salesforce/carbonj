@@ -20,6 +20,7 @@ import software.amazon.awssdk.regions.Region;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import static com.demandware.carbonj.service.engine.TestUtils.setEnvironmentVariable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.DYNAMODB;
@@ -33,6 +34,8 @@ public class TestDynamoDbCheckPointMgr {
 
     @Test
     public void testBasic() throws Exception {
+        setEnvironmentVariable("AWS_ACCESS_KEY_ID", "accessKey");
+        setEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "secretKey");
         AmazonDynamoDB dynamoDbClient = AmazonDynamoDBClientBuilder.standard()
                 .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(localstack.getEndpoint().toString(), Region.US_EAST_1.id()))
                 .build();
