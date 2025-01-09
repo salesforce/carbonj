@@ -18,7 +18,6 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.engine.DataPoint;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -28,7 +27,7 @@ public class LineProtocolDestinationSocket
     extends Destination
     implements LineProtocolDestination
 {
-    private static Logger log = LoggerFactory.getLogger( LineProtocolDestinationSocket.class );
+    private static final Logger log = LoggerFactory.getLogger( LineProtocolDestinationSocket.class );
 
     private final MetricRegistry metricRegistry;
     final String ip;
@@ -126,7 +125,7 @@ public class LineProtocolDestinationSocket
         }
         catch ( InterruptedException e )
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException(e);
         }
     }
 
@@ -199,25 +198,24 @@ public class LineProtocolDestinationSocket
                     {
                         Closeables.close( pw, true );
                     }
-                    catch ( IOException e2 )
-                    {
+                    catch ( IOException ignored) {
                     }
                     pw = null;
                     try
                     {
                         Closeables.close( sock, true );
                     }
-                    catch ( IOException e2 )
-                    {
+                    catch ( IOException ignored) {
                     }
                     sock = null;
                     try
                     {
+                        //noinspection BusyWait
                         Thread.sleep( 1000 ); // try reconnect in a sec
                     }
                     catch ( InterruptedException e1 )
                     {
-                        throw Throwables.propagate( e );
+                        throw new RuntimeException(e1);
                     }
                 }
                 finally
@@ -236,8 +234,7 @@ public class LineProtocolDestinationSocket
             {
                 Closeables.close( sock, true );
             }
-            catch ( IOException e )
-            {
+            catch ( IOException ignored) {
             }
             metricRegistry.remove(name);
             log.info("Exited " + name);

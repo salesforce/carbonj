@@ -10,11 +10,15 @@ import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.strings.StringsCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class RelayRulesTest {
 
@@ -42,5 +46,40 @@ public class RelayRulesTest {
         assertEquals(2, destinationGroups.length);
         assertEquals("kinesis:umon-prd-v2-cjajna", destinationGroups[0]);
         assertEquals("kinesis:umon-prd-v2-cjArgus", destinationGroups[1]);
+        assertEquals(2, relayRules.allDestinationGroups().size());
+        relayRules.getDestinationGroups("pod240.ecom.host.jvm.memory.heap.usage");
+    }
+
+    @Test
+    public void testEmptyRelayRules() {
+        RelayRules relayRules = new RelayRules("relay");
+        assertEquals(0, relayRules.allDestinationGroups().size());
+        assertEquals(0, relayRules.getDestinationGroups("foo.bar").length);
+        assertTrue(relayRules.equals(relayRules));
+        assertFalse(relayRules.equals(null));
+        assertEquals(relayRules.hashCode(), new RelayRules("relay").hashCode());
+        assertEquals("RelayRules{configLines=[]}", relayRules.toString());
+    }
+
+    @Test
+    public void testNegatives() {
+        RelayRules relayRules = new RelayRules("relay",
+                new File("/tmp/relay-rules.conf.not.exist"),
+                "server", true, null);
+        assertEquals(0, relayRules.allDestinationGroups().size());
+        try {
+            new RelayRules("relay",
+                    new File("/tmp/relay-rules.conf.not.exist"),
+                    "invalid", true, null);
+            fail("Should have thrown exception");
+        } catch (IllegalStateException e) {
+            assertEquals("Unexpected configuration src: invalid", e.getMessage());
+        }
+    }
+
+    @Test
+    public void testConfigServerRelayRules() throws Exception {
+        ConfigServerUtil configServerUtil = new ConfigServerUtil(new RestTemplate(), "http://127.0.0.1:8888", new MetricRegistry(),
+                "testConfigServerRelayRules", "/tmp/backup");
     }
 }

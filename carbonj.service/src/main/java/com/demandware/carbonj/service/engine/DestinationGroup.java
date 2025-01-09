@@ -142,6 +142,10 @@ class DestinationGroup
         return dest;
     }
 
+    LineProtocolDestination[] getDestinations() {
+        return destinations;
+    }
+
     void close()
     {
         close( Arrays.asList(destinations) );

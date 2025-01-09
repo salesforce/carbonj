@@ -15,12 +15,14 @@ import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorF
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
+import com.amazonaws.services.kinesis.metrics.interfaces.MetricsLevel;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.engine.kinesis.GzipDataPointCodec;
 import com.demandware.carbonj.service.engine.kinesis.kcl.MemLeaseManager;
 import com.demandware.carbonj.service.engine.recovery.*;
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,16 +47,27 @@ public class KinesisConsumer extends Thread {
 
     private Worker worker;
 
-    private PointProcessor recoveryPointProcessor;
+    private final PointProcessor recoveryPointProcessor;
 
     private volatile boolean closed;
 
-    private String kinesisConsumerRegion;
+    private final String kinesisConsumerRegion;
+
+    private final String overrideKinesisEndpoint;
 
     public KinesisConsumer(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor,
                            String kinesisStreamName, String kinesisApplicationName,
                            KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr,
                            Counter noOfRestarts, String kinesisConsumerRegion) {
+        this(metricRegistry, pointProcessor, recoveryPointProcessor, kinesisStreamName, kinesisApplicationName, kinesisConfig,
+                checkPointMgr, noOfRestarts, kinesisConsumerRegion, null);
+    }
+
+    public KinesisConsumer(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor,
+                           String kinesisStreamName, String kinesisApplicationName,
+                           KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr,
+                           Counter noOfRestarts, String kinesisConsumerRegion,
+                           String overrideKinesisEndpoint) {
         this.metricRegistry = metricRegistry;
         this.pointProcessor = Preconditions.checkNotNull(pointProcessor);
         this.recoveryPointProcessor = recoveryPointProcessor;
@@ -64,6 +77,7 @@ public class KinesisConsumer extends Thread {
         this.checkPointMgr = checkPointMgr;
         this.noOfRestarts = noOfRestarts;
         this.kinesisConsumerRegion = kinesisConsumerRegion;
+        this.overrideKinesisEndpoint = overrideKinesisEndpoint;
         log.info("Kinesis consumer started");
         this.start();
     }
@@ -89,6 +103,12 @@ public class KinesisConsumer extends Thread {
                 int maxRecords = kinesisConfig.getMaxRecords();
                 if (maxRecords > 0) {
                     kinesisClientLibConfiguration.withMaxRecords(maxRecords);
+                }
+
+                // For testing only
+                if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
+                    kinesisClientLibConfiguration.withKinesisEndpoint(overrideKinesisEndpoint);
+                    kinesisClientLibConfiguration.withMetricsLevel(MetricsLevel.NONE);
                 }
 
                 log.info(" Kinesis Client Library started with application name " + kinesisApplicationName + " with stream "

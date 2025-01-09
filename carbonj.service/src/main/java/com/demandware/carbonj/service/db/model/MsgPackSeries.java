@@ -7,7 +7,6 @@
 package com.demandware.carbonj.service.db.model;
 
 import java.util.List;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 
@@ -32,12 +31,7 @@ public class MsgPackSeries
 
     public MsgPackSeries( Series series)
     {
-        this.start = series.start;
-        this.end = series.end;
-        this.step = series.step;
-        this.name = series.name;
-        this.pathExpression = series.name;
-        this.values = series.values;
+        this(series.start, series.end, series.step, series.name, series.name, series.values);
     }
 
     @JsonCreator

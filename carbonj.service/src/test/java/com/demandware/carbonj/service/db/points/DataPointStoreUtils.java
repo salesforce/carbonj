@@ -20,7 +20,9 @@ public class DataPointStoreUtils {
     public static DataPointStore createDataPointStore(MetricRegistry metricRegistry, File dbDirFile, boolean longId,
                                                       MetricIndex metricIndex) {
         File stagingDir = new File(dbDirFile, "staging");
-        assertTrue(stagingDir.mkdirs());
+        if (!stagingDir.exists()) {
+            assertTrue(stagingDir.mkdirs());
+        }
         StagingFiles sFiles = new StagingFiles(metricRegistry, stagingDir, new SystemSort(), metricIndex);
         DataPointArchiveFactory pointArchiveFactory = new DataPointArchiveFactory(metricRegistry, dbDirFile, new RocksDBConfig(), longId);
         DataPointStagingStore stagingStore = new DataPointStagingStore( metricRegistry, sFiles, 1000, 1, 1, 1, 100, 30, 3);

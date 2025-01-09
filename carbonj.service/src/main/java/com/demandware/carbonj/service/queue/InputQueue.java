@@ -46,17 +46,15 @@ public class InputQueue<T> extends Thread implements Consumer<T>, StatsAware, Cl
 
     private final QueueProcessor<T> pointProcessor;
 
-    private int batchSize;
+    private final int batchSize;
 
-    private BlockingQueue<T> queue;
+    private final BlockingQueue<T> queue;
 
     private volatile boolean stop = false;
 
-    private long emptyQueuePauseMillis;
+    private final long emptyQueuePauseMillis;
 
-    private RejectionHandler rh;
-
-    private final int queueCapacity;
+    private final RejectionHandler<T> rh;
 
     public InputQueue(MetricRegistry metricRegistry, String name, QueueProcessor<T> queueProcessor, int queueSize,
                       RejectionHandler<T> rejectionHandler, int batchSize,
@@ -65,7 +63,6 @@ public class InputQueue<T> extends Thread implements Consumer<T>, StatsAware, Cl
         this.pointProcessor = Preconditions.checkNotNull(queueProcessor);
         this.batchSize = batchSize;
         this.emptyQueuePauseMillis = emptyQueuePauseMillis;
-        this.queueCapacity = queueSize;
         this.queue = new ArrayBlockingQueue<>( queueSize );
         this.rh = rejectionHandler;
 
@@ -100,13 +97,6 @@ public class InputQueue<T> extends Thread implements Consumer<T>, StatsAware, Cl
     @Override
     public void run()
     {
-
-        if ( queue == null )
-        {
-            stop = true;
-            return;
-        }
-
         // queue consumer loop.
         while ( true )
         {
@@ -202,19 +192,7 @@ public class InputQueue<T> extends Thread implements Consumer<T>, StatsAware, Cl
 
     public int queuedItemsCount()
     {
-        if ( queue == null )
-        {
-            return 0;
-        }
-        else
-        {
-            return queue.size();
-        }
-    }
-
-    public int queueCapacity()
-    {
-        return queueCapacity;
+        return queue.size();
     }
 
     private String queueSizeGaugeName(String name)

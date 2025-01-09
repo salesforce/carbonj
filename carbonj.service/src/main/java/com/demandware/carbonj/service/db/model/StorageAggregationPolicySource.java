@@ -8,7 +8,6 @@ package com.demandware.carbonj.service.db.model;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +25,9 @@ public class StorageAggregationPolicySource
     private static final Logger log = LoggerFactory.getLogger( StorageAggregationPolicySource.class );
 
     // reuse same instance across multiple metrics.
-    private CopyOnWriteArrayList<AggregationPolicy> policies = new CopyOnWriteArrayList<>(  );
+    private final CopyOnWriteArrayList<AggregationPolicy> policies = new CopyOnWriteArrayList<>(  );
 
-    private StorageAggregationRulesLoader rulesLoader;
+    private final StorageAggregationRulesLoader rulesLoader;
 
     public StorageAggregationPolicySource( StorageAggregationRulesLoader rulesLoader)
     {
@@ -75,15 +74,11 @@ public class StorageAggregationPolicySource
     {
         log.info("checking for obsolete aggregation policies to remove from cache");
         List<AggregationPolicy> obsolete = policies.stream()
-                                                   .filter( p -> p.configChanged() )
-                                                   .collect( Collectors.toList());
+                                                   .filter(AggregationPolicy::configChanged)
+                                                   .toList();
         // no need to keep policies that represent obsolete config.
         policies.removeAll( obsolete );
         log.info("purged obsolete aggregation policies from cache. Number of obsolete policies found: "
             + obsolete.size() + ", total number of policies after purge: " + policies.size());
-    }
-
-    public StorageAggregationRulesLoader getRulesLoader() {
-        return rulesLoader;
     }
 }

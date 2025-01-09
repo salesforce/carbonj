@@ -40,6 +40,7 @@ task licenseCheckDockerFiles(type: com.hierynomus.gradle.license.tasks.LicenseFo
 licenseMain.dependsOn licenseCheckDockerFiles
 
 apply plugin: 'java'
+apply plugin: 'jacoco'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'io.spring.dependency-management'
@@ -225,15 +226,38 @@ dependencies {
     }
     implementation group:"org.springframework.boot", name:"spring-boot-starter-actuator", version: "${springbootVersion}"
     testImplementation group:"org.springframework.boot", name:"spring-boot-starter-test", version: "${springbootVersion}"
+    testImplementation "org.testcontainers:junit-jupiter:${testContainers}"
+    testImplementation "org.testcontainers:localstack:${testContainers}"
+    testImplementation "software.amazon.kinesis:amazon-kinesis-client:${kinesisClient}"
 }
 
 test {
     useJUnitPlatform()
-    maxHeapSize = "2g"
+    maxHeapSize = "3g"
     jvmArgs = [
             '--add-opens', 'java.base/java.util=ALL-UNNAMED',
     ]
     environment "AWS_REGION", "us-east-1"
+}
+
+jacocoTestReport {
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = true
+    }
+}
+
+task printCoverageReport {
+    dependsOn jacocoTestReport
+    doLast {
+        def reportFile = file("${projectDir}/build/reports/jacoco/test/jacocoTestReport.csv")
+        if (reportFile.exists()) {
+            println reportFile.text
+        } else {
+            println "Coverage report not found!"
+        }
+    }
 }
 
 tasks.withType(Test) {
