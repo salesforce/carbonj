@@ -100,8 +100,8 @@ public class ConfigServerUtil {
             if (res.getStatusCode().value() >= 200 && res.getStatusCode().value() < 300) {
                 Process process = res.getBody();
                 if (process != null && process.getProcessConfigs() != null && !process.getProcessConfigs().isEmpty()) {
-                    updateConfig(process);
                     saveToBackupFile(process);
+                    updateConfig(process);
                     registrationSuccessCount.inc();
                     log.info("Registered successfully with config server at {}, received configs: {}", registrationUrl,
                             process.getProcessConfigs().stream().map(ProcessConfig::getName).collect(Collectors.toList()));
@@ -111,7 +111,7 @@ public class ConfigServerUtil {
                 }
             } else {
                 handleRegistrationFailure(String.format("Config server registration failed. URL: %s, Response status " +
-                        "code: %s", registrationUrl, res.getStatusCodeValue()), null);
+                        "code: %s", registrationUrl, res.getStatusCode().value()), null);
             }
         } catch (Exception e) {
             handleRegistrationFailure("Unexpected error during config server registration. URL: " + registrationUrl, e);
@@ -133,10 +133,10 @@ public class ConfigServerUtil {
     private void updateConfig(Process process) {
         final Optional<ProcessConfig> processConfigOptional = process.getProcessConfigs().stream()
                         .filter(pc -> pc.getName().startsWith("prepend-template"))
-                        .collect(Collectors.toList()).stream().findFirst();
+                        .toList().stream().findFirst();
         final List<ProcessConfig> idBasedConfigs = process.getProcessConfigs().stream()
                 .filter(pc -> pc.getName().startsWith("id-based"))
-                .collect(Collectors.toList());
+                .toList();
         final Map<String, ProcessConfig> nameToConfigTmp = process.getProcessConfigs().stream()
                 .filter(pc -> !pc.getName().startsWith("id-based"))
                 .collect(Collectors.toMap(ProcessConfig::getName, pc -> pc));
