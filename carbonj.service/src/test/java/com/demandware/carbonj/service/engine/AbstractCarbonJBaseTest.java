@@ -42,6 +42,7 @@ public class AbstractCarbonJBaseTest
             FileUtils.deleteDirectory( new File( serviceDirStatic, "work/carbonj-data" ) );
             FileUtils.deleteDirectory( new File( serviceDirStatic, "work/carbonj-staging" ) );
             FileUtils.deleteDirectory( new File( serviceDirStatic, "work/carbonj-checkpoint" ) );
+            FileUtils.deleteDirectory( new File( serviceDirStatic, "work/carbonj-render" ) );
         }
         catch ( Exception e )
         {
@@ -56,5 +57,6 @@ public class AbstractCarbonJBaseTest
         new File( serviceDirStatic, "work/carbonj-data" ).mkdirs();
         new File( serviceDirStatic, "work/carbonj-staging" ).mkdirs();
         new File( serviceDirStatic, "work/carbonj-checkpoint" ).mkdirs();
+        new File( serviceDirStatic, "work/carbonj-render" ).mkdirs();
     }
 }

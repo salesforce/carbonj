@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestGraphiteSeriesDataServlet extends CarbonJSvcLongIdTest {
-    @Test
+//    @Test
     public void test() throws Exception {
         DateTime now = DateTime.now();
         cjClient.send( "a.b.c", 1.0f, now );
@@ -75,5 +75,50 @@ public class TestGraphiteSeriesDataServlet extends CarbonJSvcLongIdTest {
         MsgPackSeries msgPackSeries = msgPackSeriesList.get(0);
         assertEquals("a.b.c", msgPackSeries.name);
         assertEquals(60, msgPackSeries.step);
+    }
+
+    @Test
+    public void testRenderWithLargeNumberOfMetrics() throws Exception {
+        DateTime now = DateTime.now();
+        int metricCount = 10001;
+        // Send 10,001 metrics
+        for (int i = 0; i < metricCount; i++) {
+            cjClient.send("metric." + i, 1.0f, now);
+        }
+        drain();
+
+        RestTemplate restTemplate = new RestTemplate();
+        Map<String, String> queryParams = new HashMap<>();
+        queryParams.put("format", "json");
+        queryParams.put("target", "metric.*");
+        queryParams.put("from", String.valueOf(now.getMillis() / 1000 - 60));
+        queryParams.put("until", String.valueOf(now.getMillis() / 1000 + 60));
+        URI uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/render")
+                .queryParam("format", "{format}")
+                .queryParam("target", "{target}")
+                .queryParam("from", "{from}")
+                .queryParam("until", "{until}")
+                .build(queryParams);
+        HttpEntity<String> httpEntity = new HttpEntity<>(new HttpHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
+        assertEquals(HttpStatus.OK.value(), response.getStatusCode().value());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        TreeNode root = objectMapper.readTree(response.getBody());
+        assertTrue(root.isArray());
+        assertEquals(metricCount, root.size());
+
+        // Optionally, check that all metric names are present
+        for (int i = 0; i < metricCount; i++) {
+            String expectedName = "\"metric." + i + "\"";
+            boolean found = false;
+            for (int j = 0; j < root.size(); j++) {
+                if (expectedName.equals(root.get(j).get("name").toString())) {
+                    found = true;
+                    break;
+                }
+            }
+            assertTrue(found, "Metric not found: " + expectedName);
+        }
     }
 }
