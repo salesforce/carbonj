@@ -64,6 +64,9 @@ public interface TimeSeriesStore
     void streamSeriesData(Query query, ResponseStream seriesStream )
         throws IOException;
 
+    void streamSeriesData(Query query, ResponseStream lightSeriesStream, ResponseStream heavySeriesStream )
+            throws IOException;
+
     List<Metric> deleteMetric( String name, boolean recursive, boolean testRun );
 
     DeleteAPIResult deleteAPI( String name, boolean delete, Set<String> exclude );

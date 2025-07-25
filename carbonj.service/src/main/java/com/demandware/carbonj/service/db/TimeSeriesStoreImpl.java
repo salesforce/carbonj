@@ -495,6 +495,13 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
     @Override
     @SuppressWarnings("unused")
     public void streamSeriesData(Query query, ResponseStream seriesStream )
+{
+        streamSeriesData(query, seriesStream, seriesStream);
+    }
+
+    @Override
+    @SuppressWarnings("unused")
+    public void streamSeriesData(Query query, ResponseStream lightSeriesStream, ResponseStream heavySeriesStream )
     {
         long startTime = System.currentTimeMillis();
         Preconditions.checkNotNull( ex );
@@ -506,10 +513,17 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
 
         QueryDurations d = new QueryDurations();
         List<Metric> matchedLeafMetrics = Collections.emptyList();
+        ResponseStream selectedStream = lightSeriesStream; // default
         try (Timer.Context t = DatabaseMetrics.getSeriesTimer.time())
         {
-            seriesStream.openSeriesList();
             matchedLeafMetrics = nameIndex.findMetrics(query.pattern(), true, true, true);
+
+            int noOfSeries = matchedLeafMetrics.size();
+            if (noOfSeries > logNoOfSeriesThreshold) {
+                selectedStream = heavySeriesStream;
+            }
+
+            selectedStream.openSeriesList();
 
             ThreadPoolExecutor threadPoolExecutor = selectThreadPoolExecutor(query, matchedLeafMetrics);
 
@@ -519,16 +533,15 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
             for(List<Metric> batch : batches)
             {
                 StreamSeriesBatchMetricsTask task = new StreamSeriesBatchMetricsTask(pointStore, batch,
-                        query, seriesStream, d);
+                        query, selectedStream, d);
                 futures.add( threadPoolExecutor.submit( task ) );
             }
             // Ensure all executors complete the stream
             QueryStats queryStats = waitFor( futures, query, matchedLeafMetrics.size() );
-            seriesStream.closeSeriesList();
+            selectedStream.closeSeriesList();
 
             long currentTimeMillis = System.currentTimeMillis();
             long responseTime = currentTimeMillis - startTime;
-            int noOfSeries = matchedLeafMetrics.size();
             if (responseTime > logResponseTimeThresholdInMillis || noOfSeries > logNoOfSeriesThreshold) {
                 eventLogger.log(new CompletedQueryStats(query, noOfSeries,
                         threadPoolExecutor == heavyQueryTaskQueue, currentTimeMillis, queryStats));
@@ -552,7 +565,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
         {
             try
             {
-                seriesStream.close();
+                selectedStream.close();
             }
             catch (IOException e)
             {

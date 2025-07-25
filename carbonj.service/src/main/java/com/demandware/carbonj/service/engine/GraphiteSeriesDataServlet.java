@@ -7,8 +7,6 @@
 package com.demandware.carbonj.service.engine;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.servlet.ServletConfig;
@@ -20,18 +18,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import com.demandware.carbonj.service.events.EventsLogger;
 import com.demandware.carbonj.service.db.TimeSeriesStore;
 import com.demandware.carbonj.service.db.model.Series;
-import com.demandware.carbonj.service.db.model.MsgPackSeries;
 import com.demandware.carbonj.service.db.util.SystemTime;
 import com.google.gson.Gson;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.msgpack.jackson.dataformat.MessagePackFactory;
-import org.msgpack.jackson.dataformat.JsonArrayFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+import org.springframework.beans.factory.annotation.Value;
+import java.io.File;
 
 /**
  * Servlet to serve series data to graphite.
@@ -51,6 +47,9 @@ public class GraphiteSeriesDataServlet
     @Autowired(required = false)
     @Qualifier("CarbonjEventsLogger")
     EventsLogger logger;
+
+    @Value("${metrics.store.carbonjRenderDir:work/carbonj-render}")
+    private String carbonjRenderDir;
 
     @Override
     public void init( ServletConfig config )
@@ -154,28 +153,30 @@ public class GraphiteSeriesDataServlet
         }
         else if ( msgpack )
         {
-            List<Series> seriesList = store.fetchSeriesData( new Query( target, Integer.parseInt( from ),
-                Integer.parseInt( until ), now, System.currentTimeMillis() ) );
-
-            ObjectMapper objectMapper = new ObjectMapper( new MessagePackFactory() );
-
-            List<MsgPackSeries> msgPackSeries = new ArrayList<>();
-
-            for ( Series series : seriesList )
-            {
-                msgPackSeries.add( new MsgPackSeries( series ) );
-            }
-
-            try ( OutputStream output = res.getOutputStream() )
-            {
-                // Serialize the series
-                byte[] serialized = objectMapper.writeValueAsBytes( msgPackSeries );
-                res.setContentLength( serialized.length );
-                output.write( serialized );
-            }
-            catch ( IOException e )
-            {
-                LOG.error( "carbonapi request: error writing msgpack response", e.getMessage() );
+            MessagePackFileWriter fileWriter = new MessagePackFileWriter(carbonjRenderDir, res);
+            MessagePackHttpResponseWriter httpResponseWriter = new MessagePackHttpResponseWriter(res);
+            File tempFile = fileWriter.getTempFile();
+            IOException mainException = null;
+            try {
+                store.streamSeriesData(
+                        new Query(target, Integer.parseInt(from), Integer.parseInt(until), now, System.currentTimeMillis()),
+                        fileWriter, httpResponseWriter);
+                // Closing this will also output the file contents to the HttpServletResponse
+                fileWriter.close();
+                httpResponseWriter.close();
+            } catch (IOException e) {
+                mainException = e;
+                throw e;
+            } finally {
+                fileWriter.close();
+                httpResponseWriter.close();
+                if (tempFile.exists() && !tempFile.delete()) {
+                    IOException deletionException = new IOException("Failed to delete temp file: " + tempFile.getAbsolutePath());
+                    if (mainException != null) {
+                        deletionException.addSuppressed(mainException);
+                    }
+                    throw deletionException;
+                }
             }
         }
         else

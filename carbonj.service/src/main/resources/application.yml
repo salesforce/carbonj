@@ -20,6 +20,7 @@ metrics:
       offset:
         default:
           mins: 5
+    carbonjRenderDir: work/carbonj-render
 kinesis:
   consumer:
     region: us-east-1
