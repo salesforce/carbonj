@@ -31,7 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestGraphiteSeriesDataServlet extends CarbonJSvcLongIdTest {
-//    @Test
+
+    @Test
     public void test() throws Exception {
         DateTime now = DateTime.now();
         cjClient.send( "a.b.c", 1.0f, now );
@@ -89,7 +90,7 @@ public class TestGraphiteSeriesDataServlet extends CarbonJSvcLongIdTest {
 
         RestTemplate restTemplate = new RestTemplate();
         Map<String, String> queryParams = new HashMap<>();
-        queryParams.put("format", "json");
+        queryParams.put("format", "msgpack");
         queryParams.put("target", "metric.*");
         queryParams.put("from", String.valueOf(now.getMillis() / 1000 - 60));
         queryParams.put("until", String.valueOf(now.getMillis() / 1000 + 60));
