@@ -25,24 +25,24 @@ public class MessagePackHttpResponseWriter implements ResponseStream {
     }
 
     @Override
-    public void openSeriesList() throws IOException {
+    public synchronized void openSeriesList() throws IOException {
         // No-op for MessagePack streaming
     }
 
     @Override
-    public void writeSeries(Series s) throws IOException {
+    public synchronized void writeSeries(Series s) throws IOException {
         MsgPackSeries msgPackSeries = new MsgPackSeries(s);
         byte[] bytes = objectMapper.writeValueAsBytes(msgPackSeries);
         out.write(bytes);
     }
 
     @Override
-    public void closeSeriesList() throws IOException {
+    public synchronized void closeSeriesList() throws IOException {
         // No-op for MessagePack streaming
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         out.flush();
         // Do not close the servlet response's OutputStream, just flush it.
     }
