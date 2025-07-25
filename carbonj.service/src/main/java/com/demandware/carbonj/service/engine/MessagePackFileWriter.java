@@ -10,6 +10,7 @@ import java.io.*;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonGenerator;
 import jakarta.servlet.http.HttpServletResponse;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
@@ -22,6 +23,7 @@ public class MessagePackFileWriter implements ResponseStream {
     private final ObjectMapper objectMapper;
     private boolean isOpen = false;
     private final HttpServletResponse response;
+    private JsonGenerator generator;
 
     public MessagePackFileWriter(String carbonjRenderDir, HttpServletResponse response) throws IOException {
         File renderTmpDir = new File(carbonjRenderDir).getAbsoluteFile();
@@ -45,6 +47,8 @@ public class MessagePackFileWriter implements ResponseStream {
     public synchronized void openSeriesList() throws IOException {
         if (isOpen) return;
         this.outputStream = new FileOutputStream(tempFile);
+        this.generator = objectMapper.getFactory().createGenerator(outputStream);
+        generator.writeStartArray(); // Start the array
         isOpen = true;
     }
 
@@ -52,17 +56,23 @@ public class MessagePackFileWriter implements ResponseStream {
     public synchronized void writeSeries(Series s) throws IOException {
         if (!isOpen) throw new IOException("Stream not open");
         MsgPackSeries msgPackSeries = new MsgPackSeries(s);
-        byte[] bytes = objectMapper.writeValueAsBytes(msgPackSeries);
-        outputStream.write(bytes);
+        objectMapper.writeValue(generator, msgPackSeries); // Write as array element
     }
 
     @Override
-    public synchronized void closeSeriesList() {
-        // No-op for this streaming approach
+    public synchronized void closeSeriesList() throws IOException {
+        if (generator != null) {
+            generator.writeEndArray(); // End the array
+            generator.flush();
+        }
     }
 
     @Override
     public synchronized void close() throws IOException {
+        if (generator != null) {
+            generator.close();
+            generator = null;
+        }
         if (outputStream != null) {
             // Now stream the file to the HTTP response
             response.setContentLengthLong(tempFile.length());
