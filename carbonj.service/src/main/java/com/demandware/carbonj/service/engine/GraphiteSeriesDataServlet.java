@@ -160,7 +160,7 @@ public class GraphiteSeriesDataServlet
             try {
                 store.streamSeriesData(
                         new Query(target, Integer.parseInt(from), Integer.parseInt(until), now, System.currentTimeMillis()),
-                        fileWriter, httpResponseWriter);
+                        httpResponseWriter, fileWriter);
                 // Closing this will also output the file contents to the HttpServletResponse
                 fileWriter.close();
                 httpResponseWriter.close();

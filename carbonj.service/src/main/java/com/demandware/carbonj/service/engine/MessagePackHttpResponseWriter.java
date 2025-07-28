@@ -6,6 +6,7 @@ import java.io.OutputStream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 
 import com.demandware.carbonj.service.db.model.Series;
 import com.demandware.carbonj.service.db.model.MsgPackSeries;
@@ -18,27 +19,35 @@ public class MessagePackHttpResponseWriter implements ResponseStream {
 
     private final OutputStream out;
     private final ObjectMapper objectMapper;
+    private JsonGenerator generator;
 
     public MessagePackHttpResponseWriter(HttpServletResponse response) throws IOException {
         this.out = response.getOutputStream();
         this.objectMapper = new ObjectMapper(new MessagePackFactory());
+        this.generator = null;
     }
 
     @Override
     public synchronized void openSeriesList() throws IOException {
-        // No-op for MessagePack streaming
+        // Initialize the generator and start the array
+        this.generator = objectMapper.getFactory().createGenerator(out);
+        generator.writeStartArray();
     }
 
     @Override
     public synchronized void writeSeries(Series s) throws IOException {
         MsgPackSeries msgPackSeries = new MsgPackSeries(s);
-        byte[] bytes = objectMapper.writeValueAsBytes(msgPackSeries);
-        out.write(bytes);
+        objectMapper.writeValue(generator, msgPackSeries);
     }
 
     @Override
     public synchronized void closeSeriesList() throws IOException {
-        // No-op for MessagePack streaming
+        // End the array and flush the generator
+        if (generator != null) {
+            generator.writeEndArray();
+            generator.flush();
+            generator = null;
+        }
     }
 
     @Override

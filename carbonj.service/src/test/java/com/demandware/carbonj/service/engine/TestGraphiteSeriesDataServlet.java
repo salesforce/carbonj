@@ -104,17 +104,19 @@ public class TestGraphiteSeriesDataServlet extends CarbonJSvcLongIdTest {
         ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
         assertEquals(HttpStatus.OK.value(), response.getStatusCode().value());
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        TreeNode root = objectMapper.readTree(response.getBody());
-        assertTrue(root.isArray());
-        assertEquals(metricCount, root.size());
+        ObjectMapper objectMapper = new MessagePackMapper();
+        List<MsgPackSeries> msgPackSeriesList = objectMapper.readValue(
+            response.getBody().getBytes(StandardCharsets.ISO_8859_1),
+            new TypeReference<>() {}
+        );
+        assertEquals(metricCount, msgPackSeriesList.size());
 
         // Optionally, check that all metric names are present
         for (int i = 0; i < metricCount; i++) {
-            String expectedName = "\"metric." + i + "\"";
+            String expectedName = "metric." + i;
             boolean found = false;
-            for (int j = 0; j < root.size(); j++) {
-                if (expectedName.equals(root.get(j).get("name").toString())) {
+            for (MsgPackSeries series : msgPackSeriesList) {
+                if (expectedName.equals(series.name)) {
                     found = true;
                     break;
                 }
