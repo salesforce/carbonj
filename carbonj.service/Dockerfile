@@ -24,7 +24,7 @@ RUN yum update -y && \
   # If sysstat version is updated, confirm iolog.sh execution and update associated version check in entrypoint.sh
   #
   yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/sysstat-12.5.4-7.el9.$(uname -m).rpm && \
-  yum install -y https://repo.almalinux.org/almalinux/9/extras/$(uname -m)/os/Packages/epel-release-9-5.el9.noarch.rpm && \
+  yum install -y 'https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm' && \
   yum install -y https://dl.fedoraproject.org/pub/epel/9/Everything/$(uname -m)/Packages/p/perl-URI-Encode-1.1.1-17.el9.noarch.rpm && \
   yum install -y https://rpmfind.net/linux/centos-stream/9-stream/BaseOS/$(uname -m)/os/Packages/snappy-1.1.8-8.el9.$(uname -m).rpm && \
   yum update -y && \
