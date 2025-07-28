@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestGraphiteSeriesDataServlet extends CarbonJSvcLongIdTest {
 
     @Test
-    public void test() throws Exception {
+    public void testRender() throws Exception {
         DateTime now = DateTime.now();
         cjClient.send( "a.b.c", 1.0f, now );
         cjClient.send( "a.b.d", 1.0f, now );
