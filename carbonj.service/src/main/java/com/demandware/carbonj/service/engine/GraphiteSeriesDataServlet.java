@@ -148,17 +148,13 @@ public class GraphiteSeriesDataServlet
         }
         else if ( msgpack )
         {
-            MessagePackHttpResponseWriter httpResponseWriter = new MessagePackHttpResponseWriter(res);
-            try {
+            try (MessagePackHttpResponseWriter httpResponseWriter = new MessagePackHttpResponseWriter(res)) {
                 store.streamSeriesData(
                         new Query(target, Integer.parseInt(from), Integer.parseInt(until), now, System.currentTimeMillis()),
                         httpResponseWriter);
-                httpResponseWriter.close();
             } catch (IOException e) {
                 LOG.error("Error streaming message pack series data", e);
                 throw e;
-            } finally {
-                httpResponseWriter.close();
             }
         }
         else

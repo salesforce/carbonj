@@ -21,7 +21,7 @@ import com.demandware.carbonj.service.db.model.MsgPackSeries;
  * ResponseStream implementation that writes MsgPackSeries as binary MessagePack
  * directly to the HttpServletResponse's output stream.
  */
-public class MessagePackHttpResponseWriter implements ResponseStream {
+public class MessagePackHttpResponseWriter implements ResponseStream, AutoCloseable {
 
     private final OutputStream out;
     private final ObjectMapper objectMapper;
