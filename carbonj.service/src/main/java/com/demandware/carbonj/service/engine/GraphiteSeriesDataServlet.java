@@ -26,8 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
-import org.springframework.beans.factory.annotation.Value;
-import java.io.File;
 
 /**
  * Servlet to serve series data to graphite.
@@ -47,9 +45,6 @@ public class GraphiteSeriesDataServlet
     @Autowired(required = false)
     @Qualifier("CarbonjEventsLogger")
     EventsLogger logger;
-
-    @Value("${metrics.store.carbonjRenderDir:work/carbonj-render}")
-    private String carbonjRenderDir;
 
     @Override
     public void init( ServletConfig config )
@@ -153,30 +148,17 @@ public class GraphiteSeriesDataServlet
         }
         else if ( msgpack )
         {
-            MessagePackFileWriter fileWriter = new MessagePackFileWriter(carbonjRenderDir, res);
             MessagePackHttpResponseWriter httpResponseWriter = new MessagePackHttpResponseWriter(res);
-            File tempFile = fileWriter.getTempFile();
-            IOException mainException = null;
             try {
                 store.streamSeriesData(
                         new Query(target, Integer.parseInt(from), Integer.parseInt(until), now, System.currentTimeMillis()),
-                        httpResponseWriter, fileWriter);
-                // Closing this will also output the file contents to the HttpServletResponse
-                fileWriter.close();
+                        httpResponseWriter);
                 httpResponseWriter.close();
             } catch (IOException e) {
-                mainException = e;
+                LOG.error("Error streaming message pack series data", e);
                 throw e;
             } finally {
-                fileWriter.close();
                 httpResponseWriter.close();
-                if (tempFile.exists() && !tempFile.delete()) {
-                    IOException deletionException = new IOException("Failed to delete temp file: " + tempFile.getAbsolutePath());
-                    if (mainException != null) {
-                        deletionException.addSuppressed(mainException);
-                    }
-                    throw deletionException;
-                }
             }
         }
         else
