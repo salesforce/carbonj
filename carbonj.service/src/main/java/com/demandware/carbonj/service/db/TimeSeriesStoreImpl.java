@@ -495,7 +495,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
     @Override
     @SuppressWarnings("unused")
     public void streamSeriesData(Query query, ResponseStream seriesStream )
-    {
+{
         long startTime = System.currentTimeMillis();
         Preconditions.checkNotNull( ex );
 
