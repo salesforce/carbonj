@@ -84,6 +84,12 @@ public class KinesisRecordProcessor implements IRecordProcessor {
     public void initialize(String shardId) {
         log.info("Initializing record processor for shard: " + shardId);
         this.kinesisShardId = shardId;
+        try {
+            this.nextCheckpointTimeInMillis = checkPointMgr.lastCheckPoint().getTime();
+        } catch (Exception e) {
+            log.error("Failed to check lastCheckPoint - " + e.getMessage());
+            this.nextCheckpointTimeInMillis = System.currentTimeMillis();
+        }
 
         // metrics to track number of records received per shard.
         MetricRegistry registry = metricRegistry;
