@@ -180,7 +180,8 @@ public class KinesisRecordProcessor implements IRecordProcessor {
                 if (checkPointMgr != null && kinesisConfig.isRecoveryEnabled() && !kinesisConfig.isAggregationEnabled()) {
                     // Only when the aggregation is disabled, and recovery is enabled, we set check point from here
                     // This is a use case in observability platform
-                    checkPointMgr.checkPoint(new Date(nextCheckpointTimeInMillis));
+                    // Make the checkpoint time slot starting at 0th second every minute
+                    checkPointMgr.checkPoint(new Date(nextCheckpointTimeInMillis / 60000 * 60000));
                 }
                 break;
             } catch (ShutdownException se) {
