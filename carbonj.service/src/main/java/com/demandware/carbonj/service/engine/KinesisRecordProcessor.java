@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.Date;
 import java.util.List;
 
 public class KinesisRecordProcessor implements IRecordProcessor {
@@ -49,6 +50,7 @@ public class KinesisRecordProcessor implements IRecordProcessor {
     private final KinesisConfig kinesisConfig;
     private final Meter messageRetry;
     private final Histogram pointsPerTask;
+    private final CheckPointMgr<Date> checkPointMgr;
 
     private Counter recordsFetchedPerShardCounter;
     private Counter noOfFetchesPerShardCounter;
@@ -59,7 +61,7 @@ public class KinesisRecordProcessor implements IRecordProcessor {
     KinesisRecordProcessor(MetricRegistry metricRegistry, PointProcessor pointProcessor, Meter metricsReceived, Meter messagesRecieved,
                            Histogram pointsPerTask, KinesisConfig kinesisConfig, Meter messageRetry,
                            Meter dropped, Meter taskCount, Timer consumerTimer, Histogram latency,
-                           DataPointCodec codec, String kinesisStreamName) {
+                           DataPointCodec codec, String kinesisStreamName, CheckPointMgr<Date> checkPointMgr) {
 
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
@@ -74,6 +76,7 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         this.latency = latency;
         this.codec = codec;
         this.kinesisStreamName = kinesisStreamName;
+        this.checkPointMgr = checkPointMgr;
 
         leaseLostCount = metricRegistry.counter(MetricRegistry.name("kinesis", "lostLease"));
     }
@@ -81,6 +84,12 @@ public class KinesisRecordProcessor implements IRecordProcessor {
     public void initialize(String shardId) {
         log.info("Initializing record processor for shard: " + shardId);
         this.kinesisShardId = shardId;
+        try {
+            this.nextCheckpointTimeInMillis = checkPointMgr.lastCheckPoint().getTime();
+        } catch (Exception e) {
+            log.error("Failed to check lastCheckPoint - " + e.getMessage());
+            this.nextCheckpointTimeInMillis = System.currentTimeMillis();
+        }
 
         // metrics to track number of records received per shard.
         MetricRegistry registry = metricRegistry;
@@ -168,6 +177,12 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         for (int i = 0; i < NUM_RETRIES; i++) {
             try {
                 checkpointer.checkpoint();
+                if (checkPointMgr != null && kinesisConfig.isRecoveryEnabled() && !kinesisConfig.isAggregationEnabled()) {
+                    // Only when the aggregation is disabled, and recovery is enabled, we set check point from here
+                    // This is a use case in observability platform
+                    // Make the checkpoint time slot starting at 0th second every minute
+                    checkPointMgr.checkPoint(new Date(nextCheckpointTimeInMillis / 60000 * 60000));
+                }
                 break;
             } catch (ShutdownException se) {
                 leaseLostCount.inc();
@@ -184,6 +199,8 @@ public class KinesisRecordProcessor implements IRecordProcessor {
             } catch (InvalidStateException e) {
                 log.error(e.getMessage(), e);
                 break;
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
             }
             try {
                 Thread.sleep(BACKOFF_TIME_IN_MILLIS);

@@ -14,7 +14,6 @@ import com.demandware.carbonj.service.engine.CheckPointMgr;
 import com.demandware.carbonj.service.engine.DynamoDbCheckPointMgr;
 import com.demandware.carbonj.service.engine.FileCheckPointMgr;
 import com.demandware.carbonj.service.engine.KinesisConfig;
-import com.demandware.carbonj.service.engine.cfgCarbonJ;
 import com.demandware.carbonj.service.engine.cfgKinesis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,8 +57,12 @@ public class cfgCheckPointMgr {
         }
         if (accu == null)
         {
-            log.warn("CheckPointMgr is disabled because accumulator is null");
-            return null;
+            if (kinesisConfig.isRecoveryEnabled()) {
+                log.warn("CheckPointMgr is enabled even though accumulator is null because recovery is enabled");
+            } else {
+                log.warn("CheckPointMgr is disabled because accumulator is null");
+                return null;
+            }
         }
 
         CheckPointMgr<Date> checkPointMgr;
@@ -76,20 +79,18 @@ public class cfgCheckPointMgr {
             checkPointMgr = new FileCheckPointMgr( Paths.get( checkPointDir ), defaultCheckPointOffset );
         }
 
-        s.scheduleWithFixedDelay( () -> {
-            try
-            {
-                long slotTs = accu.getMaxClosedSlotTs() * 1000L;
-                if ( slotTs > 0 )
-                {
-                    checkPointMgr.checkPoint( new Date( slotTs ) );
+        if (accu != null) {
+            s.scheduleWithFixedDelay(() -> {
+                try {
+                    long slotTs = accu.getMaxClosedSlotTs() * 1000L;
+                    if (slotTs > 0) {
+                        checkPointMgr.checkPoint(new Date(slotTs));
+                    }
+                } catch (Exception e) {
+                    log.error("Error while checkpointing", e);
                 }
-            }
-            catch ( Exception e )
-            {
-                log.error( "Error while checkpointing", e );
-            }
-        }, 120, 60, TimeUnit.SECONDS );
+            }, 120, 60, TimeUnit.SECONDS);
+        }
         return checkPointMgr;
     }
 }

@@ -11,7 +11,6 @@ import com.demandware.carbonj.service.ns.NamespaceCounter;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.regions.Region;
 
 import java.io.File;
@@ -35,11 +34,11 @@ public class TestConsumers {
         MetricRegistry metricRegistry = new MetricRegistry();
         File rulesFile = new File(Objects.requireNonNull(this.getClass().getClassLoader().getResource("consumer-rules.conf")).getFile());
         KinesisConfig kinesisConfig = new KinesisConfig(true, false, 60000, 60000, 60000,
-                1, Path.of("/tmp/checkpoint"), 60, 60, "recoveryProvider", 1, 1, 1000);
+                1, Path.of("/tmp/checkpoint"), 60, 60, "recoveryProvider", 1, 1, 1000, true);
         FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(Path.of("/tmp/checkpoint"), 5);
         Consumers consumers = new Consumers(metricRegistry, new PointProcessorMock(), new PointProcessorMock(),
                 rulesFile, kinesisConfig, checkPointMgr, Region.US_EAST_1.id(), new NamespaceCounter(metricRegistry, 60), new File("/tmp/sync"));
-        new KinesisRecordProcessorFactory(metricRegistry, new PointProcessorMock(), kinesisConfig, "test-stream");
+        new KinesisRecordProcessorFactory(metricRegistry, new PointProcessorMock(), kinesisConfig, "test-stream", checkPointMgr);
         consumers.dumpStats();
         consumers.syncNamespaces();
         consumers.reload();

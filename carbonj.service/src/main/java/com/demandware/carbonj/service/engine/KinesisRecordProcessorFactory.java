@@ -16,6 +16,8 @@ import com.codahale.metrics.Timer;
 import com.demandware.carbonj.service.engine.kinesis.DataPointCodec;
 import com.demandware.carbonj.service.engine.kinesis.GzipDataPointCodec;
 
+import java.util.Date;
+
 
 public class KinesisRecordProcessorFactory implements IRecordProcessorFactory {
 
@@ -41,13 +43,15 @@ public class KinesisRecordProcessorFactory implements IRecordProcessorFactory {
     private final KinesisConfig kinesisConfig;
     private final String streamName;
     private final DataPointCodec codec;
+    private final CheckPointMgr<Date> checkPointMgr;
 
 
-    KinesisRecordProcessorFactory(MetricRegistry metricRegistry, PointProcessor pointProcessor, KinesisConfig kinesisConfig, String streamName) {
+    KinesisRecordProcessorFactory(MetricRegistry metricRegistry, PointProcessor pointProcessor, KinesisConfig kinesisConfig, String streamName, CheckPointMgr<Date> checkPointMgr) {
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
         this.kinesisConfig = kinesisConfig;
         this.streamName = streamName;
+        this.checkPointMgr = checkPointMgr;
 
         metricsReceived = metricRegistry.meter(MetricRegistry.name("kinesis", "metricsRecieved"));
 
@@ -70,6 +74,6 @@ public class KinesisRecordProcessorFactory implements IRecordProcessorFactory {
 
     public IRecordProcessor createProcessor() {
         return new KinesisRecordProcessor(metricRegistry, pointProcessor, metricsReceived, messagesReceived, pointsPerTask,
-                kinesisConfig, messagesRetry, dropped, taskCount, consumerTimer, latency, codec, streamName);
+                kinesisConfig, messagesRetry, dropped, taskCount, consumerTimer, latency, codec, streamName, checkPointMgr);
     }
 }

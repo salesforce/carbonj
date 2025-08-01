@@ -29,10 +29,8 @@ import software.amazon.awssdk.services.kinesis.model.ListStreamsResponse;
 import software.amazon.awssdk.services.kinesis.model.PutRecordRequest;
 import software.amazon.awssdk.services.kinesis.model.StreamStatus;
 
-import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 
 import static com.demandware.carbonj.service.engine.TestUtils.setEnvironmentVariable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,7 +88,7 @@ public class TestKinesisConsumer {
 
         MetricRegistry metricRegistry = new MetricRegistry();
         KinesisConfig kinesisConfig = new KinesisConfig(true, true, 60000, 60000, 60000,
-                1, Path.of("/tmp/checkpoint"), 60, 60, "recoveryProvider", 1, 1, 1000);
+                1, Path.of("/tmp/checkpoint"), 60, 60, "recoveryProvider", 1, 1, 1000, true);
         FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(Path.of("/tmp/checkpoint"), 5);
         PointProcessorMock pointProcessor = new PointProcessorMock();
         KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, pointProcessor,

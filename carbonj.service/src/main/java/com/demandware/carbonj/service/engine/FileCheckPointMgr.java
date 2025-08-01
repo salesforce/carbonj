@@ -39,10 +39,10 @@ public class FileCheckPointMgr implements CheckPointMgr<Date> {
     }
 
     @Override
-    public void checkPoint(Date checkPoint) throws Exception {
+    public synchronized void checkPoint(Date checkPoint) throws Exception {
         try (PrintWriter pw = new PrintWriter(checkPointFile)) {
             pw.println(VERSION);
-            pw.println(String.valueOf(checkPoint.getTime()));
+            pw.println(checkPoint.getTime());
         }
     }
 

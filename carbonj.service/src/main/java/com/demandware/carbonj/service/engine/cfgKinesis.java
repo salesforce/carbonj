@@ -55,12 +55,15 @@ public class cfgKinesis
     @Value( "${kinesis.kcl.leaseTaker.delayInMillis:100}" )
     private long leaseTakerDelayInMillis;
 
+    @Value( "${aggregation.enabled:true}" )
+    private boolean aggregationEnabled;
+
     @Bean
     KinesisConfig kinesisConfig()
     {
         return new KinesisConfig(kinesisConsumerEnabled, recoveryEnabled, recoveryIdleTimeInMillis,
                 checkPointIntervalMillis, retryTimeInMillis, recoveryThreads, Paths.get(checkPointDir),
                 initRetryTimeInSecs, leaseExpirationTimeInSecs, recoveryProvider, gapsTableProvisionedThroughput,
-                maxRecords, leaseTakerDelayInMillis);
+                maxRecords, leaseTakerDelayInMillis, aggregationEnabled);
     }
 }
