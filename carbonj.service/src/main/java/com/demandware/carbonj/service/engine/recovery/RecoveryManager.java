@@ -78,10 +78,10 @@ public class RecoveryManager implements Runnable {
                 // gap has been processed.  clean up resources.
                 checkPointCmdFuture.cancel(false);
                 gapsTable.delete(gap);
-                //todo:  ideally we would like to have a separate point processor while proccessing each gap so that
-                // we do not have to clear state between processing each gaps.
-                pointProcessor.flushAggregations(true);  // flush all slots.
                 if (accumulator != null) {
+                    //todo:  ideally we would like to have a separate point processor while proccessing each gap so that
+                    // we do not have to clear state between processing each gaps.
+                    pointProcessor.flushAggregations(true);  // flush all slots.
                     accumulator.reset();
                 }
 
