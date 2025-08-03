@@ -237,6 +237,13 @@ public class GapProcessor {
     }
 
     private void processSingleRecord(DataPoints record) {
+        if (log.isDebugEnabled()) {
+            for (DataPoint dataPoint : record.getDataPoints()) {
+                if (dataPoint.name.contains("webadapter.bbdl.bbdl_prd")) {
+                    log.debug("processSingleRecord------------->>>>>>>>>>" + dataPoint);
+                }
+            }
+        }
         pointProcessor.process(record.getDataPoints());
     }
 
