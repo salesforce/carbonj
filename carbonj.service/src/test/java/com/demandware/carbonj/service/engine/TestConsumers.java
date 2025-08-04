@@ -43,4 +43,19 @@ public class TestConsumers {
         consumers.syncNamespaces();
         consumers.reload();
     }
+
+    @Test
+    public void testConsumersNoAggregation() throws Exception {
+        MetricRegistry metricRegistry = new MetricRegistry();
+        File rulesFile = new File(Objects.requireNonNull(this.getClass().getClassLoader().getResource("consumer-rules.conf")).getFile());
+        KinesisConfig kinesisConfig = new KinesisConfig(true, true, 60000, 60000, 60000,
+                1, Path.of("/tmp/checkpoint"), 60, 60, "recoveryProvider", 1, 1, 1000, false);
+        FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(Path.of("/tmp/checkpoint"), 5);
+        Consumers consumers = new Consumers(metricRegistry, new PointProcessorMock(), new PointProcessorMock(),
+                rulesFile, kinesisConfig, checkPointMgr, Region.US_EAST_1.id(), new NamespaceCounter(metricRegistry, 60), new File("/tmp/sync"));
+        new KinesisRecordProcessorFactory(metricRegistry, new PointProcessorMock(), kinesisConfig, "test-stream", checkPointMgr);
+        consumers.dumpStats();
+        consumers.syncNamespaces();
+        consumers.reload();
+    }
 }

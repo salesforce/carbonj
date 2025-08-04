@@ -140,9 +140,6 @@ public class GapProcessor {
                         if (tsInMillis > gapEndTimeInMillis) {
                             continue;
                         }
-                        if (log.isDebugEnabled() && dataPoint.name.contains("webadapter.bbdl.bbdl_prd")) {
-                            log.debug("filteredDataPoints------------->>>>>>>>>>" + dataPoint);
-                        }
                         filteredDataPoints.add(dataPoint);
                     }
                     if (log.isDebugEnabled())
@@ -237,13 +234,6 @@ public class GapProcessor {
     }
 
     private void processSingleRecord(DataPoints record) {
-        if (log.isDebugEnabled()) {
-            for (DataPoint dataPoint : record.getDataPoints()) {
-                if (dataPoint.name.contains("webadapter.bbdl.bbdl_prd")) {
-                    log.debug("processSingleRecord------------->>>>>>>>>>" + dataPoint);
-                }
-            }
-        }
         pointProcessor.process(record.getDataPoints());
     }
 
@@ -282,15 +272,9 @@ public class GapProcessor {
 
             List<DataPoint> dataPointsList = dataPoints.getDataPoints();
             minTs = maxTs = dataPointsList.get(0).ts;
-            if (log.isDebugEnabled() && dataPointsList.get(0).name.contains("webadapter.bbdl.bbdl_prd")) {
-                log.debug("DataPointsInfo----------->>>>>>>>>>>>" + dataPointsList.get(0));
-            }
             int size = dataPointsList.size();
             for (int i = 1; i < size; i++) {
                 int ts = dataPointsList.get(i).ts;
-                if (log.isDebugEnabled() && dataPointsList.get(i).name.contains("webadapter.bbdl.bbdl_prd")) {
-                    log.debug("DataPointsInfo----------->>>>>>>>>>>>" + dataPointsList.get(i));
-                }
                 minTs = Math.min(minTs, ts);
                 maxTs = Math.max(maxTs, ts);
             }

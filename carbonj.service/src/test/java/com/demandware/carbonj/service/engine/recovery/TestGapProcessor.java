@@ -106,6 +106,17 @@ public class TestGapProcessor {
         List<DataPoint> lastProcessed = dataPointsList.get(noOfSubmissions - 1);
         assertEquals(lastSubSize, lastProcessed.size());
         // Assert.assertEquals(, lastProcessed.get(2).ts);
+
+        mockPointProcessor = new MockPointProcessor(dataPointsList, null);
+        gapProcessor = new GapProcessor(metricRegistry, gap, mockKinesisStream, mockPointProcessor, 5, mockCodec);
+        gapProcessor.process();
+        noOfSubmissions = dataPointsList.size();
+        assertEquals(expectedPointProcessorSubmissions, noOfSubmissions);
+        for (int i = 2; i < noOfSubmissions - 4; i++) {
+            assertEquals(5, dataPointsList.get(i).size());
+        }
+        lastProcessed = dataPointsList.get(noOfSubmissions - 1);
+        assertEquals(lastSubSize, lastProcessed.size());
     }
 
     private DataPointCodec getMockCodec(Map<String, DataPoints> seqNumToDataPoints) {
@@ -180,6 +191,11 @@ public class TestGapProcessor {
             this.processedPoints = processedPoints;
             accumulator = mock(Accumulator.class);
             when(accumulator.getSlotStrategy()).thenReturn(new DefaultSlotStrategy());
+        }
+
+        private MockPointProcessor(List<List<DataPoint>> processedPoints, Accumulator accumulator) {
+            this.processedPoints = processedPoints;
+            this.accumulator = accumulator;
         }
 
         @Override
