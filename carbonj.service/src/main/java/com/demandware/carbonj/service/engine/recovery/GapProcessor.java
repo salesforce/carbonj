@@ -50,15 +50,20 @@ public class GapProcessor {
         this.dropped = metricRegistry.meter(MetricRegistry.name("gapProcessor","dropped"));
         this.duration = metricRegistry.counter(MetricRegistry.name("gapProcessor","duration"));
 
-        SlotStrategy slotStrategy = pointProcessor.getAccumulator().getSlotStrategy();
+        if (pointProcessor.getAccumulator() != null) {
+            SlotStrategy slotStrategy = pointProcessor.getAccumulator().getSlotStrategy();
 
-        int slotTs = slotStrategy.getSlotTs((int) (gap.lastRecovered().getTime() / 1000));
-        int startTs = slotStrategy.getStartTs(slotTs);
-        this.startTimeStamp = new Date(startTs * 1000L);
+            int slotTs = slotStrategy.getSlotTs((int) (gap.lastRecovered().getTime() / 1000));
+            int startTs = slotStrategy.getStartTs(slotTs);
+            this.startTimeStamp = new Date(startTs * 1000L);
 
-        slotTs = slotStrategy.getSlotTs((int) (gap.endTime().getTime() / 1000));
-        int endTs = slotStrategy.getEndTs(slotTs);
-        this.endTimeStamp = new Date(endTs * 1000L);
+            slotTs = slotStrategy.getSlotTs((int) (gap.endTime().getTime() / 1000));
+            int endTs = slotStrategy.getEndTs(slotTs);
+            this.endTimeStamp = new Date(endTs * 1000L);
+        } else {
+            this.startTimeStamp = gap.startTime();
+            this.endTimeStamp = gap.endTime();
+        }
     }
 
     public void process() throws InterruptedException {
@@ -91,7 +96,7 @@ public class GapProcessor {
         // take each record from the queue and check if it is not greater than end time.
         // if it is,  we are done.
         // else, process them.  after that,  get the next record from the shard and push it to the priority queue.
-        while (queue.size() > 0) {
+        while (!queue.isEmpty()) {
             DataPointsInfo dataPointsInfo = queue.poll();
 
             DataPoints dataPoints = dataPointsInfo.dataPoints;
@@ -148,7 +153,7 @@ public class GapProcessor {
                 }
             }
 
-            if (dataPoints.getDataPoints().size() > 0) {
+            if (!dataPoints.getDataPoints().isEmpty()) {
                 processRecordsWithRetries(dataPoints);
             }
 
@@ -233,8 +238,8 @@ public class GapProcessor {
     }
 
     private static class RecordTrackingInfo {
-        private String lastSequenceNumber;
-        private String shardIterator;
+        private final String lastSequenceNumber;
+        private final String shardIterator;
 
         RecordTrackingInfo(String lastSequenceNumber, String shardIterator) {
             this.lastSequenceNumber = lastSequenceNumber;

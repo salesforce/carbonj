@@ -115,7 +115,7 @@ public class KinesisConsumer extends Thread {
                         + kinesisStreamName + " and worker id is " + workerId);
 
                 IRecordProcessorFactory recordProcessorFactory = new KinesisRecordProcessorFactory(metricRegistry, pointProcessor,
-                        kinesisConfig, kinesisStreamName);
+                        kinesisConfig, kinesisStreamName, checkPointMgr);
                 worker = new Worker.Builder()
                         .recordProcessorFactory(recordProcessorFactory)
                         .config(kinesisClientLibConfiguration)
