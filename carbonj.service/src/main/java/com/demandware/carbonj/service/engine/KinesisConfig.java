@@ -27,14 +27,13 @@ public class KinesisConfig {
     private final KinesisRecoveryProvider recoveryProvider;
     private final int gapsTableProvisionedThroughput;
     private final int maxRecords;
-    private final long leaseTakerDelayInMillis;
     private final boolean aggregationEnabled;
 
     public KinesisConfig(boolean kinesisConsumerEnabled, boolean recoveryEnabled,
                          long recoveryIdleTimeMillis, long checkPointIntervalMillis, long retryTimeInMillis,
                          int recoveryThreads, Path checkPointDir, int initRetryTimeInSecs,
                          int leaseExpirationTimeInSecs, String recoveryProvider, int gapsTableProvThroughput,
-                         int maxRecords, long leaseTakerDelayInMillis, boolean aggregationEnabled) {
+                         int maxRecords, boolean aggregationEnabled) {
         this.kinesisConsumerEnabled = kinesisConsumerEnabled;
         this.recoveryEnabled = recoveryEnabled;
         this.recoveryIdleTimeMillis = recoveryIdleTimeMillis;
@@ -46,7 +45,6 @@ public class KinesisConfig {
         this.leaseExpirationTimeInSecs = leaseExpirationTimeInSecs;
         this.gapsTableProvisionedThroughput = gapsTableProvThroughput;
         this.maxRecords = maxRecords;
-        this.leaseTakerDelayInMillis = leaseTakerDelayInMillis;
         this.aggregationEnabled = aggregationEnabled;
 
         if( recoveryProvider.equalsIgnoreCase("dynamodb")) {
@@ -99,10 +97,6 @@ public class KinesisConfig {
 
     public int getMaxRecords() {
         return maxRecords;
-    }
-
-    public long getLeaseTakerDelayInMillis() {
-        return leaseTakerDelayInMillis;
     }
 
     public boolean isAggregationEnabled() {

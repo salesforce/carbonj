@@ -35,8 +35,7 @@ import java.util.List;
 import static com.demandware.carbonj.service.engine.TestUtils.setEnvironmentVariable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.CLOUDWATCH;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.KINESIS;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.*;
 
 @Testcontainers
 public class TestKinesisConsumer {
@@ -45,7 +44,7 @@ public class TestKinesisConsumer {
 
     @Container
     public static LocalStackContainer localstack = new LocalStackContainer(
-            DockerImageName.parse("localstack/localstack:1.4.0")).withServices(KINESIS, CLOUDWATCH);
+            DockerImageName.parse("localstack/localstack:4.7.0")).withServices(KINESIS, DYNAMODB, CLOUDWATCH);
 
     private static final String STREAM_NAME = "test-stream";
     private static KinesisClient kinesisClient;
@@ -87,9 +86,10 @@ public class TestKinesisConsumer {
         assertEquals(STREAM_NAME, listStreamsResponse.streamNames().get(0));
 
         MetricRegistry metricRegistry = new MetricRegistry();
+        Path checkPointDir = Path.of("/tmp/checkpoint");
         KinesisConfig kinesisConfig = new KinesisConfig(true, true, 60000, 60000, 60000,
-                1, Path.of("/tmp/checkpoint"), 60, 60, "recoveryProvider", 1, 1, 1000, true);
-        FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(Path.of("/tmp/checkpoint"), 5);
+                1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, true);
+        FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(checkPointDir, 5);
         PointProcessorMock pointProcessor = new PointProcessorMock();
         KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, pointProcessor,
                 STREAM_NAME, STREAM_NAME + "-app", kinesisConfig, checkPointMgr, metricRegistry.counter("kinesis-consumer-counter"),

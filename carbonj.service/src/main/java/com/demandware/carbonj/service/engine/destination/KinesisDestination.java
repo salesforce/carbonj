@@ -6,18 +6,12 @@
  */
 package com.demandware.carbonj.service.engine.destination;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceAsyncClientBuilder;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
-import com.amazonaws.services.securitytoken.model.Credentials;
-import com.amazonaws.services.kinesis.AmazonKinesis;
-import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -44,7 +38,7 @@ public class KinesisDestination
 
     private static final Logger log = LoggerFactory.getLogger( KinesisDestination.class );
 
-    private final AmazonKinesis kinesisClient;
+    private final KinesisClient kinesisClient;
 
     private final ArrayBlockingQueue<DataPoint> q;
 
@@ -68,14 +62,6 @@ public class KinesisDestination
     private final Histogram activeThreads;
 
     private final Timer producerTimer;
-
-    private final Boolean kinesisRelayRbacEnabled;
-
-    private final String kinesisRelayAccount;
-
-    private final String kinesisRelayRegion;
-
-    private final String kinesisRelayRole;
 
     public KinesisDestination(MetricRegistry metricRegistry, String type, int queueSize,
                               String streamName, int batchSize, int threadCount, int maxWaitTimeInSecs, String kinesisRelayRegion,
@@ -107,22 +93,22 @@ public class KinesisDestination
 
         this.maxWaitTimeInSecs = maxWaitTimeInSecs;
 
-        this.kinesisRelayRbacEnabled = kinesisRelayRbacEnabled;
-        this.kinesisRelayRegion = kinesisRelayRegion;
-        this.kinesisRelayAccount = kinesisRelayAccount;
-        this.kinesisRelayRole = kinesisRelayRole;
-
         if ( kinesisRelayRbacEnabled )
         {
-            log.info( "Rbac enabled.  Building kinesis client and credentials provider with region: " + kinesisRelayRegion +
-                    ", account: " + kinesisRelayAccount + ", role: " + kinesisRelayRole);
-            kinesisClient = AmazonKinesisClientBuilder.standard().withCredentials( buildCredentialsProvider(kinesisRelayRegion, kinesisRelayAccount, kinesisRelayRole ) )
-                    .withRegion( kinesisRelayRegion ).build();
+            log.info("Rbac enabled.  Building kinesis client and credentials provider with region: {}, account: {}, role: {}", kinesisRelayRegion, kinesisRelayAccount, kinesisRelayRole);
+            AwsCredentialsProvider creds = buildCredentialsProvider(kinesisRelayRegion, kinesisRelayAccount, kinesisRelayRole );
+            kinesisClient = KinesisClient.builder()
+                    .region(Region.of(kinesisRelayRegion))
+                    .credentialsProvider(creds)
+                    .build();
         }
         else
         {
             log.info( "Rbac not enabled.  Building kinesis client.");
-            kinesisClient = AmazonKinesisClientBuilder.standard().withRegion(kinesisRelayRegion).build();
+            kinesisClient = KinesisClient.builder()
+                    .region(Region.of(kinesisRelayRegion))
+                    .credentialsProvider(DefaultCredentialsProvider.builder().build())
+                    .build();
         }
 
         this.streamName = streamName;
@@ -135,20 +121,19 @@ public class KinesisDestination
         this.start();
     }
 
-    private static AWSCredentialsProvider buildCredentialsProvider(String kinesisRelayRegion, String kinesisRelayAccount, String kinesisRelayRole)
+    private static AwsCredentialsProvider buildCredentialsProvider(String kinesisRelayRegion, String kinesisRelayAccount, String kinesisRelayRole)
     {
         String roleArn = "arn:aws:iam::" + kinesisRelayAccount + ":role/" + kinesisRelayRole;
         String roleSessionName = "cc-umon-client-session";
 
-        final AWSCredentialsProvider credentialsProvider;
+        StsClient stsClient = StsClient.builder()
+                .region(Region.of(kinesisRelayRegion))
+                .build();
 
-        AWSSecurityTokenService stsClient =
-                AWSSecurityTokenServiceAsyncClientBuilder.standard().withRegion( kinesisRelayRegion ).build();
-
-        credentialsProvider = new STSAssumeRoleSessionCredentialsProvider.Builder( roleArn, roleSessionName )
-                .withStsClient( stsClient ).withRoleSessionDurationSeconds( 3600 ).build();
-
-        return credentialsProvider;
+        return StsAssumeRoleCredentialsProvider.builder()
+                .stsClient(stsClient)
+                .refreshRequest(r -> r.roleArn(roleArn).roleSessionName(roleSessionName).durationSeconds(3600))
+                .build();
     }
 
 
@@ -163,7 +148,7 @@ public class KinesisDestination
         drop.mark();
         if ( log.isDebugEnabled() )
         {
-            log.debug( "Dropped->" + this + ". Queue size " + q.size() + ". Total dropped " + drop.getCount() );
+            log.debug("Dropped->{}. Queue size {}. Total dropped {}", this, q.size(), drop.getCount());
         }
     }
 
@@ -175,13 +160,13 @@ public class KinesisDestination
         }
         catch ( Exception e )
         {
-            log.error( "Failed to close kinesis destination " + streamName, e );
+            log.error("Failed to close kinesis destination {}", streamName, e);
         }
     }
 
     public void close()
     {
-        log.info( "Stopping Kinesis dest " +this );
+        log.info("Stopping Kinesis dest {}", this);
         try
         {
             if ( null != ex )

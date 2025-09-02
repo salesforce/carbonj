@@ -6,7 +6,7 @@
  */
 package com.demandware.carbonj.service.engine.recovery;
 
-import com.amazonaws.services.kinesis.model.Record;
+import software.amazon.awssdk.services.kinesis.model.Record;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -18,7 +18,15 @@ import com.demandware.carbonj.service.engine.kinesis.DataPoints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.Set;
 
 public class GapProcessor {
 
@@ -68,7 +76,7 @@ public class GapProcessor {
 
     public void process() throws InterruptedException {
 
-        log.info("Recovery: Recovering gap: " + startTimeStamp + " - " + endTimeStamp);
+        log.info("Recovery: Recovering gap: {} - {}", startTimeStamp, endTimeStamp);
 
         long startTime = System.nanoTime();
 
@@ -88,7 +96,7 @@ public class GapProcessor {
             if (nextRecord != DataPointsInfo.EMPTY) {
                 queue.add(nextRecord);
             }
-            log.info(String.format("Recovery: fetched %s record", shardInfo));
+            log.info("Recovery: fetched {} record", shardInfo);
         }
 
         log.info("Finished fetching the first records for all shards..");
@@ -108,15 +116,12 @@ public class GapProcessor {
 
             if (log.isDebugEnabled())
             {
-                log.debug( String.format( "Recovery: Processing %s : Record min timestamp: %tc", shardInfo,
-                                new Date( recordMinTimeStamp ) ) );
+                log.debug( "Recovery: Processing {} : Record min timestamp: {}", shardInfo, new Date( recordMinTimeStamp ) );
             }
             if (recordMinTimeStamp > gapEndTimeInMillis) {  // finish processing...  we have processed all records in the gap.
                 if (log.isDebugEnabled())
                 {
-                    log.debug( String
-                                    .format( "Recovery: Finished processing %s : Received timestamp: %tc  End timestamp: %tc record",
-                                                    shardInfo, new Date( recordMinTimeStamp ), endTimeStamp ) );
+                    log.debug("Recovery: Finished processing {} : Received timestamp: {} End timestamp: {} record", shardInfo, new Date( recordMinTimeStamp ), endTimeStamp );
                 }
                 break;
             }
@@ -144,10 +149,8 @@ public class GapProcessor {
                     }
                     if (log.isDebugEnabled())
                     {
-                        log.debug(String
-                                        .format( "Recovery: filtered submission %s : %tc record %d datapoints %d original",
-                                                        shardInfo, new Date( recordMinTimeStamp ), filteredDataPoints.size(),
-                                                        dataPointsInfo.dataPoints.getDataPoints().size() ) );
+                        log.debug("Recovery: filtered submission {} : {} record {} datapoints {} original",
+                                shardInfo, new Date( recordMinTimeStamp ), filteredDataPoints.size(), dataPointsInfo.dataPoints.getDataPoints().size() );
                     }
                     dataPoints = new DataPoints(filteredDataPoints, dataPoints.getTimeStamp());
                 }
@@ -193,16 +196,15 @@ public class GapProcessor {
         Record record = recordAndIterator.getRecord();
         String iterator = recordAndIterator.getIterator();
 
-        shardToTrackingInfoMap.put(shardInfo, new RecordTrackingInfo(record.getSequenceNumber(), iterator));
+        shardToTrackingInfoMap.put(shardInfo, new RecordTrackingInfo(record.sequenceNumber(), iterator));
 
-        DataPoints dataPoints = codec.decode(record.getData().array());
+        DataPoints dataPoints = codec.decode(record.data().asByteArray());
 
-        DataPointsInfo dataPointsInfo = new DataPointsInfo(dataPoints, shardInfo, record.getApproximateArrivalTimestamp().getTime());
+        DataPointsInfo dataPointsInfo = new DataPointsInfo(dataPoints, shardInfo, record.approximateArrivalTimestamp().toEpochMilli());
 
         if (log.isDebugEnabled())
         {
-            log.debug( String.format( "Recovery: fetched %s : %tc record; Record min timestamp: %tc", shardInfo, record.getApproximateArrivalTimestamp(), new Date(
-                            dataPointsInfo.minTs * 1000L ) ) );
+            log.debug("Recovery: fetched {} : {} record; Record min timestamp: {}", shardInfo, Date.from(record.approximateArrivalTimestamp()), new Date(dataPointsInfo.minTs * 1000L ) );
         }
         return dataPointsInfo;
     }
@@ -215,7 +217,7 @@ public class GapProcessor {
                 processedSuccessfully = true;
                 break;
             } catch (Throwable t) {
-                log.error("Caught throwable while processing record "+ t.getMessage(), t);
+                log.error("Caught throwable while processing record {}", t.getMessage(), t);
             }
 
             retries.mark();
@@ -224,7 +226,7 @@ public class GapProcessor {
             try {
                 Thread.sleep(BACKOFF_TIME_IN_MILLIS);
             } catch (InterruptedException e) {
-                log.error("Interrupted sleep: " + e.getMessage() ,e);
+                log.error("Interrupted sleep: {}", e.getMessage(), e);
             }
         }
 

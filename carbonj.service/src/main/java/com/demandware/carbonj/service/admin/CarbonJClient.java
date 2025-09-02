@@ -8,11 +8,11 @@ package com.demandware.carbonj.service.admin;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -40,7 +40,6 @@ import org.joda.time.DateTime;
 import com.demandware.carbonj.service.db.model.DataPointValue;
 import com.demandware.carbonj.service.engine.DataPoint;
 import com.demandware.carbonj.service.engine.LineProtocolHandler;
-import com.google.common.base.Throwables;
 
 public class CarbonJClient
     implements AutoCloseable
@@ -69,7 +68,7 @@ public class CarbonJClient
         }
         catch ( UnknownHostException e )
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException( e );
         }
     }
 
@@ -82,7 +81,7 @@ public class CarbonJClient
             {
                 lineProtocolSock.close();
             }
-            catch ( IOException e )
+            catch ( IOException ignored)
             {
             }
         }
@@ -92,7 +91,7 @@ public class CarbonJClient
         }
         catch ( IOException e )
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException( e );
         }
     }
 
@@ -108,7 +107,7 @@ public class CarbonJClient
         }
         catch ( IOException e )
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException( e );
         }
     }
 
@@ -125,7 +124,7 @@ public class CarbonJClient
         }
         catch ( IOException e )
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException( e );
         }
     }
 
@@ -147,7 +146,7 @@ public class CarbonJClient
         }
         catch ( IOException e )
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException( e );
         }
         send( wrt, dp );
     }
@@ -164,16 +163,16 @@ public class CarbonJClient
 
     public Collection<String> listMetrics( String pattern )
     {
-        ArrayList<String> ret = new ArrayList<String>();
+        ArrayList<String> ret = new ArrayList<>();
         // http://localhost:56787/_dw/rest/carbonj/listmetrics2/{pattern}
-        doRestCall( "listmetrics2/" + pattern, e -> ret.add( e ) );
+        doRestCall( "listmetrics2/" + pattern, ret::add);
         return ret;
     }
 
     public String listPointsWithId( String dbName, String id )
     {
-        ArrayList<String> ret = new ArrayList<String>();
-        doRestCall( String.format( "/listpointswithid/%s/%s", dbName, id ), s -> ret.add( s ) );
+        ArrayList<String> ret = new ArrayList<>();
+        doRestCall( String.format( "/listpointswithid/%s/%s", dbName, id ), ret::add);
         return ret.get( 0 );
     }
 
@@ -181,14 +180,7 @@ public class CarbonJClient
     {
         HttpPost post = new HttpPost( cjAdminUrl( url ) );
         HttpEntity entity;
-        try
-        {
-            entity = new ByteArrayEntity( body.getBytes( "UTF-8" ) );
-        }
-        catch ( UnsupportedEncodingException e1 )
-        {
-            throw Throwables.propagate( e1 );
-        }
+        entity = new ByteArrayEntity( body.getBytes(StandardCharsets.UTF_8) );
         post.setEntity( entity );
         try (CloseableHttpResponse resp = httpClient.execute( post ))
         {
@@ -199,7 +191,7 @@ public class CarbonJClient
             HttpEntity e = resp.getEntity();
             try
             {
-                System.out.println( IOUtils.readLines( e.getContent() ) );
+                System.out.println( IOUtils.readLines( e.getContent(), java.nio.charset.StandardCharsets.UTF_8 ) );
             }
             finally
             {
@@ -208,7 +200,7 @@ public class CarbonJClient
         }
         catch ( Exception e )
         {
-            throw Throwables.propagate( e );
+            throw new RuntimeException( e );
         }
     }
 
@@ -235,13 +227,13 @@ public class CarbonJClient
         catch ( Exception e )
         {
             e.printStackTrace();
-            throw Throwables.propagate( e );
+            throw new RuntimeException( e );
         }
     }
 
     private void doRestCall( String url, Consumer<String> respHandler )
     {
-        log.info("cjAdminUrl url is " + cjAdminUrl( url ));
+        log.info("cjAdminUrl url is {}", cjAdminUrl(url));
         doCall( new HttpGet( cjAdminUrl( url ) ), respHandler );
     }
 
@@ -252,50 +244,50 @@ public class CarbonJClient
 
     public Collection<String> dumpNames( String filter, Integer startId, String startName, Integer count )
     {
-        ArrayList<String> ret = new ArrayList<String>();
+        ArrayList<String> ret = new ArrayList<>();
         // http://localhost:56787/_dw/rest/carbonj/listmetrics2/{pattern}
         StringBuilder path = new StringBuilder( "dumpnames?" );
         if ( null != filter )
         {
-            path.append( "filter=" + filter + "&" );
+            path.append("filter=").append(filter).append("&");
         }
         if ( null != startId )
         {
-            path.append( "startId=" + startId + "&" );
+            path.append("startId=").append(startId).append("&");
         }
         if ( null != startName )
         {
-            path.append( "startName=" + startName + "&" );
+            path.append("startName=").append(startName).append("&");
         }
         if ( null != count )
         {
-            path.append( "count=" + count + "&" );
+            path.append("count=").append(count).append("&");
         }
 
-        doRestCall( path.toString(), e -> ret.add( e ) );
+        doRestCall( path.toString(), ret::add);
         return ret;
     }
 
     public Collection<String> cleanSeries( String from, String filter, String exclude, Integer count, boolean dryRun )
     {
-        ArrayList<String> ret = new ArrayList<String>();
+        ArrayList<String> ret = new ArrayList<>();
         // http://localhost:56787/_dw/rest/carbonj/listmetrics2/{pattern}
         StringBuilder path = new StringBuilder( "cleanseries?dryRun=" + dryRun );
         if ( null != from )
         {
-            path.append( "&from=" + from );
+            path.append("&from=").append(from);
         }
         if ( null != count )
         {
-            path.append( "&count=" + count );
+            path.append("&count=").append(count);
         }
         if ( null != filter )
         {
-            path.append( "&filter=" + filter );
+            path.append("&filter=").append(filter);
         }
         if ( null != exclude )
         {
-            path.append( "&exclude=" + exclude );
+            path.append("&exclude=").append(exclude);
         }
 
         doCall( new HttpPost( cjAdminUrl( path.toString() ) ), e -> ret.add( StringUtils.substringBefore( e, ":" ) ) );
@@ -305,12 +297,11 @@ public class CarbonJClient
     public Collection<DataPoint> dumpLines( String dbName, String startName, String filter, int from, int to )
     {
         ArrayList<DataPoint> ret = new ArrayList<>();
-        StringBuilder sb = new StringBuilder( "dumplines/" + dbName );
-        sb.append( "?start=" ).append( null != startName ? startName : "" );
-        sb.append( "&filter=" ).append( null != filter ? filter : "" );
-        sb.append( "&from=" ).append( from );
-        sb.append( "&to=" ).append( to );
-        doRestCall( sb.toString(), i -> {
+        String sb = "dumplines/" + dbName + "?start=" + (null != startName ? startName : "") +
+                "&filter=" + (null != filter ? filter : "") +
+                "&from=" + from +
+                "&to=" + to;
+        doRestCall(sb, i -> {
             DataPoint dataPoint = LineProtocolHandler.parse(i);
             if (dataPoint != null) {
                 ret.add(dataPoint);
@@ -350,39 +341,33 @@ public class CarbonJClient
     public DumpResult dumpSeries( String dbName, int cursor, int count, String filter, String exclude, int from, int to )
     {
         ArrayList<DataPoint> data = new ArrayList<>();
-        int next = dumpSeries( dbName, cursor, count, filter, exclude, from, to, d -> data.addAll( d ) );
+        int next = dumpSeries( dbName, cursor, count, filter, exclude, from, to, data::addAll);
         return new DumpResult( data, next );
     }
 
     public int dumpSeries( String dbName, int cursor, int count, String filter, String exclude, int from, int to,
                            Consumer<List<DataPoint>> dataHander )
     {
-        StringBuilder sb = new StringBuilder( "dumpseries/" + dbName );
-        sb.append( "?cursor=" ).append( cursor );
-        sb.append( "&count=" ).append( count );
-        sb.append( "&filter=" ).append( null != filter ? filter : "" );
-        sb.append( "&exclude=" ).append( null != exclude ? exclude : "" );
-        sb.append( "&from=" ).append( from );
-        sb.append( "&to=" ).append( to );
+        String sb = "dumpseries/" + dbName + "?cursor=" + cursor +
+                "&count=" + count +
+                "&filter=" + (null != filter ? filter : "") +
+                "&exclude=" + (null != exclude ? exclude : "") +
+                "&from=" + from +
+                "&to=" + to;
         AtomicInteger ret = new AtomicInteger( Integer.MAX_VALUE );
-        final Consumer<String> dumpConsumer = new Consumer<String>()
-        {
-            @Override
-            public void accept( String i )
+        final Consumer<String> dumpConsumer = i -> {
+            List<DataPoint> dp = DumpFormat.parseSeries( i );
+            if ( i.startsWith( "ignore.dumpseries.cursor" ) )
             {
-                List<DataPoint> dp = DumpFormat.parseSeries( i );
-                if ( i.startsWith( "ignore.dumpseries.cursor" ) )
-                {
-                    // special cursor value marking end of the stream
-                    ret.set( (int) dp.get( 0 ).val );
-                }
-                else
-                {
-                    dataHander.accept( dp );
-                }
+                // special cursor value marking end of the stream
+                ret.set( (int) dp.get( 0 ).val );
+            }
+            else
+            {
+                dataHander.accept( dp );
             }
         };
-        doRestCall( sb.toString(), dumpConsumer );
+        doRestCall(sb, dumpConsumer );
         return ret.get();
     }
 
@@ -401,7 +386,7 @@ public class CarbonJClient
         StringBuilder body = new StringBuilder();
         for ( Map.Entry<String, double[]> e : vals.entrySet() )
         {
-            ArrayList<DataPointValue> v = new ArrayList<DataPointValue>();
+            ArrayList<DataPointValue> v = new ArrayList<>();
             for ( int i = 0; i < e.getValue().length; i++ )
             {
                 v.add( new DataPointValue( start + i * step, e.getValue()[i] ) );

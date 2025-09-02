@@ -6,10 +6,13 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
-import com.amazonaws.services.dynamodbv2.model.TableDescription;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
+import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
+import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.core.waiters.WaiterResponse;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,24 +20,23 @@ public class DynamoDbUtils {
 
     private static final Logger log = LoggerFactory.getLogger(DynamoDbUtils.class);
 
-    public static boolean isTablePresent(DynamoDB dynamoDB, String tableName) {
-        Table table = dynamoDB.getTable(tableName);
-
+    public static boolean isTablePresent(DynamoDbClient ddb, String tableName) {
         try {
-            TableDescription tableDescription = table.describe();
-            return "ACTIVE".equals(tableDescription.getTableStatus());
+            DescribeTableResponse resp = ddb.describeTable(DescribeTableRequest.builder().tableName(tableName).build());
+            return "ACTIVE".equals(resp.table().tableStatusAsString());
         } catch (ResourceNotFoundException e) {
-            log.warn("kinesis consumer table '" + tableName + "' not found!");
+            log.warn("kinesis consumer table '{}' not found!", tableName);
             return false;
         }
     }
 
-    public static void deleteTable(DynamoDB dynamoDB, String tableName) throws InterruptedException {
-        Table table = dynamoDB.getTable(tableName);
-        table.delete();
-
-        log.info("Waiting for " + tableName + " to be deleted...this may take a while...");
-
-        table.waitForDelete();
+    public static void deleteTable(DynamoDbClient ddb, String tableName) throws InterruptedException {
+        ddb.deleteTable(DeleteTableRequest.builder().tableName(tableName).build());
+        log.info("Waiting for {} to be deleted...this may take a while...", tableName);
+        try (DynamoDbWaiter waiter = ddb.waiter()) {
+            WaiterResponse<DescribeTableResponse> waiterResponse = waiter.waitUntilTableNotExists(
+                    DescribeTableRequest.builder().tableName(tableName).build());
+            waiterResponse.matched();
+        }
     }
 }

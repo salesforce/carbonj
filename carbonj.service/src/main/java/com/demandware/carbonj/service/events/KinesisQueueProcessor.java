@@ -6,10 +6,15 @@
  */
 package com.demandware.carbonj.service.events;
 
-import com.amazonaws.services.kinesis.AmazonKinesis;
-import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
-import com.amazonaws.services.kinesis.model.PutRecordRequest;
-import com.codahale.metrics.*;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.kinesis.model.ProvisionedThroughputExceededException;
+import software.amazon.awssdk.services.kinesis.model.PutRecordRequest;
 import com.demandware.carbonj.service.db.util.StatsAware;
 import com.demandware.carbonj.service.engine.BlockingPolicy;
 import com.demandware.carbonj.service.engine.InputQueueThreadFactory;
@@ -19,9 +24,7 @@ import com.salesforce.cc.infra.core.kinesis.Message;
 import com.salesforce.cc.infra.core.kinesis.PayloadCodec;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -50,27 +53,27 @@ public class KinesisQueueProcessor implements QueueProcessor<byte[]>, StatsAware
     private static final int NUM_RETRIES = 3;
 
     private final String streamName;
-    private final AmazonKinesis kinesisClient;
+    private final KinesisClient kinesisClient;
     private final ThreadPoolExecutor ex;
 
     private final Histogram activeThreadsHistogram;
 
     private final Gauge<Number> activeThreadCount;
-    private Gauge<Number> taskCount;
+    private final Gauge<Number> taskCount;
 
-    KinesisQueueProcessor(MetricRegistry metricRegistry, String streamName, AmazonKinesis kinesisClient, int noOfThreads) {
+    KinesisQueueProcessor(MetricRegistry metricRegistry, String streamName, KinesisClient kinesisClient, int noOfThreads) {
         this.streamName = streamName;
         this.kinesisClient = kinesisClient;
 
-        this.kinesisMessagesSent = metricRegistry.meter
+        kinesisMessagesSent = metricRegistry.meter
                 (MetricRegistry.name( "events", "kinesis", "sent" ) );
 
-        this.logEventsDropped = metricRegistry.meter(MetricRegistry.name( "events", "dropped" ) );
+        logEventsDropped = metricRegistry.meter(MetricRegistry.name( "events", "dropped" ) );
 
-        this.messageRetryCounter = metricRegistry.meter
+        messageRetryCounter = metricRegistry.meter
                 (MetricRegistry.name( "events", "putRetry") );
 
-        this.messageSize = metricRegistry.histogram(
+        messageSize = metricRegistry.histogram(
                 MetricRegistry.name( "events", "messageSize" ) );
 
 
@@ -99,10 +102,10 @@ public class KinesisQueueProcessor implements QueueProcessor<byte[]>, StatsAware
     @Override
     public void dumpStats()
     {
-        log.info( String.format("stats: activePoolThreadCount=%s",  activeThreadCount.getValue() ) );
+        log.info("stats: activePoolThreadCount={}", activeThreadCount.getValue());
 
         if (taskCount != null) {
-            log.info( String.format("stats: taskCount=%d",  taskCount.getValue().intValue() ) );
+            log.info("stats: taskCount={}", taskCount.getValue().intValue());
         }
     }
 
@@ -115,10 +118,10 @@ public class KinesisQueueProcessor implements QueueProcessor<byte[]>, StatsAware
     private static final class KinesisEventTask implements Runnable {
 
         private final String streamName;
-        private final AmazonKinesis kinesisClient;
+        private final KinesisClient kinesisClient;
         private final Collection<byte[]> events;
 
-        KinesisEventTask(String streamName, AmazonKinesis kinesisClient, Collection<byte[]> events) {
+        KinesisEventTask(String streamName, KinesisClient kinesisClient, Collection<byte[]> events) {
             this.streamName = streamName;
             this.kinesisClient = kinesisClient;
             this.events = events;
@@ -130,10 +133,11 @@ public class KinesisQueueProcessor implements QueueProcessor<byte[]>, StatsAware
                 byte[] encodedDataBytes = GzipPayloadV2Codec.getInstance().encode(events);
                 Message message = new Message(HEADERS, encodedDataBytes);
                 byte[] payload = PayloadCodec.encode(message);
-                PutRecordRequest putRecordRequest = new PutRecordRequest();
-                putRecordRequest.setStreamName(streamName);
-                putRecordRequest.setData(ByteBuffer.wrap(payload));
-                putRecordRequest.setPartitionKey(UUID.randomUUID().toString());
+                PutRecordRequest putRecordRequest = PutRecordRequest.builder()
+                        .streamName(streamName)
+                        .data(SdkBytes.fromByteArray(payload))
+                        .partitionKey(UUID.randomUUID().toString())
+                        .build();
                 boolean processedSuccessfully = false;
                 for (int i = 0; i < NUM_RETRIES && !processedSuccessfully; i++) {
                     try {
@@ -141,7 +145,7 @@ public class KinesisQueueProcessor implements QueueProcessor<byte[]>, StatsAware
                         processedSuccessfully = true;
 
                         if (log.isDebugEnabled()) {
-                            log.debug("Message sent with size: " + payload.length + " for events numbering " + events.size());
+                            log.debug("Message sent with size: {} for events numbering {}", payload.length, events.size());
                         }
 
                         messageSize.update(payload.length);

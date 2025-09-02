@@ -6,9 +6,9 @@
  */
 package com.demandware.carbonj.service.engine.recovery;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -31,7 +31,7 @@ public class TestGapsTable {
     @Test
     @Disabled // ignoring because it is calling AWS API and it should not be
     public void testCRUD_Dyn() throws Exception {
-        GapsTable dynGapsTable = new DynamoDbGapsTableImpl(AmazonDynamoDBClientBuilder.standard().build(), "testApplication", 2);
+        GapsTable dynGapsTable = new DynamoDbGapsTableImpl(DynamoDbClient.builder().build(), "testApplication", 2);
         testIt(dynGapsTable);
     }
 

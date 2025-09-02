@@ -6,14 +6,14 @@
  */
 package com.demandware.carbonj.service.engine.recovery;
 
-import com.amazonaws.services.kinesis.model.Record;
+import software.amazon.awssdk.services.kinesis.model.Record;
 
 class RecordAndIterator {
 
     static final RecordAndIterator EMPTY = new RecordAndIterator(null, null);
 
-    private Record record;
-    private String iterator;
+    private final Record record;
+    private final String iterator;
 
 
     RecordAndIterator(Record record, String iterator) {

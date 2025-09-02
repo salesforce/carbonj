@@ -6,27 +6,40 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.kinesis.AmazonKinesis;
-import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
-import com.amazonaws.services.kinesis.metrics.interfaces.MetricsLevel;
+import com.demandware.carbonj.service.engine.recovery.DynamoDbGapsTableImpl;
+import com.demandware.carbonj.service.engine.recovery.FileSystemGapsTableImpl;
+import com.demandware.carbonj.service.engine.recovery.Gap;
+import com.demandware.carbonj.service.engine.recovery.GapImpl;
+import com.demandware.carbonj.service.engine.recovery.GapsTable;
+import com.demandware.carbonj.service.engine.recovery.RecoveryManager;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClientBuilder;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClientBuilder;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.kinesis.KinesisClientBuilder;
+import software.amazon.kinesis.common.ConfigsBuilder;
+import software.amazon.kinesis.coordinator.Scheduler;
+import software.amazon.kinesis.leases.LeaseManagementConfig;
+import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
+import software.amazon.kinesis.common.InitialPositionInStream;
+import software.amazon.kinesis.common.InitialPositionInStreamExtended;
+import software.amazon.kinesis.retrieval.polling.PollingConfig;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.engine.kinesis.GzipDataPointCodec;
-import com.demandware.carbonj.service.engine.kinesis.kcl.MemLeaseManager;
-import com.demandware.carbonj.service.engine.recovery.*;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class KinesisConsumer extends Thread {
@@ -45,7 +58,7 @@ public class KinesisConsumer extends Thread {
     private final CheckPointMgr<Date> checkPointMgr;
     private final Counter noOfRestarts;
 
-    private Worker worker;
+    private Scheduler worker;
 
     private final PointProcessor recoveryPointProcessor;
 
@@ -86,41 +99,62 @@ public class KinesisConsumer extends Thread {
 
         while (!closed) {
             try {
-                AWSCredentialsProvider credentialsProvider = new DefaultAWSCredentialsProviderChain();
                 String workerId = kinesisApplicationName + "-worker";
 
                 if (kinesisConfig.isRecoveryEnabled()) {
                     initCatchupKinesisClient();
                 }
 
-                KinesisClientLibConfiguration kinesisClientLibConfiguration =
-                        new KinesisClientLibConfiguration(kinesisApplicationName, kinesisStreamName, credentialsProvider,
-                                workerId)
-                                .withInitialPositionInStream(InitialPositionInStream.LATEST)
-                                .withFailoverTimeMillis(kinesisConfig.getLeaseExpirationTimeInSecs() * 1000)
-                                .withRegionName(kinesisConsumerRegion);
-
-                int maxRecords = kinesisConfig.getMaxRecords();
-                if (maxRecords > 0) {
-                    kinesisClientLibConfiguration.withMaxRecords(maxRecords);
-                }
-
-                // For testing only
+                Region region = Region.of(kinesisConsumerRegion);
+                KinesisAsyncClientBuilder kinesisAsyncClientBuilder = KinesisAsyncClient.builder()
+                        .region(region).credentialsProvider(DefaultCredentialsProvider.builder().build());
                 if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
-                    kinesisClientLibConfiguration.withKinesisEndpoint(overrideKinesisEndpoint);
-                    kinesisClientLibConfiguration.withMetricsLevel(MetricsLevel.NONE);
+                    kinesisAsyncClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
                 }
+                // TODO: max records goes to GetRecordsRequest
+                KinesisAsyncClient kinesisAsync = kinesisAsyncClientBuilder.build();
+                DynamoDbAsyncClientBuilder dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder()
+                        .region(region).credentialsProvider(DefaultCredentialsProvider.builder().build());
+                if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
+                    dynamoDbAsyncClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
+                }
+                DynamoDbAsyncClient dynamoAsync = dynamoDbAsyncClientBuilder.build();
+                CloudWatchAsyncClientBuilder cloudWatchAsyncClientBuilder = CloudWatchAsyncClient.builder()
+                        .region(region).credentialsProvider(DefaultCredentialsProvider.builder().build());
+                if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
+                    cloudWatchAsyncClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
+                }
+                CloudWatchAsyncClient cloudWatchAsync = cloudWatchAsyncClientBuilder.build();
 
-                log.info(" Kinesis Client Library started with application name " + kinesisApplicationName + " with stream "
-                        + kinesisStreamName + " and worker id is " + workerId);
-
-                IRecordProcessorFactory recordProcessorFactory = new KinesisRecordProcessorFactory(metricRegistry, pointProcessor,
+                ShardRecordProcessorFactory recordProcessorFactory = new KinesisRecordProcessorFactory(metricRegistry, pointProcessor,
                         kinesisConfig, kinesisStreamName, checkPointMgr);
-                worker = new Worker.Builder()
-                        .recordProcessorFactory(recordProcessorFactory)
-                        .config(kinesisClientLibConfiguration)
-                        .leaseManager(new MemLeaseManager(kinesisConfig.getLeaseTakerDelayInMillis()))
-                        .build();
+
+                ConfigsBuilder configsBuilder = new ConfigsBuilder(
+                        kinesisStreamName,
+                        kinesisApplicationName,
+                        kinesisAsync,
+                        dynamoAsync,
+                        cloudWatchAsync,
+                        workerId,
+                        recordProcessorFactory);
+
+                // Configure retrieval with polling and set initial position
+                PollingConfig pollingConfig = new PollingConfig(kinesisStreamName, kinesisAsync);
+                // Map v1 withFailoverTimeMillis -> v2/3 failoverTimeMillis
+                LeaseManagementConfig leaseManagementConfig = configsBuilder.leaseManagementConfig()
+                        .failoverTimeMillis(kinesisConfig.getLeaseExpirationTimeInSecs() * 1000L);
+                worker = new Scheduler(
+                        configsBuilder.checkpointConfig(),
+                        configsBuilder.coordinatorConfig(),
+                        leaseManagementConfig,
+                        configsBuilder.lifecycleConfig(),
+                        configsBuilder.metricsConfig(),
+                        configsBuilder.processorConfig(),
+                        configsBuilder.retrievalConfig()
+                                .initialPositionInStreamExtended(InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST))
+                                .retrievalSpecificConfig(pollingConfig)
+                );
+                log.info("KCL v2 Scheduler started with app {}, stream {}, workerId {}", kinesisApplicationName, kinesisStreamName, workerId);
                 worker.run();
             } catch (Throwable t) {
                 log.error("Error in initializing kinesis consumer", t);
@@ -138,7 +172,7 @@ public class KinesisConsumer extends Thread {
         }
     }
 
-    private void shutdownQuietly(Worker worker) {
+    private void shutdownQuietly(Scheduler worker) {
         try {
             if (worker != null) {
                 worker.shutdown();
@@ -152,12 +186,17 @@ public class KinesisConsumer extends Thread {
         log.info("Initializing kinesis recovery processing..");
         GapsTable gapsTable;
         if( kinesisConfig.getCheckPointProvider() == KinesisRecoveryProvider.DYNAMODB ) {
-            gapsTable = new DynamoDbGapsTableImpl( AmazonDynamoDBClientBuilder.standard().build(), kinesisApplicationName, kinesisConfig.getGapsTableProvisionedThroughput() );
+            gapsTable = new DynamoDbGapsTableImpl( DynamoDbClient.builder().region(Region.of(kinesisConsumerRegion)).build(), kinesisApplicationName, kinesisConfig.getGapsTableProvisionedThroughput() );
         } else {
             gapsTable = new FileSystemGapsTableImpl(kinesisConfig.getCheckPointDir());
         }
 
-        AmazonKinesis kinesisClient = AmazonKinesisClientBuilder.defaultClient();
+        KinesisClientBuilder kinesisClientBuilder = KinesisClient.builder().region(Region.of(kinesisConsumerRegion));
+        if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
+            kinesisClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
+        }
+        KinesisClient kinesisClient = kinesisClientBuilder.build();
+
         long gapStartTimeInMillis = checkPointMgr.lastCheckPoint().getTime();
         long gapEndTimeInMillis = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(2);
 
@@ -183,13 +222,11 @@ public class KinesisConsumer extends Thread {
     void closeQuietly() {
         closed = true;
         shutdownQuietly(worker);
-        log.info(String.format("Kinesis stream %s consumer stopped", kinesisStreamName));
+        log.info("Kinesis stream {} consumer stopped", kinesisStreamName);
     }
 
     public void dumpStats() {
-        log.info( String.format( "Metrics consumed in kinesis stream %s =%s", kinesisStreamName,
-                KinesisRecordProcessorFactory.metricsReceived.getCount() ));
-        log.info( String.format( "Messages consumed in kinesis stream %s = %s",  kinesisStreamName,
-                KinesisRecordProcessorFactory.messagesReceived.getCount() ));
+        log.info("Metrics consumed in kinesis stream {} = {}", kinesisStreamName, KinesisRecordProcessorFactory.metricsReceived.getCount());
+        log.info("Messages consumed in kinesis stream {} = {}", kinesisStreamName, KinesisRecordProcessorFactory.messagesReceived.getCount());
     }
 }
