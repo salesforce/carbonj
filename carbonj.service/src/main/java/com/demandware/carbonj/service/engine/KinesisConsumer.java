@@ -18,6 +18,7 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClientBuilder;
 import software.amazon.awssdk.services.kinesis.KinesisClient;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
@@ -111,7 +112,6 @@ public class KinesisConsumer extends Thread {
                 if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
                     kinesisAsyncClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
                 }
-                // TODO: max records goes to GetRecordsRequest
                 KinesisAsyncClient kinesisAsync = kinesisAsyncClientBuilder.build();
                 DynamoDbAsyncClientBuilder dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder()
                         .region(region).credentialsProvider(DefaultCredentialsProvider.builder().build());
@@ -140,6 +140,9 @@ public class KinesisConsumer extends Thread {
 
                 // Configure retrieval with polling and set initial position
                 PollingConfig pollingConfig = new PollingConfig(kinesisStreamName, kinesisAsync);
+                if (kinesisConfig.getMaxRecords() > 0) {
+                    pollingConfig.maxRecords(kinesisConfig.getMaxRecords());
+                }
                 // Map v1 withFailoverTimeMillis -> v2/3 failoverTimeMillis
                 LeaseManagementConfig leaseManagementConfig = configsBuilder.leaseManagementConfig()
                         .failoverTimeMillis(kinesisConfig.getLeaseExpirationTimeInSecs() * 1000L);
@@ -186,7 +189,11 @@ public class KinesisConsumer extends Thread {
         log.info("Initializing kinesis recovery processing..");
         GapsTable gapsTable;
         if( kinesisConfig.getCheckPointProvider() == KinesisRecoveryProvider.DYNAMODB ) {
-            gapsTable = new DynamoDbGapsTableImpl( DynamoDbClient.builder().region(Region.of(kinesisConsumerRegion)).build(), kinesisApplicationName, kinesisConfig.getGapsTableProvisionedThroughput() );
+            DynamoDbClientBuilder dynamoDbClientBuilder = DynamoDbClient.builder().region(Region.of(kinesisConsumerRegion));
+            if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
+                dynamoDbClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
+            }
+            gapsTable = new DynamoDbGapsTableImpl(dynamoDbClientBuilder.build(), kinesisApplicationName, kinesisConfig.getGapsTableProvisionedThroughput());
         } else {
             gapsTable = new FileSystemGapsTableImpl(kinesisConfig.getCheckPointDir());
         }

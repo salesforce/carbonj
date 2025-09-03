@@ -60,7 +60,7 @@ public class CarbonJClient
     {
         this.dataPort = dataPort;
         this.httpPort = httpPort;
-        log.info("CarbonjClient is using Dataport as " + dataPort + ", HttpPort as " + httpPort);
+        log.info("CarbonjClient is using Dataport as {}, HttpPort as {}", dataPort, httpPort);
 
         try
         {
@@ -179,8 +179,7 @@ public class CarbonJClient
     private void doPost( String url, String body )
     {
         HttpPost post = new HttpPost( cjAdminUrl( url ) );
-        HttpEntity entity;
-        entity = new ByteArrayEntity( body.getBytes(StandardCharsets.UTF_8) );
+        HttpEntity entity = new ByteArrayEntity( body.getBytes(StandardCharsets.UTF_8) );
         post.setEntity( entity );
         try (CloseableHttpResponse resp = httpClient.execute( post ))
         {
