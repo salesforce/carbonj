@@ -27,6 +27,7 @@ import com.demandware.carbonj.service.engine.kinesis.DataPoints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
 
@@ -159,7 +160,10 @@ public class KinesisRecordProcessor implements ShardRecordProcessor {
     }
 
     private void processSingleRecord(KinesisClientRecord record, long receiveTimeStamp) {
-        DataPoints dataPoints = codec.decode(record.data().array());
+        ByteBuffer buffer = record.data();
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        DataPoints dataPoints = codec.decode(bytes);
         List<DataPoint> dataPointList = dataPoints.getDataPoints();
 
         long latencyTime = receiveTimeStamp - dataPoints.getTimeStamp();
