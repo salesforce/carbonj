@@ -324,6 +324,9 @@ class DataPointArchiveRocksDB
                     int interval = policy.interval(p.ts);
                     byte[] key = DataPointRecord.toKeyBytes(p.metricId, interval, longId);
                     byte[] value = DataPointRecord.toValueBytes(p.val);
+                    if (p.name.startsWith("pod262.ecom.bfdk.bfdk_prd")) {
+                        log.info("=====>>>>> {} {} {} {}", p.name, p.val, p.ts, p.metricId);
+                    }
                     batch.put(key, value);
                     String namespace = nameUtils.firstSegment(p.name);
                     if (!latencyByNamespaceMap.containsKey(namespace)) {
