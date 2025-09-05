@@ -28,7 +28,6 @@ import software.amazon.kinesis.common.ConfigsBuilder;
 import software.amazon.kinesis.coordinator.Scheduler;
 import software.amazon.kinesis.leases.LeaseManagementConfig;
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
-import software.amazon.kinesis.common.InitialPositionInStream;
 import software.amazon.kinesis.common.InitialPositionInStreamExtended;
 import software.amazon.kinesis.retrieval.polling.PollingConfig;
 import com.codahale.metrics.Counter;
@@ -40,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.time.Clock;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -70,18 +70,21 @@ public class KinesisConsumer extends Thread {
 
     private final String overrideKinesisEndpoint;
 
+    private final int kinesisConsumerTracebackSeconds;
+
     public KinesisConsumer(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor,
                            String kinesisStreamName, String kinesisApplicationName,
                            KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr,
-                           Counter noOfRestarts, String kinesisConsumerRegion) {
+                           Counter noOfRestarts, String kinesisConsumerRegion, int kinesisConsumerTracebackSeconds) {
         this(metricRegistry, pointProcessor, recoveryPointProcessor, kinesisStreamName, kinesisApplicationName, kinesisConfig,
-                checkPointMgr, noOfRestarts, kinesisConsumerRegion, null);
+                checkPointMgr, noOfRestarts, kinesisConsumerRegion, kinesisConsumerTracebackSeconds, null);
     }
 
     public KinesisConsumer(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor,
                            String kinesisStreamName, String kinesisApplicationName,
                            KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr,
                            Counter noOfRestarts, String kinesisConsumerRegion,
+                           int kinesisConsumerTracebackSeconds,
                            String overrideKinesisEndpoint) {
         this.metricRegistry = metricRegistry;
         this.pointProcessor = Preconditions.checkNotNull(pointProcessor);
@@ -92,6 +95,7 @@ public class KinesisConsumer extends Thread {
         this.checkPointMgr = checkPointMgr;
         this.noOfRestarts = noOfRestarts;
         this.kinesisConsumerRegion = kinesisConsumerRegion;
+        this.kinesisConsumerTracebackSeconds = kinesisConsumerTracebackSeconds;
         this.overrideKinesisEndpoint = overrideKinesisEndpoint;
         log.info("Kinesis consumer started");
         this.start();
@@ -155,6 +159,10 @@ public class KinesisConsumer extends Thread {
                 // Map v1 withFailoverTimeMillis -> v2/3 failoverTimeMillis
                 LeaseManagementConfig leaseManagementConfig = configsBuilder.leaseManagementConfig()
                         .failoverTimeMillis(kinesisConfig.getLeaseExpirationTimeInSecs() * 1000L);
+                // Since v2 will create a new DynamoDB table, we need to trace back the initial position
+                InitialPositionInStreamExtended initialPositionInStreamExtended =
+                        InitialPositionInStreamExtended.newInitialPositionAtTimestamp(
+                                new Date(Clock.systemUTC().millis() - kinesisConsumerTracebackSeconds * 1000L));
                 worker = new Scheduler(
                         configsBuilder.checkpointConfig(),
                         configsBuilder.coordinatorConfig(),
@@ -163,9 +171,8 @@ public class KinesisConsumer extends Thread {
                         configsBuilder.metricsConfig(),
                         configsBuilder.processorConfig(),
                         configsBuilder.retrievalConfig()
-                                .initialPositionInStreamExtended(InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.LATEST))
-                                .retrievalSpecificConfig(pollingConfig)
-                );
+                                .initialPositionInStreamExtended(initialPositionInStreamExtended)
+                                .retrievalSpecificConfig(pollingConfig));
                 log.info("KCL v2 Scheduler started with app {}, stream {}, workerId {}", kinesisApplicationName, kinesisStreamName, workerId);
                 worker.run();
             } catch (Throwable t) {

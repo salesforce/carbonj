@@ -93,7 +93,7 @@ public class TestKinesisConsumer {
         PointProcessorMock pointProcessor = new PointProcessorMock();
         KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, pointProcessor,
                 STREAM_NAME, STREAM_NAME + "-app", kinesisConfig, checkPointMgr, metricRegistry.counter("kinesis-consumer-counter"),
-                Region.US_EAST_1.id(), localstack.getEndpointOverride(KINESIS).toString());
+                Region.US_EAST_1.id(), 60, localstack.getEndpointOverride(KINESIS).toString());
         Thread.sleep(40000);
         log.info("Start ingesting data points ...");
         int current = (int) (System.currentTimeMillis() / 1000);
