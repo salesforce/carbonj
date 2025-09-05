@@ -39,6 +39,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -102,27 +103,35 @@ public class KinesisConsumer extends Thread {
             try {
                 String workerId = kinesisApplicationName + "-worker";
 
+                URI overrideKinesisEndpointUri = null;
+                if (overrideKinesisEndpoint != null && !StringUtils.isEmpty(overrideKinesisEndpoint.trim())) {
+                    overrideKinesisEndpointUri = java.net.URI.create(overrideKinesisEndpoint);
+                }
+                if (overrideKinesisEndpointUri != null) {
+                    log.info("Overridden Kinesis endpoint = {}", overrideKinesisEndpointUri);
+                }
+
                 if (kinesisConfig.isRecoveryEnabled()) {
-                    initCatchupKinesisClient();
+                    initCatchupKinesisClient(overrideKinesisEndpointUri);
                 }
 
                 Region region = Region.of(kinesisConsumerRegion);
                 KinesisAsyncClientBuilder kinesisAsyncClientBuilder = KinesisAsyncClient.builder()
                         .region(region).credentialsProvider(DefaultCredentialsProvider.builder().build());
-                if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
-                    kinesisAsyncClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
+                if (overrideKinesisEndpointUri != null) {
+                    kinesisAsyncClientBuilder.endpointOverride(overrideKinesisEndpointUri);
                 }
                 KinesisAsyncClient kinesisAsync = kinesisAsyncClientBuilder.build();
                 DynamoDbAsyncClientBuilder dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder()
                         .region(region).credentialsProvider(DefaultCredentialsProvider.builder().build());
-                if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
-                    dynamoDbAsyncClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
+                if (overrideKinesisEndpointUri != null) {
+                    dynamoDbAsyncClientBuilder.endpointOverride(overrideKinesisEndpointUri);
                 }
                 DynamoDbAsyncClient dynamoAsync = dynamoDbAsyncClientBuilder.build();
                 CloudWatchAsyncClientBuilder cloudWatchAsyncClientBuilder = CloudWatchAsyncClient.builder()
                         .region(region).credentialsProvider(DefaultCredentialsProvider.builder().build());
-                if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
-                    cloudWatchAsyncClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
+                if (overrideKinesisEndpointUri != null) {
+                    cloudWatchAsyncClientBuilder.endpointOverride(overrideKinesisEndpointUri);
                 }
                 CloudWatchAsyncClient cloudWatchAsync = cloudWatchAsyncClientBuilder.build();
 
@@ -185,13 +194,13 @@ public class KinesisConsumer extends Thread {
         }
     }
 
-    private void initCatchupKinesisClient() throws Exception {
+    private void initCatchupKinesisClient(URI overrideKinesisEndpointUri) throws Exception {
         log.info("Initializing kinesis recovery processing..");
         GapsTable gapsTable;
         if( kinesisConfig.getCheckPointProvider() == KinesisRecoveryProvider.DYNAMODB ) {
             DynamoDbClientBuilder dynamoDbClientBuilder = DynamoDbClient.builder().region(Region.of(kinesisConsumerRegion));
-            if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
-                dynamoDbClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
+            if (overrideKinesisEndpointUri != null) {
+                dynamoDbClientBuilder.endpointOverride(overrideKinesisEndpointUri);
             }
             gapsTable = new DynamoDbGapsTableImpl(dynamoDbClientBuilder.build(), kinesisApplicationName, kinesisConfig.getGapsTableProvisionedThroughput());
         } else {
@@ -199,8 +208,8 @@ public class KinesisConsumer extends Thread {
         }
 
         KinesisClientBuilder kinesisClientBuilder = KinesisClient.builder().region(Region.of(kinesisConsumerRegion));
-        if (!StringUtils.isEmpty(overrideKinesisEndpoint)) {
-            kinesisClientBuilder.endpointOverride(java.net.URI.create(overrideKinesisEndpoint));
+        if (overrideKinesisEndpointUri != null) {
+            kinesisClientBuilder.endpointOverride(overrideKinesisEndpointUri);
         }
         KinesisClient kinesisClient = kinesisClientBuilder.build();
 

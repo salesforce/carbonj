@@ -123,6 +123,7 @@ public class Consumers {
 
                 String kinesisStreamName = consumerName.substring(("kinesis:".length()));
                 String kinesisApplicationName = getKinesisApplicationName(kinesisStreamName, hostName, carbonjEnv);
+                log.info("Kinesis application name: {}", kinesisApplicationName);
                 String consumerCfgFile = "config/kinesis-" + kinesisStreamName + "-consumer.conf";
 
                 try {
@@ -143,8 +144,8 @@ public class Consumers {
 
                 Counter initRetryCounter = metricRegistry.counter(MetricRegistry.name("kinesis.consumer." + kinesisStreamName + ".initRetryCounter"));
                 KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, recoveryPointProcessor, kinesisStreamName,
-                        kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter, kinesisConsumerRegion, carbonjEnv);
-                log.info(String.format("New Consumer created with name %s", kinesisStreamName));
+                        kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter, kinesisConsumerRegion);
+                log.info("New Consumer created with name {}", kinesisStreamName);
                 newConsumers.add(consumerName);
                 consumers.put(consumerName, kinesisConsumer);
             }
