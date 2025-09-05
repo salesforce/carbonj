@@ -38,7 +38,7 @@ public class TestConsumers {
                 1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, true);
         FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(checkPointDir, 5);
         Consumers consumers = new Consumers(metricRegistry, new PointProcessorMock(), new PointProcessorMock(),
-                rulesFile, kinesisConfig, checkPointMgr, Region.US_EAST_1.id(), new NamespaceCounter(metricRegistry, 60), new File("/tmp/sync"));
+                rulesFile, kinesisConfig, checkPointMgr, Region.US_EAST_1.id(), new NamespaceCounter(metricRegistry, 60), new File("/tmp/sync"), "test");
         new KinesisRecordProcessorFactory(metricRegistry, new PointProcessorMock(), kinesisConfig, "test-stream", checkPointMgr);
         consumers.dumpStats();
         consumers.syncNamespaces();
@@ -54,7 +54,7 @@ public class TestConsumers {
                 1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, false);
         FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(checkPointDir, 5);
         Consumers consumers = new Consumers(metricRegistry, new PointProcessorMock(), new PointProcessorMock(),
-                rulesFile, kinesisConfig, checkPointMgr, Region.US_EAST_1.id(), new NamespaceCounter(metricRegistry, 60), new File("/tmp/sync"));
+                rulesFile, kinesisConfig, checkPointMgr, Region.US_EAST_1.id(), new NamespaceCounter(metricRegistry, 60), new File("/tmp/sync"), "test");
         new KinesisRecordProcessorFactory(metricRegistry, new PointProcessorMock(), kinesisConfig, "test-stream", checkPointMgr);
         consumers.dumpStats();
         consumers.syncNamespaces();
