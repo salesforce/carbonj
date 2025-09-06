@@ -210,8 +210,8 @@ public class cfgCarbonJ
     @Value("${carbonj.env:dev}")
     private String carbonjEnv;
 
-    @Value("${kinesis.consumer.traceback.seconds:3600}")
-    private int kinesisConsumerTracebackSeconds;
+    @Value("${kinesis.consumer.traceback.minutes:20}")
+    private int kinesisConsumerTracebackMinutes;
 
     @Bean
     public RestTemplate restTemplate() {
@@ -430,7 +430,7 @@ public class cfgCarbonJ
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
             Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
                     kinesisConfig, checkPointMgr, kinesisConsumerRegion,
-                    nsCounter, dataDir == null ? null : new File(dataDir, "index-name-sync"), carbonjEnv, kinesisConsumerTracebackSeconds);
+                    nsCounter, dataDir == null ? null : new File(dataDir, "index-name-sync"), carbonjEnv, kinesisConsumerTracebackMinutes);
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
             if (syncSecondaryDb) {
                 s.scheduleWithFixedDelay( consumer::syncNamespaces, 60, 60, TimeUnit.SECONDS );

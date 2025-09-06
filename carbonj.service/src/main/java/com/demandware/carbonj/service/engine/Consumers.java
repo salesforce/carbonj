@@ -52,11 +52,11 @@ public class Consumers {
 
     private final String carbonjEnv;
 
-    private final int kinesisConsumerTracebackSeconds;
+    private final int kinesisConsumerTracebackMinutes;
 
     Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor, File rulesFile,
               KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion,
-              NamespaceCounter namespaceCounter, File indexNameSyncDir, String carbonjEnv, int kinesisConsumerTracebackSeconds) {
+              NamespaceCounter namespaceCounter, File indexNameSyncDir, String carbonjEnv, int kinesisConsumerTracebackMinutes) {
 
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
@@ -69,7 +69,7 @@ public class Consumers {
         this.consumers = new ConcurrentHashMap<>();
         this.consumerRules = new ConsumerRules(rulesFile);
         this.carbonjEnv = carbonjEnv;
-        this.kinesisConsumerTracebackSeconds = kinesisConsumerTracebackSeconds;
+        this.kinesisConsumerTracebackMinutes = kinesisConsumerTracebackMinutes;
         reload();
     }
 
@@ -147,7 +147,7 @@ public class Consumers {
 
                 Counter initRetryCounter = metricRegistry.counter(MetricRegistry.name("kinesis.consumer." + kinesisStreamName + ".initRetryCounter"));
                 KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, recoveryPointProcessor, kinesisStreamName,
-                        kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter, kinesisConsumerRegion, kinesisConsumerTracebackSeconds);
+                        kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter, kinesisConsumerRegion, kinesisConsumerTracebackMinutes);
                 log.info("New Consumer created with name {}", kinesisStreamName);
                 newConsumers.add(consumerName);
                 consumers.put(consumerName, kinesisConsumer);

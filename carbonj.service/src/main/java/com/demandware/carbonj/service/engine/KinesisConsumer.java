@@ -40,6 +40,8 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -70,21 +72,21 @@ public class KinesisConsumer extends Thread {
 
     private final String overrideKinesisEndpoint;
 
-    private final int kinesisConsumerTracebackSeconds;
+    private final int kinesisConsumerTracebackMinutes;
 
     public KinesisConsumer(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor,
                            String kinesisStreamName, String kinesisApplicationName,
                            KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr,
-                           Counter noOfRestarts, String kinesisConsumerRegion, int kinesisConsumerTracebackSeconds) {
+                           Counter noOfRestarts, String kinesisConsumerRegion, int kinesisConsumerTracebackMinutes) {
         this(metricRegistry, pointProcessor, recoveryPointProcessor, kinesisStreamName, kinesisApplicationName, kinesisConfig,
-                checkPointMgr, noOfRestarts, kinesisConsumerRegion, kinesisConsumerTracebackSeconds, null);
+                checkPointMgr, noOfRestarts, kinesisConsumerRegion, kinesisConsumerTracebackMinutes, null);
     }
 
     public KinesisConsumer(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor,
                            String kinesisStreamName, String kinesisApplicationName,
                            KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr,
                            Counter noOfRestarts, String kinesisConsumerRegion,
-                           int kinesisConsumerTracebackSeconds,
+                           int kinesisConsumerTracebackMinutes,
                            String overrideKinesisEndpoint) {
         this.metricRegistry = metricRegistry;
         this.pointProcessor = Preconditions.checkNotNull(pointProcessor);
@@ -95,7 +97,7 @@ public class KinesisConsumer extends Thread {
         this.checkPointMgr = checkPointMgr;
         this.noOfRestarts = noOfRestarts;
         this.kinesisConsumerRegion = kinesisConsumerRegion;
-        this.kinesisConsumerTracebackSeconds = kinesisConsumerTracebackSeconds;
+        this.kinesisConsumerTracebackMinutes = kinesisConsumerTracebackMinutes;
         this.overrideKinesisEndpoint = overrideKinesisEndpoint;
         log.info("Kinesis consumer started");
         this.start();
@@ -160,9 +162,9 @@ public class KinesisConsumer extends Thread {
                 LeaseManagementConfig leaseManagementConfig = configsBuilder.leaseManagementConfig()
                         .failoverTimeMillis(kinesisConfig.getLeaseExpirationTimeInSecs() * 1000L);
                 // Since v2 will create a new DynamoDB table, we need to trace back the initial position
+                Instant startTime = Instant.now().minus(Duration.ofMinutes(kinesisConsumerTracebackMinutes));
                 InitialPositionInStreamExtended initialPositionInStreamExtended =
-                        InitialPositionInStreamExtended.newInitialPositionAtTimestamp(
-                                new Date(Clock.systemUTC().millis() - kinesisConsumerTracebackSeconds * 1000L));
+                        InitialPositionInStreamExtended.newInitialPositionAtTimestamp(new Date(startTime.toEpochMilli()));
                 worker = new Scheduler(
                         configsBuilder.checkpointConfig(),
                         configsBuilder.coordinatorConfig(),
