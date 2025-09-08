@@ -126,7 +126,6 @@ public class Consumers {
 
                 String kinesisStreamName = consumerName.substring(("kinesis:".length()));
                 String kinesisApplicationName = getKinesisApplicationName(kinesisStreamName, hostName, carbonjEnv);
-                log.info("Kinesis application name: {}", kinesisApplicationName);
                 String consumerCfgFile = "config/kinesis-" + kinesisStreamName + "-consumer.conf";
 
                 try {
