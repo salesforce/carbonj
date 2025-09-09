@@ -136,6 +136,11 @@ public class Consumers {
                     String kinesisApplicationNamePropValue = consumerCfg.getProperty("kinesis.application.name");
                     if( kinesisApplicationNamePropValue != null ) {
                         kinesisApplicationName = kinesisApplicationNamePropValue;
+                    } else {
+                        String kinesisApplicationNameSuffixPropValue = consumerCfg.getProperty("kinesis.application.name.suffix");
+                        if (kinesisApplicationNameSuffixPropValue != null) {
+                            kinesisApplicationName = kinesisStreamName + "-" + kinesisApplicationNameSuffixPropValue;
+                        }
                     }
                 } catch (FileNotFoundException e) {
                     log.warn("{} not found in the classpath ", consumerCfgFile);
