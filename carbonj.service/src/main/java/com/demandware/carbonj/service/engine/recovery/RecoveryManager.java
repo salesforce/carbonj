@@ -6,7 +6,7 @@
  */
 package com.demandware.carbonj.service.engine.recovery;
 
-import com.amazonaws.services.kinesis.AmazonKinesis;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.engine.PointProcessor;
@@ -29,13 +29,13 @@ public class RecoveryManager implements Runnable {
     private final GapsTable gapsTable;
     private final String streamName;
     private final PointProcessor pointProcessor;
-    private final AmazonKinesis kinesisClient;
+    private final KinesisClient kinesisClient;
     private final long idleTimeInMillis;
     private final long retryTimeInMillis;
     private final DataPointCodec codec;
 
     public RecoveryManager(MetricRegistry metricRegistry, GapsTable gapsTable, String streamName, PointProcessor pointProcessor,
-                           AmazonKinesis kinesisClient, long idleTimeInMillis, long retryTimeInMillis,
+                           KinesisClient kinesisClient, long idleTimeInMillis, long retryTimeInMillis,
                            DataPointCodec codec) {
         this.gapsTable = gapsTable;
         this.streamName = streamName;
@@ -52,7 +52,7 @@ public class RecoveryManager implements Runnable {
         try {
             log.info("Recovery: Running Recovery Manager....");
             List<Gap> gaps = Collections.synchronizedList(gapsTable.getGaps());
-            log.info("Recovery: Found gaps " + gaps);
+            log.info("Recovery: Found gaps {}", gaps);
 
             KinesisStream kinesisStream = new KinesisStreamImpl(metricRegistry, kinesisClient, streamName,
                     retryTimeInMillis);
@@ -60,7 +60,7 @@ public class RecoveryManager implements Runnable {
             ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
             executor.setRemoveOnCancelPolicy(true);
 
-            while (gaps.size() > 0) {
+            while (!gaps.isEmpty()) {
                 Gap gap = gaps.get(0);
 
                 // checkpoint recovery table periodically so that we do not have to restart recovery from the start if
@@ -71,7 +71,7 @@ public class RecoveryManager implements Runnable {
                         TimeUnit.MINUTES);
 
                 // process gap.
-                log.info("Recovery: Recovering gap: " + gap.startTime() + " - " + gap.endTime() + " : LastRecoveryTime: " + gap.lastRecovered());
+                log.info("Recovery: Recovering gap: {} - {} : LastRecoveryTime: {}", gap.startTime(), gap.endTime(), gap.lastRecovered());
                 GapProcessor gapProcessor = new GapProcessor(metricRegistry, gap, kinesisStream, pointProcessor, idleTimeInMillis, codec);
                 gapProcessor.process();
 
@@ -99,8 +99,8 @@ public class RecoveryManager implements Runnable {
         }
     }
 
-    // We checkpoint the recovery to the last slot flushed while processing recovery data points.
-    private class RecoveryCheckPointCommand implements Runnable {
+    // We check point the recovery to the last slot flushed while processing recovery data points.
+    private static class RecoveryCheckPointCommand implements Runnable {
 
         private final GapsTable gapsTable;
         private final Gap gap;

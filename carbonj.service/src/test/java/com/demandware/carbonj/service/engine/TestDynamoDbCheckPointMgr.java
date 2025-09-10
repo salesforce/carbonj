@@ -6,16 +6,14 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import java.net.URI;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -30,18 +28,18 @@ public class TestDynamoDbCheckPointMgr {
 
     @Container
     public static LocalStackContainer localstack = new LocalStackContainer(
-            DockerImageName.parse("localstack/localstack:1.4.0")).withServices(DYNAMODB);
+            DockerImageName.parse("localstack/localstack:4.7.0")).withServices(DYNAMODB);
 
     @Test
     public void testBasic() throws Exception {
         setEnvironmentVariable("AWS_ACCESS_KEY_ID", "accessKey");
         setEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "secretKey");
-        AmazonDynamoDB dynamoDbClient = AmazonDynamoDBClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(localstack.getEndpoint().toString(), Region.US_EAST_1.id()))
+        DynamoDbClient dynamoDbClient = DynamoDbClient.builder()
+                .endpointOverride(URI.create(localstack.getEndpoint().toString()))
+                .region(Region.US_EAST_1)
                 .build();
         CheckPointMgr<Date> checkPointMgr = new DynamoDbCheckPointMgr(dynamoDbClient, "test", 60, 1);
-        while (true) {
-            if (DynamoDbUtils.isTablePresent(new DynamoDB(dynamoDbClient), "checkpoints-test")) break;
+        while (!DynamoDbUtils.isTablePresent(dynamoDbClient, "checkpoints-test")) {
             Thread.sleep(1000);
         }
         Date lastCheckPoint = checkPointMgr.lastCheckPoint();

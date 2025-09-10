@@ -6,14 +6,22 @@
  */
 package com.demandware.carbonj.service.engine;
 
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.InvalidStateException;
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ShutdownException;
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.ThrottlingException;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.ShutdownReason;
-import com.amazonaws.services.kinesis.model.Record;
-import com.codahale.metrics.*;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
+import software.amazon.kinesis.exceptions.InvalidStateException;
+import software.amazon.kinesis.exceptions.ShutdownException;
+import software.amazon.kinesis.exceptions.ThrottlingException;
+import software.amazon.kinesis.processor.ShardRecordProcessor;
+import software.amazon.kinesis.processor.RecordProcessorCheckpointer;
+import software.amazon.kinesis.lifecycle.events.InitializationInput;
+import software.amazon.kinesis.lifecycle.events.ProcessRecordsInput;
+import software.amazon.kinesis.lifecycle.events.LeaseLostInput;
+import software.amazon.kinesis.lifecycle.events.ShardEndedInput;
+import software.amazon.kinesis.lifecycle.events.ShutdownRequestedInput;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 import com.demandware.carbonj.service.engine.kinesis.DataPointCodec;
 import com.demandware.carbonj.service.engine.kinesis.DataPoints;
 import org.slf4j.Logger;
@@ -23,9 +31,9 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
 
-public class KinesisRecordProcessor implements IRecordProcessor {
+public class KinesisRecordProcessor implements ShardRecordProcessor {
 
-    private static Logger log = LoggerFactory.getLogger(KinesisRecordProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(KinesisRecordProcessor.class);
 
     private final MetricRegistry metricRegistry;
 
@@ -81,13 +89,15 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         leaseLostCount = metricRegistry.counter(MetricRegistry.name("kinesis", "lostLease"));
     }
 
-    public void initialize(String shardId) {
-        log.info("Initializing record processor for shard: " + shardId);
+    @Override
+    public void initialize(InitializationInput initializationInput) {
+        String shardId = initializationInput.shardId();
+        log.info("Initializing record processor for shard: {}", shardId);
         this.kinesisShardId = shardId;
         try {
             this.nextCheckpointTimeInMillis = checkPointMgr.lastCheckPoint().getTime();
         } catch (Exception e) {
-            log.error("Failed to check lastCheckPoint - " + e.getMessage());
+            log.error("Failed to check lastCheckPoint - {}", e.getMessage());
             this.nextCheckpointTimeInMillis = System.currentTimeMillis();
         }
 
@@ -104,54 +114,56 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         return registry.counter(counterName);
     }
 
-    public void processRecords(List<Record> records, IRecordProcessorCheckpointer checkpointer) {
+    @Override
+    public void processRecords(ProcessRecordsInput processRecordsInput) {
+        List<KinesisClientRecord> records = processRecordsInput.records();
         recordsFetchedPerShardCounter.inc(records.size());
         noOfFetchesPerShardCounter.inc();
 
         processRecordsWithRetries(records);
         // Checkpoint once every checkpoint interval.
         if (System.currentTimeMillis() > nextCheckpointTimeInMillis) {
-            checkpoint(checkpointer);
+            checkpoint(processRecordsInput.checkpointer());
             nextCheckpointTimeInMillis = System.currentTimeMillis() + kinesisConfig.getCheckPointIntervalMillis();
         }
     }
 
-    private void processRecordsWithRetries(List<Record> records) {
+    private void processRecordsWithRetries(List<KinesisClientRecord> records) {
         long receiveTimeStamp = System.currentTimeMillis();
-        for (Record record : records) {
-            final Timer.Context timerContext = consumerTimer.time();
-            boolean processedSuccessfully = false;
-            for (int i = 0; i < NUM_RETRIES; i++) {
-                try {
-                    processSingleRecord(record, receiveTimeStamp);
-                    processedSuccessfully = true;
-                    break;
+        for (KinesisClientRecord record : records) {
+            try (final Timer.Context ignored = consumerTimer.time()) {
+                boolean processedSuccessfully = false;
+                for (int i = 0; i < NUM_RETRIES; i++) {
+                    try {
+                        processSingleRecord(record, receiveTimeStamp);
+                        processedSuccessfully = true;
+                        break;
+                    } catch (Throwable t) {
+                        log.error("Caught throwable while processing record {}", t.getMessage(), t);
+                    }
+                    messageRetry.mark();
+                    // backoff if we encounter an exception.
+                    try {
+                        Thread.sleep(BACKOFF_TIME_IN_MILLIS);
+                    } catch (InterruptedException e) {
+                        log.error("Interrupted sleep {}", e.getMessage(), e);
+                    }
                 }
-                catch (Throwable t) {
-                    log.error("Caught throwable while processing record "+ t.getMessage(), t);
-                }
-                messageRetry.mark();
-                // backoff if we encounter an exception.
-                try {
-                    Thread.sleep(BACKOFF_TIME_IN_MILLIS);
-                } catch (InterruptedException e) {
-                    log.error("Interrupted sleep"+ e.getMessage() ,e);
+                if (!processedSuccessfully) {
+                    dropped.mark();
+                    log.error("Couldn't process record {}. Skipping the record.", record);
+                } else {
+                    messagesRecieved.mark();
                 }
             }
-            if (!processedSuccessfully) {
-                dropped.mark();
-                log.error("Couldn't process record " + record + ". Skipping the record.");
-            }
-            else {
-                messagesRecieved.mark();
-            }
-            timerContext.stop();
         }
     }
 
-    private void processSingleRecord(Record record, long receiveTimeStamp) {
-        ByteBuffer data = record.getData();
-        DataPoints dataPoints = codec.decode(data.array());
+    private void processSingleRecord(KinesisClientRecord record, long receiveTimeStamp) {
+        ByteBuffer buffer = record.data();
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        DataPoints dataPoints = codec.decode(bytes);
         List<DataPoint> dataPointList = dataPoints.getDataPoints();
 
         long latencyTime = receiveTimeStamp - dataPoints.getTimeStamp();
@@ -164,16 +176,25 @@ public class KinesisRecordProcessor implements IRecordProcessor {
         pointProcessor.process(dataPointList);
     }
 
-    // @Override
-    public void shutdown(IRecordProcessorCheckpointer checkpointer, ShutdownReason reason) {
-        log.info("Shutting down record processor for shard: " + kinesisShardId);
-        // Important to checkpoint after reaching end of shard, so we can start processing data from child shards.
-        if (reason == ShutdownReason.TERMINATE) {
-            checkpoint(checkpointer);
-        }
+    @Override
+    public void leaseLost(LeaseLostInput leaseLostInput) {
+        leaseLostCount.inc();
+        log.warn("Lease lost for shard: {}", kinesisShardId);
     }
 
-    private void checkpoint(IRecordProcessorCheckpointer checkpointer) {
+    @Override
+    public void shardEnded(ShardEndedInput shardEndedInput) {
+        log.info("Shard ended for shard: {}. Checkpointing...", kinesisShardId);
+        checkpoint(shardEndedInput.checkpointer());
+    }
+
+    @Override
+    public void shutdownRequested(ShutdownRequestedInput shutdownRequestedInput) {
+        log.info("Shutdown requested for shard: {}. Checkpointing...", kinesisShardId);
+        checkpoint(shutdownRequestedInput.checkpointer());
+    }
+
+    private void checkpoint(RecordProcessorCheckpointer checkpointer) {
         for (int i = 0; i < NUM_RETRIES; i++) {
             try {
                 checkpointer.checkpoint();
@@ -186,15 +207,14 @@ public class KinesisRecordProcessor implements IRecordProcessor {
                 break;
             } catch (ShutdownException se) {
                 leaseLostCount.inc();
-                log.error("Caught shutdown exception, skipping checkpoint."+se.getMessage(),se);
+                log.error("Caught shutdown exception, skipping checkpoint. {}", se.getMessage(), se);
                 break;
             } catch (ThrottlingException e) {
                 if (i >= (NUM_RETRIES - 1)) {
-                    log.error("Checkpoint failed after " + (i + 1) + "attempts."+ e.getMessage(),e );
+                    log.error("Checkpoint failed after {} attempts. {}", i + 1, e.getMessage(), e);
                     break;
                 } else {
-                    log.error("Transient issue when checkpointing - attempt " + (i + 1) + " of "
-                            + NUM_RETRIES+ e.getMessage(),e );
+                    log.error("Transient issue when checkpointing - attempt {} of " + NUM_RETRIES + "{}", i + 1, e.getMessage(), e);
                 }
             } catch (InvalidStateException e) {
                 log.error(e.getMessage(), e);
@@ -205,7 +225,7 @@ public class KinesisRecordProcessor implements IRecordProcessor {
             try {
                 Thread.sleep(BACKOFF_TIME_IN_MILLIS);
             } catch (InterruptedException e) {
-                log.error("Interrupted sleep"+e.getMessage(), e);
+                log.error("Interrupted sleep {}", e.getMessage(), e);
             }
         }
     }

@@ -6,18 +6,12 @@
  */
 package com.demandware.carbonj.service.events;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
-import com.amazonaws.services.kinesis.AmazonKinesis;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceAsyncClientBuilder;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
-import com.amazonaws.services.securitytoken.model.Credentials;
-import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.engine.RejectionHandler;
 import com.demandware.carbonj.service.queue.InputQueue;
@@ -51,29 +45,26 @@ public class KinesisEventsLogger implements EventsLogger<byte[]> {
                     streamName, buildKinesisClient(rbacEnabled, region, account, role), noOfThreads), batchSize, maxWaitTimeMillis);
     }
 
-    private static AmazonKinesis buildKinesisClient(boolean rbacEnabled, String region, String account, String role)
+    private static KinesisClient buildKinesisClient(boolean rbacEnabled, String region, String account, String role)
     {
         if ( rbacEnabled) {
             String roleArn = "arn:aws:iam::" + account + ":role/" + role;
             String roleSessionName = "cc-umon-client-events-session";
 
-            final AWSCredentialsProvider credentialsProvider;
+            log.info("Rbac enabled for events.  Building kinesis client and credentials provider with region: {}, account: {}, role: {}", region, account, role);
 
-            log.info( "Rbac enabled for events.  Building kinesis client and credentials provider with region: " + region +
-                    ", account: " + account + ", role: " + role);
+            StsClient stsClient = StsClient.builder().region(Region.of(region)).build();
+            AwsCredentialsProvider credentialsProvider = StsAssumeRoleCredentialsProvider.builder()
+                    .stsClient(stsClient)
+                    .refreshRequest(r -> r.roleArn(roleArn).roleSessionName(roleSessionName).durationSeconds(3600))
+                    .build();
 
-            AWSSecurityTokenService stsClient =
-                    AWSSecurityTokenServiceAsyncClientBuilder.standard().withRegion(region).build();
-
-            credentialsProvider = new STSAssumeRoleSessionCredentialsProvider.Builder(roleArn, roleSessionName)
-                    .withStsClient(stsClient).withRoleSessionDurationSeconds(3600).build();
-
-            return AmazonKinesisClientBuilder.standard().withCredentials( credentialsProvider ).withRegion(region).build();
+            return KinesisClient.builder().credentialsProvider(credentialsProvider).region(Region.of(region)).build();
         }
         else
         {
             log.info( "Rbac not enabled for events.  Building kinesis client.");
-            return AmazonKinesisClientBuilder.defaultClient();
+            return KinesisClient.builder().credentialsProvider(DefaultCredentialsProvider.builder().build()).region(Region.of(region)).build();
         }
     }
 

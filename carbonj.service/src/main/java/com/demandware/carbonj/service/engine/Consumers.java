@@ -50,9 +50,13 @@ public class Consumers {
 
     private final File indexNameSyncDir;
 
+    private final String carbonjEnv;
+
+    private final int kinesisConsumerTracebackMinutes;
+
     Consumers(MetricRegistry metricRegistry, PointProcessor pointProcessor, PointProcessor recoveryPointProcessor, File rulesFile,
               KinesisConfig kinesisConfig, CheckPointMgr<Date> checkPointMgr, String kinesisConsumerRegion,
-              NamespaceCounter namespaceCounter, File indexNameSyncDir) {
+              NamespaceCounter namespaceCounter, File indexNameSyncDir, String carbonjEnv, int kinesisConsumerTracebackMinutes) {
 
         this.metricRegistry = metricRegistry;
         this.pointProcessor = pointProcessor;
@@ -62,8 +66,10 @@ public class Consumers {
         this.kinesisConsumerRegion = kinesisConsumerRegion;
         this.namespaceCounter = namespaceCounter;
         this.indexNameSyncDir = indexNameSyncDir;
-        consumers = new ConcurrentHashMap<>();
-        consumerRules = new ConsumerRules(rulesFile);
+        this.consumers = new ConcurrentHashMap<>();
+        this.consumerRules = new ConsumerRules(rulesFile);
+        this.carbonjEnv = carbonjEnv;
+        this.kinesisConsumerTracebackMinutes = kinesisConsumerTracebackMinutes;
         reload();
     }
 
@@ -81,7 +87,7 @@ public class Consumers {
                 log.debug(" Check for consumer configuration update");
             }
             if (!currentRules.equals(newRules)) {
-                log.info(String.format("Updating consumer Rules. Old consumer rules: [%s], New consumer rules: [%s]", currentRules, newRules));
+                log.info("Updating consumer Rules. Old consumer rules: [{}], New consumer rules: [{}]", currentRules, newRules);
             }
             else {
                 log.debug(" Consumer rules haven't changed.");
@@ -100,11 +106,11 @@ public class Consumers {
             log.info (consumer);
 
             if (newRules.contains(consumer)) {
-                log.info(String.format("[%s] Reuse unchanged consumer", consumer));
+                log.info("[{}] Reuse unchanged consumer", consumer);
                 newConsumers.add(consumer);
                 newRules.remove(consumer);
             } else {
-                log.info(String.format("[%s] Consumer scheduled for removal", consumer));
+                log.info("[{}] Consumer scheduled for removal", consumer);
                 obsoleteConsumers.add(consumer);
             }
 
@@ -114,25 +120,30 @@ public class Consumers {
         // we use the host name to generate the kinesis application name as they are stable for stable set pods.
         String hostName = getHostName();
         for (String consumerName : newRules) {
-            log.info(String.format("Creating new consumer with kinesis stream name: %s", consumerName));
+            log.info("Creating new consumer with kinesis stream name: {}", consumerName);
 
             if (consumerName.startsWith("kinesis:")) {
 
                 String kinesisStreamName = consumerName.substring(("kinesis:".length()));
-                String kinesisApplicationName = getKinesisApplicationName(kinesisStreamName, hostName);
+                String kinesisApplicationName = getKinesisApplicationName(kinesisStreamName, hostName, carbonjEnv);
                 String consumerCfgFile = "config/kinesis-" + kinesisStreamName + "-consumer.conf";
 
                 try {
                     InputStream input = new FileInputStream(consumerCfgFile);
-                    log.info(" Loading values from " + consumerCfgFile);
+                    log.info(" Loading values from {}", consumerCfgFile);
                     Properties consumerCfg = new Properties();
                     consumerCfg.load(input);
                     String kinesisApplicationNamePropValue = consumerCfg.getProperty("kinesis.application.name");
                     if( kinesisApplicationNamePropValue != null ) {
                         kinesisApplicationName = kinesisApplicationNamePropValue;
+                    } else {
+                        String kinesisApplicationNameSuffixPropValue = consumerCfg.getProperty("kinesis.application.name.suffix");
+                        if (kinesisApplicationNameSuffixPropValue != null) {
+                            kinesisApplicationName = kinesisStreamName + "-" + kinesisApplicationNameSuffixPropValue;
+                        }
                     }
                 } catch (FileNotFoundException e) {
-                    log.warn(consumerCfgFile + " not found in the classpath ");
+                    log.warn("{} not found in the classpath ", consumerCfgFile);
                     log.info(" Falling back to default values ");
                 } catch (Throwable e) {
                     log.error(e.getMessage(), e);
@@ -140,8 +151,8 @@ public class Consumers {
 
                 Counter initRetryCounter = metricRegistry.counter(MetricRegistry.name("kinesis.consumer." + kinesisStreamName + ".initRetryCounter"));
                 KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, recoveryPointProcessor, kinesisStreamName,
-                        kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter, kinesisConsumerRegion);
-                log.info(String.format("New Consumer created with name %s", kinesisStreamName));
+                        kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter, kinesisConsumerRegion, kinesisConsumerTracebackMinutes);
+                log.info("New Consumer created with name {}", kinesisStreamName);
                 newConsumers.add(consumerName);
                 consumers.put(consumerName, kinesisConsumer);
             }
@@ -170,8 +181,8 @@ public class Consumers {
         }
     }
 
-    private String getKinesisApplicationName(String streamName, String hostName)  {
-        return streamName + "-" + hostName;
+    private String getKinesisApplicationName(String streamName, String hostName, String carbonjEnv)  {
+        return streamName + "-" + hostName + "-" + carbonjEnv;
     }
 
     private void close(Set<String> consumerSet) {

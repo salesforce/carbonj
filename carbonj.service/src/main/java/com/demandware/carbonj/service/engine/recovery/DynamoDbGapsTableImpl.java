@@ -6,21 +6,20 @@
  */
 package com.demandware.carbonj.service.engine.recovery;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.document.spec.DeleteItemSpec;
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.KeyType;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
-import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
-import com.amazonaws.services.dynamodbv2.model.ScanRequest;
-import com.amazonaws.services.dynamodbv2.model.ScanResult;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
+import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.core.waiters.WaiterResponse;
 import com.demandware.carbonj.service.engine.DynamoDbUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,68 +35,69 @@ public class DynamoDbGapsTableImpl implements GapsTable {
 
     private static final Logger log = LoggerFactory.getLogger(DynamoDbGapsTableImpl.class);
 
-    private final DynamoDB dynamoDB;
+    private final DynamoDbClient dynamoDB;
     private final String tableName;
-    private final AmazonDynamoDB client;
 
-    public DynamoDbGapsTableImpl(AmazonDynamoDB client, String kinesisApplicationName, int gapsTableProvThroughput ) throws Exception {
+    public DynamoDbGapsTableImpl(DynamoDbClient client, String kinesisApplicationName, int gapsTableProvThroughput ) {
 
-        this.dynamoDB = new DynamoDB(client);
+        this.dynamoDB = client;
         this.tableName = "gaps-" + kinesisApplicationName;
-        this.client = client;
 
         if (!DynamoDbUtils.isTablePresent(dynamoDB, tableName)) {
             createTable(tableName, gapsTableProvThroughput);
         }
     }
 
-    private void createTable(String tableName, int provisionedThroughput) throws Exception {
+    private void createTable(String tableName, int provisionedThroughput) {
         List<AttributeDefinition> attributeDefinitions = new ArrayList<>();
-        attributeDefinitions.add(new AttributeDefinition("starttime", ScalarAttributeType.N));
+        attributeDefinitions.add(AttributeDefinition.builder().attributeName("starttime").attributeType(ScalarAttributeType.N).build());
 
         List<KeySchemaElement> ks = new ArrayList<>();
-        ks.add(new KeySchemaElement("starttime", KeyType.HASH));
+        ks.add(KeySchemaElement.builder().attributeName("starttime").keyType(KeyType.HASH).build());
 
         ProvisionedThroughput provisionedthroughput =
-                new ProvisionedThroughput((long) provisionedThroughput, (long) provisionedThroughput);
+                ProvisionedThroughput.builder().readCapacityUnits((long)provisionedThroughput).writeCapacityUnits((long)provisionedThroughput).build();
 
-        CreateTableRequest request =
-                new CreateTableRequest()
-                        .withTableName(tableName)
-                        .withAttributeDefinitions(attributeDefinitions)
-                        .withKeySchema(ks)
-                        .withProvisionedThroughput(provisionedthroughput);
+        CreateTableRequest request = CreateTableRequest.builder()
+                .tableName(tableName)
+                .attributeDefinitions(attributeDefinitions)
+                .keySchema(ks)
+                .provisionedThroughput(provisionedthroughput)
+                .build();
 
-        log.info("Issuing CreateTable request for " + tableName);
-        Table newlyCreatedTable = dynamoDB.createTable(request);
+        log.info("Issuing CreateTable request for {}", tableName);
+        dynamoDB.createTable(request);
 
-        log.info("Waiting for " + tableName + " to be created...this may take a while...");
-        newlyCreatedTable.waitForActive();
+        log.info("Waiting for {} to be created...this may take a while...", tableName);
+        try (DynamoDbWaiter waiter = dynamoDB.waiter()) {
+            WaiterResponse<?> waiterResponse = waiter.waitUntilTableExists(b -> b.tableName(tableName));
+            waiterResponse.matched();
+        }
     }
 
     @Override
     public void add(Gap gap) {
-        Table table = dynamoDB.getTable(tableName);
+        Map<String, AttributeValue> item = new HashMap<>();
+        item.put("starttime", AttributeValue.builder().n(Long.toString(gap.startTime().getTime())).build());
+        item.put("endtime", AttributeValue.builder().n(Long.toString(gap.endTime().getTime())).build());
+        item.put("lastRecovered", AttributeValue.builder().n(Long.toString(gap.lastRecovered().getTime())).build());
 
-        table.putItem(new Item().withPrimaryKey("starttime", gap.startTime().getTime())
-                .withLong("endtime", gap.endTime().getTime())
-                .withLong("lastRecovered", gap.lastRecovered().getTime()));
+        dynamoDB.putItem(b -> b.tableName(tableName).item(item));
 
-        log.info("Added gap: " + gap);
+        log.info("Added gap: {}", gap);
     }
 
     @Override
     public List<Gap> getGaps() {
-        ScanRequest scanRequest = new ScanRequest()
-                .withTableName(tableName);
+        ScanRequest scanRequest = ScanRequest.builder().tableName(tableName).build();
 
         List<Gap> gaps = new ArrayList<>();
 
-        ScanResult result = client.scan(scanRequest);
-        for (Map<String, AttributeValue> item : result.getItems()){
-            Date starttime = new Date(Long.parseLong(item.get("starttime").getN()));
-            Date endtime = new Date(Long.parseLong(item.get("endtime").getN()));
-            Date lastRecovered = new Date(Long.parseLong(item.get("lastRecovered").getN()));
+        ScanResponse result = dynamoDB.scan(scanRequest);
+        for (Map<String, AttributeValue> item : result.items()){
+            Date starttime = new Date(Long.parseLong(item.get("starttime").n()));
+            Date endtime = new Date(Long.parseLong(item.get("endtime").n()));
+            Date lastRecovered = new Date(Long.parseLong(item.get("lastRecovered").n()));
             gaps.add(new GapImpl(starttime, endtime, lastRecovered));
         }
 
@@ -107,33 +107,33 @@ public class DynamoDbGapsTableImpl implements GapsTable {
 
     @Override
     public void delete(Gap gap) {
-        Table table = dynamoDB.getTable(tableName);
-
-        DeleteItemSpec deleteItemSpec = new DeleteItemSpec()
-                .withPrimaryKey(new PrimaryKey("starttime", gap.startTime().getTime()));
-
-        table.deleteItem(deleteItemSpec);
-        log.info("Gap deleted: " + gap);
+        dynamoDB.deleteItem(DeleteItemRequest.builder()
+                .tableName(tableName)
+                .key(Collections.singletonMap("starttime", AttributeValue.builder().n(Long.toString(gap.startTime().getTime())).build()))
+                .build());
+        log.info("Gap deleted: {}", gap);
     }
 
     @Override
     public boolean updateGap(Gap gap) {
-        Table table = dynamoDB.getTable(tableName);
-
         Map<String, String> expressionAttributeNames = new HashMap<>();
         expressionAttributeNames.put("#E", "endtime");
         expressionAttributeNames.put("#L", "lastRecovered");
 
-        Map<String, Object> expressionAttributeValues = new HashMap<>();
-        expressionAttributeValues.put(":val1", gap.endTime().getTime());
-        expressionAttributeValues.put(":val2", gap.lastRecovered().getTime());
+        Map<String, AttributeValue> key = Collections.singletonMap("starttime",
+                AttributeValue.builder().n(Long.toString(gap.startTime().getTime())).build());
 
-        table.updateItem(
-                "starttime",          // key attribute name
-                gap.startTime().getTime(),           // key attribute value
-                "set #E = :val1, #L = :val2", // UpdateExpression
-                expressionAttributeNames,
-                expressionAttributeValues);
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+        expressionAttributeValues.put(":val1", AttributeValue.builder().n(Long.toString(gap.endTime().getTime())).build());
+        expressionAttributeValues.put(":val2", AttributeValue.builder().n(Long.toString(gap.lastRecovered().getTime())).build());
+
+        dynamoDB.updateItem(UpdateItemRequest.builder()
+                .tableName(tableName)
+                .key(key)
+                .updateExpression("set #E = :val1, #L = :val2")
+                .expressionAttributeNames(expressionAttributeNames)
+                .expressionAttributeValues(expressionAttributeValues)
+                .build());
 
         return true;
     }
@@ -143,7 +143,7 @@ public class DynamoDbGapsTableImpl implements GapsTable {
         try {
             DynamoDbUtils.deleteTable(dynamoDB, tableName);
         } catch (InterruptedException e) {
-            log.error("Interrupted while destroting " + tableName, e);
+            log.error("Interrupted while destroting {}", tableName, e);
         }
     }
 }

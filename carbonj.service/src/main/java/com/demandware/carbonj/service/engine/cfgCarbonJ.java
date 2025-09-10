@@ -207,6 +207,12 @@ public class cfgCarbonJ
     @Value("${metrics.store.sync.secondary.db:false}")
     private boolean syncSecondaryDb;
 
+    @Value("${carbonj.env:dev}")
+    private String carbonjEnv;
+
+    @Value("${kinesis.consumer.traceback.minutes:20}")
+    private int kinesisConsumerTracebackMinutes;
+
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
@@ -424,7 +430,7 @@ public class cfgCarbonJ
             File rulesFile = locateConfigFile( serviceDir, consumerRulesFile );
             Consumers consumer = new Consumers( metricRegistry, pointProcessor, recoveryPointProcessor, rulesFile,
                     kinesisConfig, checkPointMgr, kinesisConsumerRegion,
-                    nsCounter, dataDir == null ? null : new File(dataDir, "index-name-sync"));
+                    nsCounter, dataDir == null ? null : new File(dataDir, "index-name-sync"), carbonjEnv, kinesisConsumerTracebackMinutes);
             s.scheduleWithFixedDelay( consumer::reload, 15, 30, TimeUnit.SECONDS );
             if (syncSecondaryDb) {
                 s.scheduleWithFixedDelay( consumer::syncNamespaces, 60, 60, TimeUnit.SECONDS );
@@ -468,8 +474,7 @@ public class cfgCarbonJ
     {
         if ( runInactiveNamespaceCheckEverySeconds > 0 )
         {
-            log.info( String.format( "scheduling removal of expired namespace counters to run every %s sec",
-                            runInactiveNamespaceCheckEverySeconds ) );
+            log.info("scheduling removal of expired namespace counters to run every {} sec", runInactiveNamespaceCheckEverySeconds);
             s.scheduleWithFixedDelay( ns::removeInactive, 120, runInactiveNamespaceCheckEverySeconds,
                             TimeUnit.SECONDS );
         }
@@ -506,16 +511,14 @@ public class cfgCarbonJ
     NettyChannel lineProtocolChannel( NettyServer netty, InputQueue r )
     {
         lineProtocolTcpPort = ( lineProtocolTcpPort == -1 ) ? jettyPort + 2 : lineProtocolTcpPort;
-        return netty.bind( lineProtocolTcpHost, lineProtocolTcpPort, new ChannelInitializer<SocketChannel>()
-        {
-            @Override public void initChannel(@SuppressWarnings("NullableProblems") SocketChannel ch )
-            {
-                if ( log.isDebugEnabled() )
-                {
-                    log.debug( "accepted TCP line protocol from " + ch );
+        return netty.bind( lineProtocolTcpHost, lineProtocolTcpPort, new ChannelInitializer<>() {
+            @Override
+            public void initChannel(SocketChannel ch) {
+                if (log.isDebugEnabled()) {
+                    log.debug("accepted TCP line protocol from {}", ch);
                 }
-                ch.pipeline().addLast( new DelimiterBasedFrameDecoder( tcpBuff, Delimiters.lineDelimiter() ),
-                                new LineProtocolHandler( metricRegistry, r ) );
+                ch.pipeline().addLast(new DelimiterBasedFrameDecoder(tcpBuff, Delimiters.lineDelimiter()),
+                        new LineProtocolHandler(metricRegistry, r));
             }
         } );
     }
@@ -536,7 +539,7 @@ public class cfgCarbonJ
                                 NettyServer.udpMsgsReceived.mark();
                                 if ( log.isDebugEnabled() )
                                 {
-                                    log.debug( "accepted UDP line protocol from " + ctx.channel() );
+                                    log.debug("accepted UDP line protocol from {}", ctx.channel());
                                 }
                                 lp.process( msg.content() );
                             }
@@ -551,13 +554,13 @@ public class cfgCarbonJ
     @ConditionalOnProperty(name = "carbonj.relay", havingValue = "true", matchIfMissing = true)
     NettyChannel pickleProtocolChannel( NettyServer netty, InputQueue r )
     {
-        return netty.bind( "0.0.0.0", jettyPort + 3, new ChannelInitializer<SocketChannel>()
+        return netty.bind( "0.0.0.0", jettyPort + 3, new ChannelInitializer<>()
         {
-            @Override public void initChannel(@SuppressWarnings("NullableProblems") SocketChannel ch )
+            @Override public void initChannel(SocketChannel ch )
             {
                 if ( log.isDebugEnabled() )
                 {
-                    log.debug( "accepted pickle protocol from " + ch );
+                    log.debug("accepted pickle protocol from {}", ch);
                 }
 
                 ch.pipeline().addLast( new LengthFieldBasedFrameDecoder( pickleBuff, 0, 4 ) )
@@ -625,7 +628,7 @@ public class cfgCarbonJ
     {
         for ( String profileName : environment.getActiveProfiles() )
         {
-            log.warn( "Currently active profile: " + profileName );
+            log.warn("Currently active profile: {}", profileName);
         }
     }
 

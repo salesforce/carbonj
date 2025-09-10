@@ -6,8 +6,7 @@
  */
 package com.demandware.carbonj.service.engine.kinesis;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import com.demandware.carbonj.service.accumulator.Accumulator;
 import com.demandware.carbonj.service.accumulator.cfgAccumulator;
 import com.demandware.carbonj.service.engine.CheckPointMgr;
@@ -69,7 +68,7 @@ public class cfgCheckPointMgr {
         if ( checkPointProvider.equalsIgnoreCase( "dynamodb" ) )
         {
             log.info( "Creating Dynamo DB Checkpoint Mgr" );
-            AmazonDynamoDB dynamoDbClient = AmazonDynamoDBClientBuilder.standard().build();
+            DynamoDbClient dynamoDbClient = DynamoDbClient.builder().build();
             checkPointMgr = new DynamoDbCheckPointMgr( dynamoDbClient, checkPointApplicationName,
                     defaultCheckPointOffset, checkPointTableProvisionedThroughput );
         }

@@ -6,17 +6,22 @@
  */
 package com.demandware.carbonj.service.engine.destination;
 
-import com.amazonaws.services.kinesis.AmazonKinesis;
-import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
-import com.amazonaws.services.kinesis.model.PutRecordRequest;
-import com.amazonaws.services.kinesis.model.PutRecordResult;
-import com.codahale.metrics.*;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.demandware.carbonj.service.engine.DataPoint;
 import com.demandware.carbonj.service.engine.kinesis.DataPointCodec;
 import com.demandware.carbonj.service.engine.kinesis.DataPoints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.nio.ByteBuffer;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.kinesis.model.ProvisionedThroughputExceededException;
+import software.amazon.awssdk.services.kinesis.model.PutRecordRequest;
+import software.amazon.awssdk.services.kinesis.model.PutRecordResponse;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,25 +34,25 @@ public class KinesisProducerTask
 
     private final MetricRegistry metricRegistry;
 
-    private AmazonKinesis kinesisClient;
+    private final KinesisClient kinesisClient;
 
     final private String streamName;
 
-    private List<DataPoint> points;
+    private final List<DataPoint> points;
 
-    private Meter metricsSent;
+    private final Meter metricsSent;
 
-    private Meter metricsDropped;
+    private final Meter metricsDropped;
 
-    private Meter messagesSent;
+    private final Meter messagesSent;
 
-    private Meter messageRetryCounter;
+    private final Meter messageRetryCounter;
 
-    private Histogram messageSize;
+    private final Histogram messageSize;
 
-    private Timer.Context timerContext;
+    private final Timer.Context timerContext;
 
-    private Map<String, Counter> shardIdMap;
+    private final Map<String, Counter> shardIdMap;
 
     private final Histogram dataPointsPerMessage;
 
@@ -55,7 +60,7 @@ public class KinesisProducerTask
 
     private static final int NUM_RETRIES = 3;
 
-    KinesisProducerTask(MetricRegistry metricRegistry, AmazonKinesis kinesisClient, String streamName, List<DataPoint> points, Meter metricsSent,
+    KinesisProducerTask(MetricRegistry metricRegistry, KinesisClient kinesisClient, String streamName, List<DataPoint> points, Meter metricsSent,
                         Meter metricsDropped, Meter messagesSent, Histogram messageSize, Meter messageRetryCounter,
                         Timer.Context timerContext, Histogram dataPointsPerMessage, DataPointCodec codec) {
         this.metricRegistry = metricRegistry;
@@ -78,12 +83,13 @@ public class KinesisProducerTask
         try {
             /* gzip multiple data points*/
             byte[] message = codec.encode(new DataPoints(points, System.currentTimeMillis()));
-            PutRecordRequest putRecordRequest = new PutRecordRequest();
-            putRecordRequest.setStreamName(streamName);
-            putRecordRequest.setData(ByteBuffer.wrap(message));
-            putRecordRequest.setPartitionKey(UUID.randomUUID().toString());
+            PutRecordRequest putRecordRequest = PutRecordRequest.builder()
+                    .streamName(streamName)
+                    .data(SdkBytes.fromByteArray(message))
+                    .partitionKey(UUID.randomUUID().toString())
+                    .build();
             boolean processedSuccessfully = false;
-            PutRecordResult putRecordResult = null;
+            PutRecordResponse putRecordResult = null;
             for (int i = 0; i < NUM_RETRIES && !processedSuccessfully; i++) {
                 try {
                     putRecordResult = kinesisClient.putRecord(putRecordRequest);
@@ -101,14 +107,14 @@ public class KinesisProducerTask
                 metricsSent.mark(noOfDataPoints);
                 dataPointsPerMessage.update(noOfDataPoints);
                 messagesSent.mark();
-                if (!shardIdMap.containsKey(putRecordResult.getShardId())) {
-                    shardIdMap.put(putRecordResult.getShardId(), metricRegistry.counter(MetricRegistry.name(streamName, putRecordResult.getShardId())));
+                if (!shardIdMap.containsKey(putRecordResult.shardId())) {
+                    shardIdMap.put(putRecordResult.shardId(), metricRegistry.counter(MetricRegistry.name(streamName, putRecordResult.shardId())));
                 }
-                shardIdMap.get(putRecordResult.getShardId()).inc();
+                shardIdMap.get(putRecordResult.shardId()).inc();
                 // log.info("Message sent.ShardId is " + putRecordResult.getShardId());
             } else {
                 metricsDropped.mark();
-                log.error("Couldn't process record " + putRecordRequest + ". Skipping the record.");
+                log.error("Couldn't process record {}. Skipping the record.", putRecordRequest);
             }
         } catch(Throwable e) {
             log.error(e.getMessage(),e);

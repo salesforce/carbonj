@@ -6,9 +6,8 @@
  */
 package com.demandware.carbonj.service.engine;
 
-
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor;
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory;
+import software.amazon.kinesis.processor.ShardRecordProcessor;
+import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -19,7 +18,7 @@ import com.demandware.carbonj.service.engine.kinesis.GzipDataPointCodec;
 import java.util.Date;
 
 
-public class KinesisRecordProcessorFactory implements IRecordProcessorFactory {
+public class KinesisRecordProcessorFactory implements ShardRecordProcessorFactory {
 
     private final MetricRegistry metricRegistry;
 
@@ -72,7 +71,7 @@ public class KinesisRecordProcessorFactory implements IRecordProcessorFactory {
         codec = new GzipDataPointCodec();
     }
 
-    public IRecordProcessor createProcessor() {
+    public ShardRecordProcessor shardRecordProcessor() {
         return new KinesisRecordProcessor(metricRegistry, pointProcessor, metricsReceived, messagesReceived, pointsPerTask,
                 kinesisConfig, messagesRetry, dropped, taskCount, consumerTimer, latency, codec, streamName, checkPointMgr);
     }

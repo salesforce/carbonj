@@ -6,9 +6,9 @@
  */
 package com.demandware.carbonj.service.events;
 
-import com.amazonaws.services.kinesis.AmazonKinesis;
-import com.amazonaws.services.kinesis.model.PutRecordRequest;
-import com.amazonaws.services.kinesis.model.PutRecordResult;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.kinesis.model.PutRecordRequest;
+import software.amazon.awssdk.services.kinesis.model.PutRecordResponse;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.queue.QueueProcessor;
 import com.salesforce.cc.infra.core.kinesis.Message;
@@ -17,6 +17,7 @@ import com.salesforce.cc.infra.core.kinesis.PayloadCodec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -27,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class TestKinesisEventsLogger {
 
@@ -60,7 +59,7 @@ public class TestKinesisEventsLogger {
 
     @Test
     public void testSingleEvent() throws Exception {
-        QueueProcessor<byte[]> queueProcessor = new KinesisQueueProcessor(metricRegistry, "test", mockAmazonKinesis(), 1);
+        QueueProcessor<byte[]> queueProcessor = new KinesisQueueProcessor(metricRegistry, "test", mockKinesis(), 1);
         EventsLogger<byte[]> kinesisLogger = new KinesisEventsLogger(metricRegistry, 5, 5, new DropRejectionHandler<>(), queueProcessor, 1, 100);
         byte[] eventBytes = EVENT.getBytes(StandardCharsets.UTF_8);
         kinesisLogger.log(eventBytes);
@@ -73,9 +72,10 @@ public class TestKinesisEventsLogger {
         assertArrayEquals(eventBytes, eventCollection.iterator().next());
     }
 
-    private AmazonKinesis mockAmazonKinesis() {
-        AmazonKinesis mockKinesisClient = mock(AmazonKinesis.class);
-        when(mockKinesisClient.putRecord(argThat(new PutRecordRequestArgMatcher(datae)))).thenReturn(new PutRecordResult().withShardId("1"));
+    private KinesisClient mockKinesis() {
+        KinesisClient mockKinesisClient = Mockito.mock(KinesisClient.class);
+        Mockito.when(mockKinesisClient.putRecord(argThat(new PutRecordRequestArgMatcher(datae))))
+                .thenReturn(PutRecordResponse.builder().shardId("1").build());
         return mockKinesisClient;
     }
 
@@ -91,7 +91,7 @@ public class TestKinesisEventsLogger {
 
         @Override
         public boolean matches(PutRecordRequest argument) {
-            byte[] bytes = argument.getData().array();
+            byte[] bytes = argument.data().asByteArray();
             return dataList.add(bytes);
         }
     }
