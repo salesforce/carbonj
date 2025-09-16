@@ -212,7 +212,7 @@ dependencies {
     implementation 'software.amazon.awssdk:dynamodb'
     implementation 'software.amazon.awssdk:dynamodb-enhanced'
     implementation 'software.amazon.awssdk:cloudwatch'
-    // Kinesis Client Library v2 for consumer
+    // Kinesis Client Library v3 for consumer
     implementation "software.amazon.kinesis:amazon-kinesis-client:${kinesisClient}"
     implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: "${metrics}"
     implementation group: 'io.dropwizard.metrics', name: 'metrics-jvm', version: "${metrics}"
