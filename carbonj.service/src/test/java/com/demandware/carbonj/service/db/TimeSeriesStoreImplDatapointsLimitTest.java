@@ -44,43 +44,57 @@ public class TimeSeriesStoreImplDatapointsLimitTest {
         when(nameIndex.findMetrics(any(String.class), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(List.of(m));
 
-        ThreadPoolExecutor main = TimeSeriesStoreImpl.newMainTaskQueue(1, 10);
-        ThreadPoolExecutor heavy = TimeSeriesStoreImpl.newMainTaskQueue(1, 10);
-        ThreadPoolExecutor serial = TimeSeriesStoreImpl.newSerialTaskQueue(10);
+        ThreadPoolExecutor main = null;
+        ThreadPoolExecutor heavy = null;
+        ThreadPoolExecutor serial = null;
 
         // Create store with a non-existent config file, then override thresholds via reflection-free path:
         // Create a temp properties file with a very low datapoints threshold to force the exception
-        File tmpProps = File.createTempFile("tsstore", ".properties");
-        try (FileWriter fw = new FileWriter(tmpProps)) {
-            fw.write("metrics.store.maxDataPointsPerRequest=10\n");
+        File tmpProps = null;
+
+        try {
+            main = TimeSeriesStoreImpl.newMainTaskQueue(1, 10);
+            heavy = TimeSeriesStoreImpl.newMainTaskQueue(1, 10);
+            serial = TimeSeriesStoreImpl.newSerialTaskQueue(10);
+
+            tmpProps = File.createTempFile("tsstore", ".properties");
+            try (FileWriter fw = new FileWriter(tmpProps)) {
+                fw.write("metrics.store.maxDataPointsPerRequest=10\n");
+            }
+
+            TimeSeriesStoreImpl store = new TimeSeriesStoreImpl(metricRegistry, nameIndex, new NoOpLogger<>(),
+                    main, heavy, serial,
+                    mock(com.demandware.carbonj.service.db.model.DataPointStore.class), dbMetrics,
+                    true, 10, false, new File("/tmp/idx.out"), 10,
+                    tmpProps.getAbsolutePath(), false);
+
+            // Manually set thresholds via internal fields to avoid filesystem config
+            // dataPointsThreshold is private, but enforced via selectThreadPoolExecutor; we can choose query that exceeds
+            int now = (int) (System.currentTimeMillis() / 1000);
+            Query q = new Query("foo", now - 365 * 24 * 3600, now, now, System.currentTimeMillis());
+
+            long before = metricRegistry.meter("db.datapointsLimitExceeded").getCount();
+
+            assertThrows(TooManyDatapointsFoundException.class, () -> store.fetchSeriesData(q));
+
+            long after = metricRegistry.meter("db.datapointsLimitExceeded").getCount();
+            // Ensure the meter was incremented once
+            assertEquals(before + 1, after);
+        } finally {
+            if (main != null) {
+                main.shutdownNow();
+            }
+            if (heavy != null) {
+                heavy.shutdownNow();
+            }
+            if (serial != null) {
+                serial.shutdownNow();
+            }
+            if (tmpProps != null) {
+                //noinspection ResultOfMethodCallIgnored
+                tmpProps.delete();
+            }
         }
-
-        TimeSeriesStoreImpl store = new TimeSeriesStoreImpl(metricRegistry, nameIndex, new NoOpLogger<>(),
-                main, heavy, serial,
-                mock(com.demandware.carbonj.service.db.model.DataPointStore.class), dbMetrics,
-                true, 10, false, new File("/tmp/idx.out"), 10,
-                tmpProps.getAbsolutePath(), false);
-
-        // Manually set thresholds via internal fields to avoid filesystem config
-        // dataPointsThreshold is private, but enforced via selectThreadPoolExecutor; we can choose query that exceeds
-        int now = (int) (System.currentTimeMillis() / 1000);
-        Query q = new Query("foo", now - 365 * 24 * 3600, now, now, System.currentTimeMillis());
-
-        long before = metricRegistry.meter("db.datapointsLimitExceeded").getCount();
-
-        assertThrows(TooManyDatapointsFoundException.class, () -> store.fetchSeriesData(q));
-
-        long after = metricRegistry.meter("db.datapointsLimitExceeded").getCount();
-        // Ensure the meter was incremented once
-        assertEquals(before + 1, after);
-
-        // Cleanup executors
-        main.shutdownNow();
-        heavy.shutdownNow();
-        serial.shutdownNow();
-        // cleanup temp
-        //noinspection ResultOfMethodCallIgnored
-        tmpProps.delete();
     }
 }
 
