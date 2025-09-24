@@ -566,9 +566,7 @@ public class TimeSeriesStoreImpl implements TimeSeriesStore
         long estimatedNumberOfDataPoints = getEstimatedNumberOfDataPoints(query.from(), query.until(),
                 query.now(), matchedLeafMetrics);
         if (estimatedNumberOfDataPoints > dataPointsThreshold) {
-            if (DatabaseMetrics.datapointsLimitExceeded != null) {
-                DatabaseMetrics.datapointsLimitExceeded.mark();
-            }
+            DatabaseMetrics.datapointsLimitExceeded.mark();
             throw new TooManyDatapointsFoundException(dataPointsThreshold);
         }
 
