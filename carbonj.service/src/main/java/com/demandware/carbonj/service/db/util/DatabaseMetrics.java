@@ -56,6 +56,9 @@ public class DatabaseMetrics
 
     public static Meter deletedMetricAccessError;
 
+    // counts how many queries exceeded max datapoints threshold
+    public static Meter datapointsLimitExceeded;
+
     public DatabaseMetrics( MetricRegistry metricRegistry)
     {
         pointsSaved = metricRegistry.meter( MetricRegistry.name( "db", "pointsSaved" ) );
@@ -87,6 +90,7 @@ public class DatabaseMetrics
         getSeriesSerializeTimer = metricRegistry.timer(MetricRegistry.name("db", "getSeriesSerializeTimer") );
         getSeriesSendTimer = metricRegistry.timer(MetricRegistry.name("db", "getSeriesSendTimer") );
         getSeriesSendOpTimer = metricRegistry.timer( MetricRegistry.name("db", "getSeriesSendOpTimer") );
+        datapointsLimitExceeded = metricRegistry.meter( MetricRegistry.name( "db", "datapointsLimitExceeded" ) );
 
     }
 
