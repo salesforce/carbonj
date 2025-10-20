@@ -29,11 +29,18 @@ public class KinesisConfig {
     private final int maxRecords;
     private final boolean aggregationEnabled;
 
+    // Controls dynamic application name behavior and cleanup of old lease tables
+    private final boolean appNameDynamicSuffixEnabled;
+    private final String appNameDynamicSuffixFormat;
+    private final boolean cleanupOldLeaseTablesEnabled;
+
     public KinesisConfig(boolean kinesisConsumerEnabled, boolean recoveryEnabled,
                          long recoveryIdleTimeMillis, long checkPointIntervalMillis, long retryTimeInMillis,
                          int recoveryThreads, Path checkPointDir, int initRetryTimeInSecs,
                          int leaseExpirationTimeInSecs, String recoveryProvider, int gapsTableProvThroughput,
-                         int maxRecords, boolean aggregationEnabled) {
+                         int maxRecords, boolean aggregationEnabled,
+                         boolean appNameDynamicSuffixEnabled, String appNameDynamicSuffixFormat,
+                         boolean cleanupOldLeaseTablesEnabled) {
         this.kinesisConsumerEnabled = kinesisConsumerEnabled;
         this.recoveryEnabled = recoveryEnabled;
         this.recoveryIdleTimeMillis = recoveryIdleTimeMillis;
@@ -46,6 +53,9 @@ public class KinesisConfig {
         this.gapsTableProvisionedThroughput = gapsTableProvThroughput;
         this.maxRecords = maxRecords;
         this.aggregationEnabled = aggregationEnabled;
+        this.appNameDynamicSuffixEnabled = appNameDynamicSuffixEnabled;
+        this.appNameDynamicSuffixFormat = appNameDynamicSuffixFormat;
+        this.cleanupOldLeaseTablesEnabled = cleanupOldLeaseTablesEnabled;
 
         if( recoveryProvider.equalsIgnoreCase("dynamodb")) {
             this.recoveryProvider = KinesisRecoveryProvider.DYNAMODB;
@@ -101,5 +111,17 @@ public class KinesisConfig {
 
     public boolean isAggregationEnabled() {
         return aggregationEnabled;
+    }
+
+    public boolean isAppNameDynamicSuffixEnabled() {
+        return appNameDynamicSuffixEnabled;
+    }
+
+    public String getAppNameDynamicSuffixFormat() {
+        return appNameDynamicSuffixFormat;
+    }
+
+    public boolean isCleanupOldLeaseTablesEnabled() {
+        return cleanupOldLeaseTablesEnabled;
     }
 }
