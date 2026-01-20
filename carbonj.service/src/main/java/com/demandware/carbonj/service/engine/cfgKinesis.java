@@ -55,12 +55,24 @@ public class cfgKinesis
     @Value( "${aggregation.enabled:true}" )
     private boolean aggregationEnabled;
 
+    // Optional: dynamically suffix the KCL application name and cleanup old lease tables
+    @Value( "${kinesis.consumer.appName.dynamicSuffix.enabled:false}" )
+    private boolean appNameDynamicSuffixEnabled;
+
+    // Supports tokens: {epoch}, {uuid}, {hostname}
+    @Value( "${kinesis.consumer.appName.dynamicSuffix.format:-{epoch}}" )
+    private String appNameDynamicSuffixFormat;
+
+    @Value( "${kinesis.consumer.cleanupOldLeaseTables.enabled:false}" )
+    private boolean cleanupOldLeaseTablesEnabled;
+
     @Bean
     KinesisConfig kinesisConfig()
     {
         return new KinesisConfig(kinesisConsumerEnabled, recoveryEnabled, recoveryIdleTimeInMillis,
                 checkPointIntervalMillis, retryTimeInMillis, recoveryThreads, Paths.get(checkPointDir),
                 initRetryTimeInSecs, leaseExpirationTimeInSecs, recoveryProvider, gapsTableProvisionedThroughput,
-                maxRecords, aggregationEnabled);
+                maxRecords, aggregationEnabled,
+                appNameDynamicSuffixEnabled, appNameDynamicSuffixFormat, cleanupOldLeaseTablesEnabled);
     }
 }
