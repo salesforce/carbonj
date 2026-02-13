@@ -5,7 +5,7 @@ Parallel high-cardinality metric analyzer for CarbonJ audit files.
 CarbonJ periodically dumps all known metric names into an audit file where each
 line has the format: <metric_name> <value> <timestamp>.  Metric names are
 dot-separated hierarchical paths (e.g.
-pod217.ecom.bgzd.bgzd_prd.blade9-4.bgzd_prd.ocapi.scapi.responses.custom.data.v1.customers_123).
+env1.infrastructure.collectd.app.blade2-3.cpu.idle 98.5 1770921361).
 
 This script reads the audit file using all available CPU cores and identifies
 metric name patterns with high cardinality -- i.e. prefixes that fan out into a
