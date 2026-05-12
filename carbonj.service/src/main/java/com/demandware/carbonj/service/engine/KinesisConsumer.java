@@ -19,12 +19,19 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClientBuilder;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.AttributeAction;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValueUpdate;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClientBuilder;
 import software.amazon.awssdk.services.kinesis.KinesisClient;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import software.amazon.awssdk.services.kinesis.KinesisClientBuilder;
 import software.amazon.kinesis.common.ConfigsBuilder;
+import software.amazon.kinesis.coordinator.CoordinatorConfig;
 import software.amazon.kinesis.coordinator.Scheduler;
 import software.amazon.kinesis.leases.LeaseManagementConfig;
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
@@ -42,8 +49,15 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class KinesisConsumer extends Thread {
@@ -105,10 +119,27 @@ public class KinesisConsumer extends Thread {
 
     public void run () {
 
+        // KCL expects a unique workerId per process so that lease ownership and expiry
+        // semantics work correctly. Hostname makes it readable in logs / lease tables;
+        // the UUID guarantees uniqueness even when hostnames collide (e.g. multiple
+        // restarts of the same pod within a failover window).
+        final String workerId = resolveHostId() + ":" + UUID.randomUUID();
+
+        // Anchor the live consumer's initial position to a fixed wall-clock instant
+        // captured at startup. KCL's LATEST iterator only returns records that arrive
+        // *after* the iterator is created, which can leave a gap of seconds-to-minutes
+        // between recovery's gapEndTime (startup + 2min) and KCL's first
+        // GetShardIterator call. AT_TIMESTAMP filters by record arrival time on the
+        // Kinesis side, so the live consumer always reads from this anchor regardless
+        // of when KCL gets around to creating the iterator. The traceback property
+        // optionally extends this anchor further into the past for fresh deployments
+        // that want the live path to backfill instead of relying on recovery.
+        final Instant liveStartInstant = Instant.now()
+                .minus(Duration.ofMinutes(Math.max(0, kinesisConsumerTracebackMinutes)));
+        boolean firstIteration = true;
+
         while (!closed) {
             try {
-                String workerId = kinesisApplicationName + "-worker";
-
                 URI overrideKinesisEndpointUri = null;
                 if (overrideKinesisEndpoint != null && !StringUtils.isEmpty(overrideKinesisEndpoint.trim())) {
                     overrideKinesisEndpointUri = java.net.URI.create(overrideKinesisEndpoint);
@@ -161,13 +192,44 @@ public class KinesisConsumer extends Thread {
                 // Map v1 withFailoverTimeMillis -> v2/3 failoverTimeMillis
                 LeaseManagementConfig leaseManagementConfig = configsBuilder.leaseManagementConfig()
                         .failoverTimeMillis(kinesisConfig.getLeaseExpirationTimeInSecs() * 1000L);
-                // Since v2 will create a new DynamoDB table, we need to trace back the initial position
-                Instant startTime = Instant.now().minus(Duration.ofMinutes(kinesisConsumerTracebackMinutes));
                 InitialPositionInStreamExtended initialPositionInStreamExtended =
-                        InitialPositionInStreamExtended.newInitialPositionAtTimestamp(new Date(startTime.toEpochMilli()));
+                        InitialPositionInStreamExtended.newInitialPositionAtTimestamp(
+                                new Date(liveStartInstant.toEpochMilli()));
+
+                // KCL persists per-shard checkpoints in the lease table and resumes from them on
+                // every restart, ignoring initialPositionInStreamExtended once leases exist. To
+                // make the AT_TIMESTAMP(liveStartInstant) anchor take effect on every start,
+                // overwrite each lease's checkpoint before starting the Scheduler.
+                //
+                // Only seed on the first iteration of the retry loop. A transient KCL exception
+                // re-enters this loop; running the seed again would clobber valid in-flight
+                // checkpoints just before recovery would otherwise resume from them. This means
+                // the in-process retry loop only recovers from transient failures — if the seed
+                // or forceCoordinatorStateToV2Compat partially completed and left the DDB state
+                // inconsistent, only a process restart will re-run them.
+                if (firstIteration) {
+                    DynamoDbClientBuilder seedDdbBuilder = DynamoDbClient.builder()
+                            .region(region).credentialsProvider(DefaultCredentialsProvider.builder().build());
+                    if (overrideKinesisEndpointUri != null) {
+                        seedDdbBuilder.endpointOverride(overrideKinesisEndpointUri);
+                    }
+                    try (DynamoDbClient seedDdb = seedDdbBuilder.build()) {
+                        seedLeaseCheckpoints(seedDdb, kinesisApplicationName,
+                                kinesisConfig.getResetLeasesOnStartup());
+                        forceCoordinatorStateToV2Compat(seedDdb, kinesisApplicationName, workerId);
+                    }
+                    firstIteration = false;
+                }
+                // KCL 3's load-aware LeaseAssignmentManager refuses to assign leases without
+                // healthy WorkerMetricStats from a quorum of workers, which never happens for
+                // single-worker deployments — the worker stays leader with leasesOwned=0
+                // forever. Force the 2.x-style lease taker, which steals expired leases on a
+                // fixed failoverTimeMillis window and matches carbonj's pre-migration behavior.
+                CoordinatorConfig coordinatorConfig = configsBuilder.coordinatorConfig()
+                        .clientVersionConfig(CoordinatorConfig.ClientVersionConfig.CLIENT_VERSION_CONFIG_COMPATIBLE_WITH_2X);
                 worker = new Scheduler(
                         configsBuilder.checkpointConfig(),
-                        configsBuilder.coordinatorConfig(),
+                        coordinatorConfig,
                         leaseManagementConfig,
                         configsBuilder.lifecycleConfig(),
                         configsBuilder.metricsConfig(),
@@ -191,6 +253,152 @@ public class KinesisConsumer extends Thread {
                 noOfRestarts.inc();
             }
         }
+    }
+
+    /**
+     * Resolve the local hostname for use as the human-readable prefix of the KCL
+     * workerId. This is purely for diagnostics — uniqueness is guaranteed by a UUID
+     * appended after this value. On Kubernetes this is typically the pod name.
+     */
+    private static String resolveHostId() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            log.warn("Unable to resolve local hostname; using 'unknown' for workerId prefix.", e);
+            return "unknown";
+        }
+    }
+
+    /**
+     * Overwrite every row's checkpoint in the KCL lease table so the next Scheduler start
+     * uses the configured initialPositionInStreamExtended instead of the persisted checkpoint.
+     * Skipped if the table doesn't exist (KCL will create it).
+     *
+     * AUTO and ALWAYS both reset every lease unconditionally. We deliberately do not try
+     * to detect peer workers via leaseOwner: workerId is unique per process (hostname +
+     * UUID), so any previous run's leases — whether from this same pod or a redeployed
+     * pod with a different hostname — will look like a peer's. We have no reliable way
+     * to distinguish "my own previous run" from "a live peer in a multi-worker fleet"
+     * without external state.
+     *
+     * For multi-worker deployments where multiple pods share a kinesisApplicationName,
+     * operators must set kinesis.consumer.resetLeasesOnStartup=never so the live
+     * consumers can resume from their persisted checkpoints without being clobbered by
+     * any peer's startup. The default (single-worker, reset on startup) matches the v1
+     * KCL MemLeaseManager behavior carbonj relied on for years.
+     */
+    private static void seedLeaseCheckpoints(DynamoDbClient ddb, String tableName,
+                                             KinesisConfig.ResetLeasesMode mode) {
+        if (mode == KinesisConfig.ResetLeasesMode.NEVER) {
+            return;
+        }
+        List<Map<String, AttributeValue>> items;
+        try {
+            items = scanAllLeases(ddb, tableName);
+        } catch (ResourceNotFoundException e) {
+            log.info("Lease table {} does not exist yet; KCL will create it.", tableName);
+            return;
+        }
+        if (items.isEmpty()) {
+            log.info("Lease table {} is empty; nothing to seed.", tableName);
+            return;
+        }
+        // The live consumer's initial position is always AT_TIMESTAMP (configured per
+        // run), so the lease checkpoint sentinel must match — KCL reads the timestamp
+        // from initialPositionInStreamExtended whenever it sees this sentinel.
+        int updated = 0;
+        for (Map<String, AttributeValue> item : items) {
+            AttributeValue leaseKey = item.get("leaseKey");
+            if (leaseKey == null || leaseKey.s() == null) {
+                continue;
+            }
+            // Surface the previous owner so multi-worker deployments that forgot to
+            // set resetLeasesOnStartup=never can spot the misconfiguration in logs.
+            AttributeValue priorOwner = item.get("leaseOwner");
+            if (priorOwner != null && priorOwner.s() != null) {
+                log.info("Resetting lease {} previously owned by {} to checkpoint=AT_TIMESTAMP",
+                        leaseKey.s(), priorOwner.s());
+            }
+            Map<String, AttributeValue> key = Collections.singletonMap("leaseKey", leaseKey);
+            Map<String, AttributeValueUpdate> updates = new HashMap<>();
+            updates.put("checkpoint", AttributeValueUpdate.builder()
+                    .value(AttributeValue.builder().s("AT_TIMESTAMP").build()).build());
+            updates.put("checkpointSubSequenceNumber", AttributeValueUpdate.builder()
+                    .value(AttributeValue.builder().n("0").build()).build());
+            // Drop attributes that KCL also reads when reconstructing a Lease. A stale
+            // pendingCheckpoint left from a previous run's mid-prepareCheckpoint crash is
+            // not a sentinel and would route IteratorBuilder to AT_SEQUENCE_NUMBER, undoing
+            // the AT_TIMESTAMP we just wrote. checkpointOwner is similar — stale values
+            // break getDynamoLeaseOwnerExpectation conditional updates on lease takeover.
+            updates.put("pendingCheckpoint", AttributeValueUpdate.builder().action(AttributeAction.DELETE).build());
+            updates.put("pendingCheckpointSubSequenceNumber", AttributeValueUpdate.builder().action(AttributeAction.DELETE).build());
+            updates.put("pendingCheckpointState", AttributeValueUpdate.builder().action(AttributeAction.DELETE).build());
+            updates.put("checkpointOwner", AttributeValueUpdate.builder().action(AttributeAction.DELETE).build());
+            ddb.updateItem(b -> b.tableName(tableName).key(key).attributeUpdates(updates));
+            updated++;
+        }
+        log.info("Seeded {} lease(s) in {} with checkpoint=AT_TIMESTAMP", updated, tableName);
+    }
+
+    /**
+     * Force the KCL CoordinatorState row to CLIENT_VERSION_2X so KCL takes the 2x-compat
+     * lease-assignment path, regardless of whatever was persisted by an earlier build.
+     *
+     * Without this, KCL's MigrationStateMachine reads the persistent {appName}-CoordinatorState
+     * row at startup and overrides our application's CLIENT_VERSION_CONFIG_COMPATIBLE_WITH_2X
+     * config if the row says CLIENT_VERSION_3X. The 3x path uses load-aware lease
+     * assignment which won't assign leases until the LeaseAssignmentManager has accumulated
+     * sufficient WorkerMetricStats samples — a process that takes ~10 minutes — during
+     * which the live consumer reads no records. Writing CLIENT_VERSION_2X here makes
+     * KCL go straight to the 2x-style lease taker.
+     *
+     * Schema (per software.amazon.kinesis.coordinator.MigrationState):
+     *   key (S) = "Migration3.0"   — hash key
+     *   cv (S)  = client version sentinel
+     *   mts (N) = modified timestamp millis
+     *   mb (S)  = modified-by worker id
+     *   h (L)   = history list (left untouched; informational)
+     */
+    private static void forceCoordinatorStateToV2Compat(DynamoDbClient ddb, String appName, String workerId) {
+        String tableName = appName + "-CoordinatorState";
+        Map<String, AttributeValue> key = Collections.singletonMap("key",
+                AttributeValue.builder().s("Migration3.0").build());
+        Map<String, AttributeValueUpdate> updates = new HashMap<>();
+        updates.put("cv", AttributeValueUpdate.builder()
+                .value(AttributeValue.builder().s("CLIENT_VERSION_2X").build()).build());
+        updates.put("mts", AttributeValueUpdate.builder()
+                .value(AttributeValue.builder().n(Long.toString(System.currentTimeMillis())).build()).build());
+        updates.put("mb", AttributeValueUpdate.builder()
+                .value(AttributeValue.builder().s(workerId).build()).build());
+        try {
+            ddb.updateItem(b -> b.tableName(tableName).key(key).attributeUpdates(updates));
+            log.info("Forced {} Migration3.0 to CLIENT_VERSION_2X", tableName);
+        } catch (ResourceNotFoundException e) {
+            // Table doesn't exist yet (first ever start). KCL will create it and
+            // initialise from our CLIENT_VERSION_CONFIG_COMPATIBLE_WITH_2X config,
+            // which writes CLIENT_VERSION_2X — so no action needed here.
+            log.info("CoordinatorState table {} does not exist yet; KCL will create it.", tableName);
+        }
+    }
+
+    /**
+     * DynamoDB Scan returns at most 1 MB per call. For lease tables with many shards
+     * a single call would miss leases beyond the first page, defeating both the AUTO
+     * ownership check and the seed update for those leases.
+     */
+    private static List<Map<String, AttributeValue>> scanAllLeases(DynamoDbClient ddb, String tableName) {
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        Map<String, AttributeValue> lastKey = null;
+        do {
+            ScanRequest.Builder req = ScanRequest.builder().tableName(tableName);
+            if (lastKey != null) {
+                req.exclusiveStartKey(lastKey);
+            }
+            ScanResponse resp = ddb.scan(req.build());
+            items.addAll(resp.items());
+            lastKey = resp.hasLastEvaluatedKey() ? resp.lastEvaluatedKey() : null;
+        } while (lastKey != null);
+        return items;
     }
 
     private void shutdownQuietly(Scheduler worker) {
@@ -240,7 +448,7 @@ public class KinesisConsumer extends Thread {
 
         RecoveryManager recoveryManager = new RecoveryManager(metricRegistry, gapsTable, kinesisStreamName, recoveryPointProcessor, kinesisClient,
                 kinesisConfig.getRecoveryIdleTimeMillis(), kinesisConfig.getRetryTimeInMillis(),
-                new GzipDataPointCodec());
+                kinesisConfig.getRecoveryGetRecordsLimit(), new GzipDataPointCodec());
         new Thread(recoveryManager).start();
     }
 

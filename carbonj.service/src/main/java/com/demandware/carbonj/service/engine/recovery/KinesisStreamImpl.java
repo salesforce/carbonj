@@ -22,10 +22,14 @@ import com.codahale.metrics.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class KinesisStreamImpl implements KinesisStream {
 
@@ -35,12 +39,39 @@ public class KinesisStreamImpl implements KinesisStream {
     private final KinesisClient kinesis;
     private final String streamName;
     private final long retryTimeInMillis;
+    private final long minFetchIntervalMillis;
+    private final int getRecordsLimit;
 
-    KinesisStreamImpl(MetricRegistry metricRegistry, KinesisClient kinesis, String streamName, long retryTimeInMillis) {
+    // Per-shard buffer of records pre-fetched by a single batched GetRecords call.
+    // GapProcessor consumes one record at a time; buffering lets us amortize the
+    // 5 GetRecords/sec/shard quota across many records instead of one call per record.
+    // ConcurrentHashMap is defensive — current callers iterate shards sequentially,
+    // but cfgKinesis.recoveryThreads exists as a knob, so be safe.
+    private final Map<String, ShardBuffer> buffers = new ConcurrentHashMap<>();
+
+    KinesisStreamImpl(MetricRegistry metricRegistry, KinesisClient kinesis, String streamName, long retryTimeInMillis,
+                      long minFetchIntervalMillis, int getRecordsLimit) {
         timer = metricRegistry.timer(MetricRegistry.name("KinesisStream", "getNextRecord"));
         this.kinesis = kinesis;
         this.streamName = streamName;
         this.retryTimeInMillis = retryTimeInMillis;
+        this.minFetchIntervalMillis = minFetchIntervalMillis;
+        this.getRecordsLimit = getRecordsLimit;
+    }
+
+    private static final class ShardBuffer {
+        final Deque<Record> records = new ArrayDeque<>();
+        // The shardIterator we surface to the caller. The caller round-trips this
+        // value back into getNextRecord on subsequent calls. Recognising it on
+        // re-entry is how we know we should drain the buffer instead of reseeding.
+        String currentIterator;
+        // The shardIterator to use for the next batched GetRecords call.
+        String nextIterator;
+        // Wall-clock millis when this shard's most recent GetRecords completed.
+        // Used to enforce minFetchIntervalMillis between calls so recovery
+        // does not exhaust the per-shard 5 GetRecords/sec/shard quota and
+        // starve the live consumer.
+        long lastFetchMillis = 0L;
     }
 
     @Override
@@ -59,41 +90,84 @@ public class KinesisStreamImpl implements KinesisStream {
             throws InterruptedException {
 
         try (Timer.Context ignored = timer.time()) {
-            GetRecordsRequest request = GetRecordsRequest.builder().limit(1).shardIterator(shardIterator).build();
-            GetRecordsResponse result;
+            ShardBuffer buffer = buffers.computeIfAbsent(shardInfo.getShardId(), k -> new ShardBuffer());
 
-            try {
-                result = kinesis.getRecords(request);
-            } catch (ExpiredIteratorException e) {
-                log.warn("Got expired iterator: {}", e.getMessage());
-
-                // retry with last sequence number
-                log.info("Trying with a new iterator");
-                shardIterator = getShardIterator(shardInfo, lastSequenceNumber);
-                request = GetRecordsRequest.builder().limit(1).shardIterator(shardIterator).build();
-                result = kinesis.getRecords(request);
+            // If the caller passes an iterator that is not the one we last surfaced,
+            // it is a fresh seed (initial call, or a recovery iterator from
+            // getShardIterator after an ExpiredIteratorException). Reset the buffer.
+            if (!Objects.equals(shardIterator, buffer.currentIterator)) {
+                buffer.records.clear();
+                buffer.currentIterator = shardIterator;
+                buffer.nextIterator = shardIterator;
             }
 
-            List<Record> records = result.records();
-            shardIterator = result.nextShardIterator();
-
-            // retry until we get the records.
-            while (records.isEmpty() && shardIterator != null) {
+            // Refill the buffer if empty. Loop because Kinesis may return an empty
+            // batch even when more records exist downstream of nextIterator.
+            while (buffer.records.isEmpty() && buffer.nextIterator != null) {
+                GetRecordsResponse result = fetchBatch(shardInfo, buffer, lastSequenceNumber);
+                buffer.nextIterator = result.nextShardIterator();
+                if (!result.records().isEmpty()) {
+                    buffer.records.addAll(result.records());
+                    break;
+                }
                 if (log.isDebugEnabled()) {
                     log.debug("Recovery: Records not available yet for {}.  Waiting..", shardInfo.getShardId());
                 }
                 Thread.sleep(retryTimeInMillis);
-
-                request = GetRecordsRequest.builder().limit(1).shardIterator(shardIterator).build();
-                result = kinesis.getRecords(request);
-                records = result.records();
-                shardIterator = result.nextShardIterator();
             }
 
-            if (records.isEmpty()) {  // end of shard has been reached.
+            if (buffer.records.isEmpty()) {  // end of shard has been reached.
+                buffers.remove(shardInfo.getShardId());
                 return RecordAndIterator.EMPTY;
             }
-            return new RecordAndIterator(records.get(0), shardIterator);
+
+            Record record = buffer.records.poll();
+            // Surface nextIterator to the caller so they round-trip it back; the
+            // equality check above will recognise it and keep draining the buffer.
+            buffer.currentIterator = buffer.nextIterator;
+            return new RecordAndIterator(record, buffer.nextIterator);
+        }
+    }
+
+    private GetRecordsResponse fetchBatch(ShardInfo shardInfo, ShardBuffer buffer, String lastSequenceNumber)
+            throws InterruptedException {
+        // Cap recovery's GetRecords rate per shard. Kinesis enforces 5 GetRecords/sec/shard;
+        // the live KCL consumer also reads from the same shard at ~1/sec. Without this gate,
+        // recovery's tight per-record loop can saturate the quota and trigger
+        // ProvisionedThroughputExceededException for both paths.
+        if (minFetchIntervalMillis > 0 && buffer.lastFetchMillis > 0) {
+            long elapsed = System.currentTimeMillis() - buffer.lastFetchMillis;
+            long wait = minFetchIntervalMillis - elapsed;
+            if (wait > 0) {
+                Thread.sleep(wait);
+            }
+        }
+        GetRecordsRequest request = GetRecordsRequest.builder()
+                .limit(getRecordsLimit)
+                .shardIterator(buffer.nextIterator)
+                .build();
+        try {
+            GetRecordsResponse resp = kinesis.getRecords(request);
+            // Only stamp the gate after we've actually consumed call quota. If sleep
+            // above is interrupted, no GetRecords ran and the next caller should not
+            // be over-rate-limited.
+            buffer.lastFetchMillis = System.currentTimeMillis();
+            return resp;
+        } catch (ExpiredIteratorException e) {
+            // ExpiredIteratorException means the request reached Kinesis and was rejected;
+            // count it against the gate to avoid hammering on the retry.
+            buffer.lastFetchMillis = System.currentTimeMillis();
+            log.warn("Got expired iterator: {}", e.getMessage());
+            log.info("Trying with a new iterator");
+            String newIterator = getShardIterator(shardInfo, lastSequenceNumber);
+            buffer.nextIterator = newIterator;
+            buffer.currentIterator = newIterator;
+            GetRecordsResponse resp = kinesis.getRecords(GetRecordsRequest.builder()
+                    .limit(getRecordsLimit)
+                    .shardIterator(newIterator)
+                    .build());
+            buffer.lastFetchMillis = System.currentTimeMillis();
+            return resp;
         }
     }
 
