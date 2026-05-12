@@ -88,7 +88,7 @@ public class TestKinesisConsumer {
         MetricRegistry metricRegistry = new MetricRegistry();
         Path checkPointDir = Path.of("/tmp/checkpoint");
         KinesisConfig kinesisConfig = new KinesisConfig(true, true, 60000, 60000, 60000,
-                1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, true);
+                1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, 1000, "auto", true);
         FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(checkPointDir, 5);
         PointProcessorMock pointProcessor = new PointProcessorMock();
         KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, pointProcessor,

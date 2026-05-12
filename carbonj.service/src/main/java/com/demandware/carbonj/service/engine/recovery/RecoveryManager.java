@@ -32,17 +32,19 @@ public class RecoveryManager implements Runnable {
     private final KinesisClient kinesisClient;
     private final long idleTimeInMillis;
     private final long retryTimeInMillis;
+    private final int getRecordsLimit;
     private final DataPointCodec codec;
 
     public RecoveryManager(MetricRegistry metricRegistry, GapsTable gapsTable, String streamName, PointProcessor pointProcessor,
                            KinesisClient kinesisClient, long idleTimeInMillis, long retryTimeInMillis,
-                           DataPointCodec codec) {
+                           int getRecordsLimit, DataPointCodec codec) {
         this.gapsTable = gapsTable;
         this.streamName = streamName;
         this.pointProcessor = pointProcessor;
         this.kinesisClient = kinesisClient;
         this.idleTimeInMillis = idleTimeInMillis;
         this.retryTimeInMillis = retryTimeInMillis;
+        this.getRecordsLimit = getRecordsLimit;
         this.metricRegistry = metricRegistry;
         this.codec = codec;
     }
@@ -55,7 +57,7 @@ public class RecoveryManager implements Runnable {
             log.info("Recovery: Found gaps {}", gaps);
 
             KinesisStream kinesisStream = new KinesisStreamImpl(metricRegistry, kinesisClient, streamName,
-                    retryTimeInMillis);
+                    retryTimeInMillis, getRecordsLimit);
 
             ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
             executor.setRemoveOnCancelPolicy(true);

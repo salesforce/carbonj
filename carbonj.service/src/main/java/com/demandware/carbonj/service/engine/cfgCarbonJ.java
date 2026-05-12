@@ -210,7 +210,7 @@ public class cfgCarbonJ
     @Value("${carbonj.env:dev}")
     private String carbonjEnv;
 
-    @Value("${kinesis.consumer.traceback.minutes:20}")
+    @Value("${kinesis.consumer.traceback.minutes:0}")
     private int kinesisConsumerTracebackMinutes;
 
     @Bean

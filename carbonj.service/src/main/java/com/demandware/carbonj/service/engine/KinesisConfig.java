@@ -27,13 +27,18 @@ public class KinesisConfig {
     private final KinesisRecoveryProvider recoveryProvider;
     private final int gapsTableProvisionedThroughput;
     private final int maxRecords;
+    private final int recoveryGetRecordsLimit;
+    private final ResetLeasesMode resetLeasesOnStartup;
     private final boolean aggregationEnabled;
+
+    public enum ResetLeasesMode { AUTO, ALWAYS, NEVER }
 
     public KinesisConfig(boolean kinesisConsumerEnabled, boolean recoveryEnabled,
                          long recoveryIdleTimeMillis, long checkPointIntervalMillis, long retryTimeInMillis,
                          int recoveryThreads, Path checkPointDir, int initRetryTimeInSecs,
                          int leaseExpirationTimeInSecs, String recoveryProvider, int gapsTableProvThroughput,
-                         int maxRecords, boolean aggregationEnabled) {
+                         int maxRecords, int recoveryGetRecordsLimit, String resetLeasesOnStartup,
+                         boolean aggregationEnabled) {
         this.kinesisConsumerEnabled = kinesisConsumerEnabled;
         this.recoveryEnabled = recoveryEnabled;
         this.recoveryIdleTimeMillis = recoveryIdleTimeMillis;
@@ -45,6 +50,8 @@ public class KinesisConfig {
         this.leaseExpirationTimeInSecs = leaseExpirationTimeInSecs;
         this.gapsTableProvisionedThroughput = gapsTableProvThroughput;
         this.maxRecords = maxRecords;
+        this.recoveryGetRecordsLimit = recoveryGetRecordsLimit;
+        this.resetLeasesOnStartup = parseResetLeasesMode(resetLeasesOnStartup);
         this.aggregationEnabled = aggregationEnabled;
 
         if( recoveryProvider.equalsIgnoreCase("dynamodb")) {
@@ -97,6 +104,25 @@ public class KinesisConfig {
 
     public int getMaxRecords() {
         return maxRecords;
+    }
+
+    public int getRecoveryGetRecordsLimit() {
+        return recoveryGetRecordsLimit;
+    }
+
+    public ResetLeasesMode getResetLeasesOnStartup() {
+        return resetLeasesOnStartup;
+    }
+
+    private static ResetLeasesMode parseResetLeasesMode(String value) {
+        if (value == null) {
+            return ResetLeasesMode.AUTO;
+        }
+        try {
+            return ResetLeasesMode.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResetLeasesMode.AUTO;
+        }
     }
 
     public boolean isAggregationEnabled() {

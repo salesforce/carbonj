@@ -35,7 +35,7 @@ public class TestConsumers {
         File rulesFile = new File(Objects.requireNonNull(this.getClass().getClassLoader().getResource("consumer-rules.conf")).getFile());
         Path checkPointDir = Path.of("/tmp/checkpoint");
         KinesisConfig kinesisConfig = new KinesisConfig(true, false, 60000, 60000, 60000,
-                1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, true);
+                1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, 1000, "auto", true);
         FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(checkPointDir, 5);
         Consumers consumers = new Consumers(metricRegistry, new PointProcessorMock(), new PointProcessorMock(),
                 rulesFile, kinesisConfig, checkPointMgr, Region.US_EAST_1.id(), new NamespaceCounter(metricRegistry, 60), new File("/tmp/sync"), "test", 60);
@@ -51,7 +51,7 @@ public class TestConsumers {
         File rulesFile = new File(Objects.requireNonNull(this.getClass().getClassLoader().getResource("consumer-rules.conf")).getFile());
         Path checkPointDir = Path.of("/tmp/checkpoint");
         KinesisConfig kinesisConfig = new KinesisConfig(true, true, 60000, 60000, 60000,
-                1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, false);
+                1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, 1000, "auto", false);
         FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(checkPointDir, 5);
         Consumers consumers = new Consumers(metricRegistry, new PointProcessorMock(), new PointProcessorMock(),
                 rulesFile, kinesisConfig, checkPointMgr, Region.US_EAST_1.id(), new NamespaceCounter(metricRegistry, 60), new File("/tmp/sync"), "test", 60);

@@ -31,6 +31,12 @@ public class cfgKinesis
     @Value( "${kinesis.consumer.maxRecords:10}" )
     private int maxRecords;
 
+    @Value( "${kinesis.recovery.getRecords.limit:10}" )
+    private int recoveryGetRecordsLimit;
+
+    @Value( "${kinesis.consumer.resetLeasesOnStartup:auto}" )
+    private String resetLeasesOnStartup;
+
     @Value( "${kinesis.checkPoint.interval.millis:60000}" )
     private long checkPointIntervalMillis;
 
@@ -61,6 +67,6 @@ public class cfgKinesis
         return new KinesisConfig(kinesisConsumerEnabled, recoveryEnabled, recoveryIdleTimeInMillis,
                 checkPointIntervalMillis, retryTimeInMillis, recoveryThreads, Paths.get(checkPointDir),
                 initRetryTimeInSecs, leaseExpirationTimeInSecs, recoveryProvider, gapsTableProvisionedThroughput,
-                maxRecords, aggregationEnabled);
+                maxRecords, recoveryGetRecordsLimit, resetLeasesOnStartup, aggregationEnabled);
     }
 }
