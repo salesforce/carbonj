@@ -43,15 +43,13 @@ public class GapProcessor {
     private final Date endTimeStamp;
     private final KinesisStream kinesisStream;
     private final PointProcessor pointProcessor;
-    private final long idleTimeInMillis;
     private final DataPointCodec codec;
 
     GapProcessor(MetricRegistry metricRegistry, Gap gap, KinesisStream kinesisStream, PointProcessor pointProcessor,
-                 long idleTimeInMillis, DataPointCodec codec) {
+                 DataPointCodec codec) {
 
         this.kinesisStream = kinesisStream;
         this.pointProcessor = pointProcessor;
-        this.idleTimeInMillis = idleTimeInMillis;
         this.codec = codec;
 
         this.retries = metricRegistry.meter(MetricRegistry.name("gapProcessor","retry"));
@@ -168,8 +166,6 @@ public class GapProcessor {
             long currentTime = System.nanoTime();
             duration.inc(currentTime - startTime);
             startTime = currentTime;
-
-            Thread.sleep(idleTimeInMillis);
         }
 
         duration.inc(System.nanoTime() - startTime);

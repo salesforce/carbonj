@@ -87,7 +87,11 @@ public class TestKinesisConsumer {
 
         MetricRegistry metricRegistry = new MetricRegistry();
         Path checkPointDir = Path.of("/tmp/checkpoint");
-        KinesisConfig kinesisConfig = new KinesisConfig(true, true, 60000, 60000, 60000,
+        // Short idle/retry intervals so the recovery path's GetRecords gate doesn't
+        // exceed the test's polling deadline. With the per-shard fetch gate, recovery
+        // re-fetches at most every recoveryIdleTimeMillis; a 60s value here would push
+        // the second fetch past the 30s polling window after the record is put.
+        KinesisConfig kinesisConfig = new KinesisConfig(true, true, 1000, 60000, 1000,
                 1, checkPointDir, 60, 60, "recoveryProvider", 1, 1, 1000, "auto", true);
         FileCheckPointMgr checkPointMgr = new FileCheckPointMgr(checkPointDir, 5);
         PointProcessorMock pointProcessor = new PointProcessorMock();

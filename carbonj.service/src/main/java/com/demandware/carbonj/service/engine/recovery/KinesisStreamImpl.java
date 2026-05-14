@@ -39,6 +39,7 @@ public class KinesisStreamImpl implements KinesisStream {
     private final KinesisClient kinesis;
     private final String streamName;
     private final long retryTimeInMillis;
+    private final long minFetchIntervalMillis;
     private final int getRecordsLimit;
 
     // Per-shard buffer of records pre-fetched by a single batched GetRecords call.
@@ -47,11 +48,12 @@ public class KinesisStreamImpl implements KinesisStream {
     private final Map<String, ShardBuffer> buffers = new HashMap<>();
 
     KinesisStreamImpl(MetricRegistry metricRegistry, KinesisClient kinesis, String streamName, long retryTimeInMillis,
-                      int getRecordsLimit) {
+                      long minFetchIntervalMillis, int getRecordsLimit) {
         timer = metricRegistry.timer(MetricRegistry.name("KinesisStream", "getNextRecord"));
         this.kinesis = kinesis;
         this.streamName = streamName;
         this.retryTimeInMillis = retryTimeInMillis;
+        this.minFetchIntervalMillis = minFetchIntervalMillis;
         this.getRecordsLimit = getRecordsLimit;
     }
 
@@ -63,6 +65,11 @@ public class KinesisStreamImpl implements KinesisStream {
         String currentIterator;
         // The shardIterator to use for the next batched GetRecords call.
         String nextIterator;
+        // Wall-clock millis when this shard's most recent GetRecords completed.
+        // Used to enforce minFetchIntervalMillis between calls so recovery
+        // does not exhaust the per-shard 5 GetRecords/sec/shard quota and
+        // starve the live consumer.
+        long lastFetchMillis = 0L;
     }
 
     @Override
@@ -120,7 +127,19 @@ public class KinesisStreamImpl implements KinesisStream {
         }
     }
 
-    private GetRecordsResponse fetchBatch(ShardInfo shardInfo, ShardBuffer buffer, String lastSequenceNumber) {
+    private GetRecordsResponse fetchBatch(ShardInfo shardInfo, ShardBuffer buffer, String lastSequenceNumber)
+            throws InterruptedException {
+        // Cap recovery's GetRecords rate per shard. Kinesis enforces 5 GetRecords/sec/shard;
+        // the live KCL consumer also reads from the same shard at ~1/sec. Without this gate,
+        // recovery's tight per-record loop can saturate the quota and trigger
+        // ProvisionedThroughputExceededException for both paths.
+        if (minFetchIntervalMillis > 0 && buffer.lastFetchMillis > 0) {
+            long elapsed = System.currentTimeMillis() - buffer.lastFetchMillis;
+            long wait = minFetchIntervalMillis - elapsed;
+            if (wait > 0) {
+                Thread.sleep(wait);
+            }
+        }
         GetRecordsRequest request = GetRecordsRequest.builder()
                 .limit(getRecordsLimit)
                 .shardIterator(buffer.nextIterator)
@@ -137,6 +156,8 @@ public class KinesisStreamImpl implements KinesisStream {
                     .limit(getRecordsLimit)
                     .shardIterator(newIterator)
                     .build());
+        } finally {
+            buffer.lastFetchMillis = System.currentTimeMillis();
         }
     }
 

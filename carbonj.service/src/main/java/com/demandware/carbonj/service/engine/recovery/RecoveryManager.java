@@ -56,8 +56,12 @@ public class RecoveryManager implements Runnable {
             List<Gap> gaps = Collections.synchronizedList(gapsTable.getGaps());
             log.info("Recovery: Found gaps {}", gaps);
 
+            // idleTimeInMillis is now used as the per-shard minimum interval between
+            // GetRecords calls (see KinesisStreamImpl.fetchBatch). It used to gate the
+            // per-record loop in GapProcessor, but with batched fetches that gating
+            // belongs at the GetRecords call site so we cap quota usage, not throughput.
             KinesisStream kinesisStream = new KinesisStreamImpl(metricRegistry, kinesisClient, streamName,
-                    retryTimeInMillis, getRecordsLimit);
+                    retryTimeInMillis, idleTimeInMillis, getRecordsLimit);
 
             ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
             executor.setRemoveOnCancelPolicy(true);
@@ -74,7 +78,7 @@ public class RecoveryManager implements Runnable {
 
                 // process gap.
                 log.info("Recovery: Recovering gap: {} - {} : LastRecoveryTime: {}", gap.startTime(), gap.endTime(), gap.lastRecovered());
-                GapProcessor gapProcessor = new GapProcessor(metricRegistry, gap, kinesisStream, pointProcessor, idleTimeInMillis, codec);
+                GapProcessor gapProcessor = new GapProcessor(metricRegistry, gap, kinesisStream, pointProcessor, codec);
                 gapProcessor.process();
 
                 // gap has been processed.  clean up resources.
