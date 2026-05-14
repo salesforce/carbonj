@@ -19,13 +19,20 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.net.UnknownHostException;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.ListTablesRequest;
+import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
+import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
 
 public class Consumers {
 
@@ -149,6 +156,16 @@ public class Consumers {
                     log.error(e.getMessage(), e);
                 }
 
+                // Optionally add dynamic suffix to the KCL application name
+                if (kinesisConfig.isAppNameDynamicSuffixEnabled()) {
+                    String suffix = resolveDynamicSuffix(kinesisConfig.getAppNameDynamicSuffixFormat());
+                    kinesisApplicationName = kinesisApplicationName + suffix;
+                    // Optionally kick off async cleanup of old lease tables
+                    if (kinesisConfig.isCleanupOldLeaseTablesEnabled()) {
+                        asyncCleanupOldLeaseTables(getKinesisApplicationName(kinesisStreamName, hostName, carbonjEnv));
+                    }
+                }
+
                 Counter initRetryCounter = metricRegistry.counter(MetricRegistry.name("kinesis.consumer." + kinesisStreamName + ".initRetryCounter"));
                 KinesisConsumer kinesisConsumer = new KinesisConsumer(metricRegistry, pointProcessor, recoveryPointProcessor, kinesisStreamName,
                         kinesisApplicationName, kinesisConfig, checkPointMgr, initRetryCounter, kinesisConsumerRegion, kinesisConsumerTracebackMinutes);
@@ -183,6 +200,50 @@ public class Consumers {
 
     private String getKinesisApplicationName(String streamName, String hostName, String carbonjEnv)  {
         return streamName + "-" + hostName + "-" + carbonjEnv;
+    }
+
+    private String resolveDynamicSuffix(String format) {
+        String suffix = format;
+        try {
+            suffix = suffix.replace("{epoch}", Long.toString(System.currentTimeMillis()))
+                           .replace("{hostname}", InetAddress.getLocalHost().getHostName())
+                           .replace("{uuid}", java.util.UUID.randomUUID().toString());
+        } catch (Throwable t) {
+            // fallback minimal suffix
+            suffix = "-" + System.currentTimeMillis();
+        }
+        if (!suffix.startsWith("-")) {
+            suffix = "-" + suffix;
+        }
+        return suffix;
+    }
+
+    private void asyncCleanupOldLeaseTables(String baseApplicationName) {
+        ExecutorService es = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "kcl-lease-cleanup");
+            t.setDaemon(true);
+            return t;
+        });
+        es.submit(() -> {
+            try (DynamoDbClient ddb = DynamoDbClient.builder().build()) {
+                ListTablesResponse resp = ddb.listTables(ListTablesRequest.builder().build());
+                for (String table : resp.tableNames()) {
+                    // KCL v2/v3 table name prefix is usually application name; be conservative
+                    if (table.startsWith(baseApplicationName) && !table.equals(baseApplicationName)) {
+                        try {
+                            ddb.deleteTable(DeleteTableRequest.builder().tableName(table).build());
+                            log.info("Submitted async deletion for old KCL lease/checkpoint table {}", table);
+                        } catch (Throwable t) {
+                            log.warn("Failed to delete table {}: {}", table, t.getMessage());
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                log.warn("KCL lease cleanup encountered an error: {}", t.getMessage());
+            }
+        });
+        es.shutdown();
+        try { es.awaitTermination(1, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
     }
 
     private void close(Set<String> consumerSet) {
