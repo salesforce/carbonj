@@ -81,7 +81,7 @@ public class TestGapProcessor {
         List<List<DataPoint>> dataPointsList = new ArrayList<>();
         PointProcessor mockPointProcessor = getMockPointProcessor(dataPointsList);
         DataPointCodec mockCodec = getMockCodec(seqNumToDataPoints);
-        GapProcessor gapProcessor = new GapProcessor(metricRegistry, gap, mockKinesisStream, mockPointProcessor, 5, mockCodec);
+        GapProcessor gapProcessor = new GapProcessor(metricRegistry, gap, mockKinesisStream, mockPointProcessor, mockCodec);
         gapProcessor.process();
 
         int noOfSubmissions = dataPointsList.size();
@@ -108,7 +108,7 @@ public class TestGapProcessor {
         // Assert.assertEquals(, lastProcessed.get(2).ts);
 
         mockPointProcessor = new MockPointProcessor(dataPointsList, null);
-        gapProcessor = new GapProcessor(metricRegistry, gap, mockKinesisStream, mockPointProcessor, 5, mockCodec);
+        gapProcessor = new GapProcessor(metricRegistry, gap, mockKinesisStream, mockPointProcessor, mockCodec);
         gapProcessor.process();
         noOfSubmissions = dataPointsList.size();
         assertEquals(expectedPointProcessorSubmissions, noOfSubmissions);
