@@ -1,0 +1,70 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./**/*.env)",
+      "Read(./**/*.env.*)",
+      "Read(./**/secrets/**)",
+      "Read(./**/credentials*)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/.aws/**)",
+      "Read(./**/.ssh/**)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -fdx *)",
+      "Bash(./gradlew release *)",
+      "Bash(./gradlew publish *)",
+      "Bash(docker push *)",
+      "Bash(curl * | sh)",
+      "Bash(curl * | bash)"
+    ],
+    "allow": [
+      "Bash(./gradlew build)",
+      "Bash(./gradlew build *)",
+      "Bash(./gradlew test)",
+      "Bash(./gradlew test *)",
+      "Bash(./gradlew :carbonj.service:test)",
+      "Bash(./gradlew :carbonj.service:test *)",
+      "Bash(./gradlew :carbonj.service:bootJar)",
+      "Bash(./gradlew :carbonj.service:bootJar *)",
+      "Bash(./gradlew :cc-metrics-reporter:test)",
+      "Bash(./gradlew :cc-metrics-reporter:test *)",
+      "Bash(./gradlew licenseMain)",
+      "Bash(./gradlew licenseFormat)",
+      "Bash(./gradlew printCoverageReport)",
+      "Bash(./gradlew tasks)",
+      "Bash(./gradlew tasks *)",
+      "Bash(./gradlew properties)",
+      "Bash(./gradlew dependencies *)",
+      "Bash(./gradlew clean)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log)",
+      "Bash(git log *)",
+      "Bash(git branch)",
+      "Bash(git branch *)",
+      "Bash(git checkout *)",
+      "Bash(git fetch)",
+      "Bash(git fetch *)",
+      "Bash(git pull --ff-only)",
+      "Bash(git stash)",
+      "Bash(git stash *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'CarbonJ — Spring Boot 3 / JDK 17 / Gradle multi-project. Golden commands:\\n  build:  ./gradlew build\\n  test:   ./gradlew :carbonj.service:test\\n  jar:    ./gradlew :carbonj.service:bootJar\\n  lint:   ./gradlew licenseMain (auto-fix: licenseFormat)\\nSee CLAUDE.md and .claude/rules/ for details.'"
+          }
+        ]
+      }
+    ]
+  }
+}
