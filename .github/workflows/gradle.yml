@@ -32,7 +32,7 @@ jobs:
       if: ${{ !contains(github.ref, 'dependabot') }}
       env:
         DOCKER_HUB_SECRET: ${{ secrets.SALESFORCE_DOCKER_HUB_SECRET }}
-      run: echo "$DOCKER_HUB_SECRET" | docker login --username sholavanalli508 --password-stdin
+      run: echo "$DOCKER_HUB_SECRET" | docker login --username slodha342 --password-stdin
     - name: Publish Docker container
       if: ${{ !contains(github.ref, 'dependabot') }}
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
