@@ -16,9 +16,6 @@ jobs:
         java-version: 17
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    - name: Log into registry
-      if: ${{ !contains(github.ref, 'dependabot') }}
-      run: echo "${{ secrets.SALESFORCE_DOCKER_HUB_SECRET }}" | docker login --username sholavanalli508 --password-stdin
     - name: Build with Gradle
       run: ./gradlew build printCoverageReport --info --stacktrace
     - name: Publish Failure Test Report
@@ -31,6 +28,11 @@ jobs:
       run: echo "GRADLE_PROJECT_VERSION=$(./gradlew properties | grep '^version:' | cut -c 10-)" >> "$GITHUB_ENV"
     - name: Show project version
       run: echo "$GRADLE_PROJECT_VERSION"
+    - name: Log into registry
+      if: ${{ !contains(github.ref, 'dependabot') }}
+      env:
+        DOCKER_HUB_SECRET: ${{ secrets.SALESFORCE_DOCKER_HUB_SECRET }}
+      run: echo "$DOCKER_HUB_SECRET" | docker login --username sholavanalli508 --password-stdin
     - name: Publish Docker container
       if: ${{ !contains(github.ref, 'dependabot') }}
       # run: ./gradlew -PdockerRepo=docker.pkg.github.com/${{ github.repository }}/ -x test publish  --info
