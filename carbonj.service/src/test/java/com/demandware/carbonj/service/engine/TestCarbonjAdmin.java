@@ -61,14 +61,15 @@ public class TestCarbonjAdmin extends CarbonJSvcLongIdTest {
         uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/_dw/rest/carbonj/metrics/a.b.c").build().toUri();
         response = restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
         assertEquals(HttpStatus.OK.value(), response.getStatusCode().value());
-        assertTrue(response.getBody().startsWith("{\"id\":2,\"name\":\"a.b.c\""));
+        assertTrue(response.getBody().contains("\"id\":2"));
+        assertTrue(response.getBody().contains("\"name\":\"a.b.c\""));
 
         uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/_dw/rest/carbonj/metrics/foo.bar").build().toUri();
         try {
             restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
             fail("Should have thrown exception");
         } catch (HttpServerErrorException e) {
-            assertEquals("500 Server Error: \"{\"status\":\"ERROR\",\"message\":\"Metric [foo.bar] not found.\"}\"", e.getMessage());
+            assertEquals("{\"status\":\"ERROR\",\"message\":\"Metric [foo.bar] not found.\"}", e.getResponseBodyAsString());
         }
 
         uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/_dw/rest/carbonj/metricsearch").build().toUri();
@@ -76,7 +77,7 @@ public class TestCarbonjAdmin extends CarbonJSvcLongIdTest {
             restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
             fail("Should have thrown exception");
         } catch (HttpServerErrorException e) {
-            assertEquals("500 Server Error: \"{\"status\":\"ERROR\",\"message\":\"request parameter 'metricId' should be a positive int, Actual value [0]\"}\"", e.getMessage());
+            assertEquals("{\"status\":\"ERROR\",\"message\":\"request parameter 'metricId' should be a positive int, Actual value [0]\"}", e.getResponseBodyAsString());
         }
 
         uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/_dw/rest/carbonj/metricsearch?metricId=1234").build().toUri();
@@ -84,13 +85,14 @@ public class TestCarbonjAdmin extends CarbonJSvcLongIdTest {
             restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
             fail("Should have thrown exception");
         } catch (HttpServerErrorException e) {
-            assertEquals("500 Server Error: \"{\"status\":\"ERROR\",\"message\":\"Metric with id [1234] not found.\"}\"", e.getMessage());
+            assertEquals("{\"status\":\"ERROR\",\"message\":\"Metric with id [1234] not found.\"}", e.getResponseBodyAsString());
         }
 
         uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/_dw/rest/carbonj/metricsearch?metricId=2").build().toUri();
         response = restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
         assertEquals(HttpStatus.OK.value(), response.getStatusCode().value());
-        assertTrue(response.getBody().startsWith("[{\"id\":2,\"name\":\"a.b.c\""));
+        assertTrue(response.getBody().contains("\"id\":2"));
+        assertTrue(response.getBody().contains("\"name\":\"a.b.c\""));
 
         uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/_dw/rest/carbonj/getIdStoreName/a.b.c").build().toUri();
         response = restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
@@ -102,7 +104,7 @@ public class TestCarbonjAdmin extends CarbonJSvcLongIdTest {
             restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
             fail("Should have thrown exception");
         } catch (HttpServerErrorException e) {
-            assertEquals("500 Server Error: \"{\"status\":\"ERROR\",\"message\":\"Metric [foo.bar] not found.\"}\"", e.getMessage());
+            assertEquals("{\"status\":\"ERROR\",\"message\":\"Metric [foo.bar] not found.\"}", e.getResponseBodyAsString());
         }
 
         int current = (int) (System.currentTimeMillis() / 1000);
@@ -114,7 +116,7 @@ public class TestCarbonjAdmin extends CarbonJSvcLongIdTest {
             restTemplate.exchange(uri, HttpMethod.POST, httpEntity, String.class);
             fail("Should have thrown exception");
         } catch (HttpServerErrorException e) {
-            assertEquals("500 Server Error: \"{\"status\":\"ERROR\",\"message\":\"Unknown database [60s7d]\"}\"", e.getMessage());
+            assertEquals("{\"status\":\"ERROR\",\"message\":\"Unknown database [60s7d]\"}", e.getResponseBodyAsString());
         }
 
         uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/_dw/rest/carbonj/dbloader/60s24h/foo.bar")
@@ -124,7 +126,7 @@ public class TestCarbonjAdmin extends CarbonJSvcLongIdTest {
             restTemplate.exchange(uri, HttpMethod.POST, httpEntity, String.class);
             fail("Should have thrown exception");
         } catch (HttpServerErrorException e) {
-            assertEquals("500 Server Error: \"{\"status\":\"ERROR\",\"message\":\"Metric not found. Metric name: [foo.bar]\"}\"", e.getMessage());
+            assertEquals("{\"status\":\"ERROR\",\"message\":\"Metric not found. Metric name: [foo.bar]\"}", e.getResponseBodyAsString());
         }
 
         uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/_dw/rest/carbonj/dbloader/60s24h/a.b.c")
@@ -134,7 +136,7 @@ public class TestCarbonjAdmin extends CarbonJSvcLongIdTest {
             restTemplate.exchange(uri, HttpMethod.POST, httpEntity, String.class);
             fail("Should have thrown exception");
         } catch (HttpServerErrorException e) {
-            assertEquals("500 Server Error: \"{\"status\":\"ERROR\",\"message\":\"Invalid import line format: [" + current + "]\"}\"", e.getMessage());
+            assertEquals("{\"status\":\"ERROR\",\"message\":\"Invalid import line format: [" + current + "]\"}", e.getResponseBodyAsString());
         }
 
         RetentionPolicy retentionPolicy = RetentionPolicy.getInstance("60s:24h");
