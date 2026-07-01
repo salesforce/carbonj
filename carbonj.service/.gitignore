@@ -4,5 +4,6 @@ bin/*
 /work
 /work-test
 /build
+/config
 /out
 /log

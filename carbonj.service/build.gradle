@@ -11,7 +11,6 @@ buildscript {
     }
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:${springbootVersion}"
-        classpath "org.hibernate.build.gradle:gradle-maven-publish-auth:${mavenPublish}"
     }
 }
 
@@ -46,7 +45,6 @@ apply plugin: 'idea'
 apply plugin: 'io.spring.dependency-management'
 apply plugin: 'org.sonarqube'
 apply plugin: 'maven-publish'
-apply plugin: 'maven-publish-auth'
 
 ext {
     if (project.hasProperty('dockerRepo')) {
@@ -135,7 +133,9 @@ task rpm(type: Rpm) {
 	}
     from('src/main/scripts/bin/carbonj.sh') {
 		into 'bin'
-		fileMode 0554
+		filePermissions {
+			unix(0554)
+		}
 	}
 	from('src/main/resources') {
 		fileType CONFIG | NOREPLACE
@@ -222,6 +222,7 @@ dependencies {
     implementation "org.eclipse.jetty:jetty-server:${jettyServer}"
 
     testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: "${junit}"
+    testRuntimeOnly group: 'org.junit.platform', name: 'junit-platform-launcher'
 
     implementation (group:"org.springframework.boot", name:"spring-boot-starter-logging", version: "${springbootVersion}") {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
