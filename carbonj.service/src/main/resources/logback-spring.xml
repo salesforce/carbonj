@@ -7,7 +7,7 @@
     For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 -->
-<configuration scan="true" scanPeriod="10 seconds">
+<configuration scan="true" scanPeriod="5 minutes">
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <property name="LOG_FILE" value="log/carbonj.log"/>
     <property name="KINESIS_LOG_FILE" value="log/kinesis.log"/>
@@ -48,7 +48,7 @@
 <!--
 separate kinesis log file
 -->
-    <logger name="software.amazon.kinesis" level="DEBUG" additivity="false">
+    <logger name="software.amazon.kinesis" level="INFO" additivity="false">
         <appender-ref ref="KINESIS-FILE"/>
     </logger>
     <logger name="com.demandware" level="INFO" additivity="false">
