@@ -23,6 +23,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.kinesis.KinesisClient;
 import software.amazon.awssdk.services.kinesis.model.DescribeStreamRequest;
 import software.amazon.awssdk.services.kinesis.model.DescribeStreamResponse;
@@ -54,6 +55,7 @@ public class TestKinesisConsumer {
             DockerImageName.parse("localstack/localstack:4.7.0")).withServices(KINESIS, DYNAMODB, CLOUDWATCH);
 
     private static KinesisClient kinesisClient;
+    private static DynamoDbClient dynamoDbClient;
     private final List<KinesisConsumer> consumers = new ArrayList<>();
 
     @BeforeAll
@@ -63,6 +65,12 @@ public class TestKinesisConsumer {
 
         kinesisClient = KinesisClient.builder()
                 .endpointOverride(localstack.getEndpointOverride(KINESIS))
+                .region(Region.US_EAST_1)
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create("accessKey", "secretKey")))
+                .build();
+        dynamoDbClient = DynamoDbClient.builder()
+                .endpointOverride(localstack.getEndpointOverride(DYNAMODB))
                 .region(Region.US_EAST_1)
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create("accessKey", "secretKey")))
@@ -109,7 +117,7 @@ public class TestKinesisConsumer {
                 streamName, applicationName, kinesisConfig, checkPointMgr, metricRegistry.counter("kinesis-consumer-b"),
                 Region.US_EAST_1.id(), 0, localstack.getEndpointOverride(KINESIS).toString()));
 
-        Thread.sleep(3000);
+        await(Duration.ofSeconds(90), () -> leaseOwners(applicationName).size() == 2);
         log.info("Start ingesting data points into {} ...", streamName);
         int current = (int) (System.currentTimeMillis() / 1000);
         DataPointCodec dataPointCodec = new GzipDataPointCodec();
@@ -130,6 +138,19 @@ public class TestKinesisConsumer {
         assertEquals(expectedMetricNames.size(), pointProcessor.getCounter(), "records must be processed exactly once");
         assertEquals(expectedMetricNames, pointProcessor.getMetricNames());
         consumers.forEach(KinesisConsumer::dumpStats);
+    }
+
+    private static Set<String> leaseOwners(String applicationName) {
+        try {
+            return dynamoDbClient.scan(builder -> builder.tableName(applicationName)).items().stream()
+                    .map(item -> item.get("leaseOwner"))
+                    .filter(java.util.Objects::nonNull)
+                    .map(attribute -> attribute.s())
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toSet());
+        } catch (software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException e) {
+            return Set.of();
+        }
     }
 
     private static void await(Duration timeout, BooleanSupplier condition) throws Exception {
