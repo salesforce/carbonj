@@ -16,10 +16,13 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.demandware.carbonj.service.db.SyncPrimaryDbTask;
@@ -102,6 +105,14 @@ class DataPointArchiveRocksDB
 
     private final ThreadPoolExecutor cleaner;
 
+    private final Meter iteratorOpened;
+
+    private final Meter iteratorClosed;
+
+    private final Meter iteratorCloseRejected;
+
+    private final AtomicLong activeIterators = new AtomicLong();
+
     private final ConcurrentMap<String, Histogram> latencyByNamespaceMap = new ConcurrentHashMap<>();
 
     private final MetricRegistry metricRegistry;
@@ -129,18 +140,68 @@ class DataPointArchiveRocksDB
         this.deleteTimer = metricRegistry.timer(MetricUtils.dbDeleteTimerName(dbName));
         this.catchUpTimer = metricRegistry.timer(MetricUtils.dbCatchUpTimerName(dbName));
         this.catchUpTimerError = metricRegistry.meter(MetricUtils.dbCatchUpTimerErrorName(dbName));
+        this.iteratorOpened = metricRegistry.meter(MetricUtils.dbRocksIteratorName(dbName, "opened"));
+        this.iteratorClosed = metricRegistry.meter(MetricUtils.dbRocksIteratorName(dbName, "closed"));
+        this.iteratorCloseRejected = metricRegistry.meter(MetricUtils.dbRocksIteratorName(dbName, "closeRejected"));
         this.longId = longId;
         this.cleaner = new ThreadPoolExecutor( 1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(
-                rocksdbConfig.objectCleanerQueueSize ), new ThreadFactoryBuilder().setDaemon( true ).build(), new ThreadPoolExecutor.DiscardPolicy()
-        {
-            @Override
-            public void rejectedExecution( Runnable r, ThreadPoolExecutor e )
-            {
-                log.info( "cleaner queue is full. rejecting (GC should pick this object up eventually)" );
-                super.rejectedExecution( r, e );
-            }
-        } );
+                rocksdbConfig.objectCleanerQueueSize ), new ThreadFactoryBuilder().setDaemon( true ).build(), cleanerRejectionHandler() );
+        registerDiagnosticGauges();
         TtlDB.loadLibrary();
+    }
+
+    private RejectedExecutionHandler cleanerRejectionHandler()
+    {
+        return ( task, executor ) -> {
+            if ( task instanceof IteratorCleanupTask )
+            {
+                iteratorCloseRejected.mark();
+            }
+            log.warn( "cleaner queue is full; running cleanup on the submitting thread" );
+            task.run();
+        };
+    }
+
+    private void registerDiagnosticGauges()
+    {
+        metricRegistry.register( MetricUtils.dbRocksIteratorName( dbName, "active" ), (Gauge<Long>) activeIterators::get );
+        metricRegistry.register( MetricUtils.dbRocksCleanerName( dbName, "queueSize" ),
+            (Gauge<Integer>) () -> cleaner.getQueue().size() );
+        metricRegistry.register( MetricUtils.dbRocksCleanerName( dbName, "queueRemainingCapacity" ),
+            (Gauge<Integer>) () -> cleaner.getQueue().remainingCapacity() );
+        metricRegistry.register( MetricUtils.dbRocksCleanerName( dbName, "activeThreads" ),
+            (Gauge<Integer>) cleaner::getActiveCount );
+        registerRocksDbPropertyGauge( "numLiveVersions", "num-live-versions" );
+        registerRocksDbPropertyGauge( "liveSstFilesSize", "live-sst-files-size" );
+        registerRocksDbPropertyGauge( "totalSstFilesSize", "total-sst-files-size" );
+        registerRocksDbPropertyGauge( "estimateLiveDataSize", "estimate-live-data-size" );
+        registerRocksDbPropertyGauge( "pendingCompactionBytes", "estimate-pending-compaction-bytes" );
+        registerRocksDbPropertyGauge( "runningCompactions", "num-running-compactions" );
+        registerRocksDbPropertyGauge( "runningFlushes", "num-running-flushes" );
+        registerRocksDbPropertyGauge( "immutableMemtables", "num-immutable-mem-table" );
+    }
+
+    private void registerRocksDbPropertyGauge( String metric, String property )
+    {
+        metricRegistry.register( MetricUtils.dbRocksPropertyName( dbName, metric ), (Gauge<Long>) () -> getRocksDbProperty( property ) );
+    }
+
+    private long getRocksDbProperty( String property )
+    {
+        RocksDB currentDb = db;
+        if ( currentDb == null )
+        {
+            return -1;
+        }
+        try
+        {
+            return Long.parseLong( currentDb.getProperty( "rocksdb." + property ) );
+        }
+        catch ( RocksDBException | NumberFormatException e )
+        {
+            log.warn( "Unable to read RocksDB property {} for {}", property, dbName, e );
+            return -1;
+        }
     }
 
     @Override
@@ -182,7 +243,7 @@ class DataPointArchiveRocksDB
         RocksIterator iter = null;
         try
         {
-            iter = db.newIterator( readOptions );
+            iter = newIterator();
             byte[] startKey = DataPointRecord.toKeyBytes( metricId, 0 , longId);
             byte[] endKey = DataPointRecord.toKeyBytes( metricId, Integer.MAX_VALUE, longId );
 
@@ -201,9 +262,7 @@ class DataPointArchiveRocksDB
         {
             if ( iter != null )
             {
-                final RocksIterator iterToDispose = iter;
-                // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute( ( ) -> dispose( iterToDispose ) );
+                dispose( iter );
             }
         }
     }
@@ -220,7 +279,7 @@ class DataPointArchiveRocksDB
         RocksIterator iter = null;
         try
         {
-            iter = db.newIterator( readOptions );
+            iter = newIterator();
             for ( iter.seekToFirst(); iter.isValid(); iter.next(), i++ )
             {
                 byte[] key = iter.key();
@@ -250,9 +309,7 @@ class DataPointArchiveRocksDB
 
             if ( iter != null )
             {
-                final RocksIterator iterToDispose = iter;
-                // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute(() -> dispose(iterToDispose));
+                dispose( iter );
             }
         }
 
@@ -385,7 +442,7 @@ class DataPointArchiveRocksDB
         RocksIterator iter = null;
         try
         {
-            iter = db.newIterator( readOptions );
+            iter = newIterator();
             byte[] startKey = DataPointRecord.toKeyBytes( metricId, startTime, longId );
             byte[] endKey = DataPointRecord.toKeyBytes( metricId, endTime, longId );
 
@@ -419,7 +476,48 @@ class DataPointArchiveRocksDB
         if ( o != null )
         {
             // contains global lock. Dispose in a separate thread to avoid contention.
-            cleaner.execute(o::close);
+            if ( o instanceof RocksIterator )
+            {
+                submitIteratorCleanup( () -> {
+                    o.close();
+                    iteratorClosed.mark();
+                    activeIterators.decrementAndGet();
+                } );
+            }
+            else
+            {
+                cleaner.execute(o::close);
+            }
+        }
+    }
+
+    private RocksIterator newIterator()
+    {
+        RocksIterator iterator = db.newIterator( readOptions );
+        iteratorOpened.mark();
+        activeIterators.incrementAndGet();
+        return iterator;
+    }
+
+    private void submitIteratorCleanup( Runnable cleanup )
+    {
+        cleaner.execute( new IteratorCleanupTask( cleanup ) );
+    }
+
+    private final class IteratorCleanupTask
+        implements Runnable
+    {
+        private final Runnable cleanup;
+
+        private IteratorCleanupTask( Runnable cleanup )
+        {
+            this.cleanup = cleanup;
+        }
+
+        @Override
+        public void run()
+        {
+            cleanup.run();
         }
     }
 
@@ -436,7 +534,7 @@ class DataPointArchiveRocksDB
         try
         {
             // TODO: just to get started. Revisit as part of tuning.
-            iter = db.newIterator( readOptions );
+            iter = newIterator();
             byte[] startKey = DataPointRecord.toKeyBytes( metricId, startTime, longId );
             byte[] endKey = DataPointRecord.toKeyBytes( metricId, endTime, longId );
 
@@ -483,9 +581,7 @@ class DataPointArchiveRocksDB
 
             if ( iter != null )
             {
-                final RocksIterator iterToDispose = iter;
-                // contains global lock. Dispose in a separate thread to avoid contention.
-                cleaner.execute(() -> dispose(iterToDispose));
+                dispose( iter );
             }
         }
 
