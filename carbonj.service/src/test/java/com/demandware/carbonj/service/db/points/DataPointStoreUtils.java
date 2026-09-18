@@ -26,7 +26,7 @@ public class DataPointStoreUtils {
         StagingFiles sFiles = new StagingFiles(metricRegistry, stagingDir, new SystemSort(), metricIndex);
         DataPointArchiveFactory pointArchiveFactory = new DataPointArchiveFactory(metricRegistry, dbDirFile, new RocksDBConfig(), longId);
         DataPointStagingStore stagingStore = new DataPointStagingStore( metricRegistry, sFiles, 1000, 1, 1, 1, 100, 30, 3);
-        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true );
+        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true, true );
         return new DataPointStoreImpl(metricRegistry, pointArchiveFactory, new DatabaseMetrics(metricRegistry),
                 stagingStore, true, 100, 10, qcp, name -> true );
     }
