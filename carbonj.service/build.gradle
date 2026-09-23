@@ -245,6 +245,7 @@ test {
     useJUnitPlatform()
     maxHeapSize = "3g"
     jvmArgs = [
+            '--add-opens', 'jdk.management/com.sun.management.internal=ALL-UNNAMED',
             '--add-opens', 'java.base/java.util=ALL-UNNAMED',
     ]
     environment "AWS_REGION", "us-east-1"
