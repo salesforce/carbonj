@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-CarbonJ is a high-performance, drop-in replacement for `carbon-cache` and `carbon-relay` in the Graphite metrics stack. It is a Spring Boot 3 application running on JDK 17 that uses an embedded RocksDB for time-series storage. It supports both direct ingestion (Line / Pickle protocols) and AWS Kinesis-based ingestion, and serves Graphite-compatible JSON / Pickle queries.
+CarbonJ is a high-performance, drop-in replacement for `carbon-cache` and `carbon-relay` in the Graphite metrics stack. It is a Spring Boot 3 application running on JDK 21 that uses an embedded RocksDB for time-series storage. It supports both direct ingestion (Line / Pickle protocols) and AWS Kinesis-based ingestion, and serves Graphite-compatible JSON / Pickle queries.
 
 The repo is a Gradle multi-project build with two modules:
 - `carbonj.service` — the Spring Boot service (the actual server)
@@ -25,7 +25,7 @@ Build, test, and Docker image (run from repo root):
 ```
 
 Notes on testing:
-- Tests use JUnit 5 (`useJUnitPlatform()`) and are launched with `--add-opens java.base/java.util=ALL-UNNAMED` and `AWS_REGION=us-east-1` set automatically.
+- Tests use JUnit 5 (`useJUnitPlatform()`) and are launched with `--add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED`, `--add-opens java.base/java.util=ALL-UNNAMED`, and `AWS_REGION=us-east-1` set automatically.
 - Some integration tests use Testcontainers + LocalStack (Kinesis / DynamoDB), so a working Docker daemon is required for the full suite.
 - Test resources live in `carbonj.service/src/test/resources` (e.g. `aggregation-rules-test.conf`, `relay-rules.conf`, `storage-aggregation.conf`).
 
@@ -75,6 +75,6 @@ Exposes Graphite-compatible read endpoints plus a CarbonJ-specific admin REST AP
 ## Conventions worth knowing
 
 - All sources are licensed under BSD-3-Clause; the `com.github.hierynomus.license` Gradle plugin enforces the header from `LICENSE-HEADER-JAVA` on every Java file and `src/main/docker/files/*`. `licenseFormat` will fix headers; `licenseMain` runs as part of `build` and will fail on missing headers.
-- Java 17 source/target across all subprojects; do not introduce features beyond JDK 17.
+- Java 21 source/target across all subprojects; do not introduce features beyond JDK 21.
 - Releases run from `master` only (`release.git.requireBranch = 'master'`).
 - CI (`.github/workflows/gradle.yml`) runs `./gradlew build printCoverageReport` on every push and publishes a multi-arch Docker image on non-dependabot branches.

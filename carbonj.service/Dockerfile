@@ -28,7 +28,7 @@ RUN yum update -y && \
   yum install -y https://dl.fedoraproject.org/pub/epel/9/Everything/$(uname -m)/Packages/p/perl-URI-Encode-1.1.1-17.el9.noarch.rpm && \
   yum install -y https://rpmfind.net/linux/centos-stream/9-stream/BaseOS/$(uname -m)/os/Packages/snappy-1.1.8-8.el9.$(uname -m).rpm && \
   yum update -y && \
-  yum install -y zulu17-jdk python3 perl-Data-Dumper && \
+  yum install -y zulu21-jdk python3 perl-Data-Dumper && \
   yum clean all && \
   dnf update && \
   dnf -y install chkconfig && \

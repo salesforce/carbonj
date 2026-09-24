@@ -43,7 +43,7 @@ public class TestGraphiteReporter {
             timers.put("timer", new Timer());
             graphiteReporter.report(gauges, counters, histograms, meters, timers);
         }
-        assertEquals(99, graphiteTransport.data.size());
+        assertEquals(101, graphiteTransport.data.size());
     }
 
     private static class TestGraphiteTransport implements GraphiteTransport {
