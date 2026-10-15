@@ -42,4 +42,16 @@ public class MetricUtils {
     public static String dbDataPointLatencyName(String dbName, String namespace) {
         return "db." + dbName + ".namespace." + namespace + ".latency";
     }
+
+    public static String dbRocksIteratorName(String dbName, String metric) {
+        return "db." + dbName + ".rocksdb.iterator." + metric;
+    }
+
+    public static String dbRocksCleanerName(String dbName, String metric) {
+        return "db." + dbName + ".rocksdb.cleaner." + metric;
+    }
+
+    public static String dbRocksPropertyName(String dbName, String property) {
+        return "db." + dbName + ".rocksdb." + property;
+    }
 }
