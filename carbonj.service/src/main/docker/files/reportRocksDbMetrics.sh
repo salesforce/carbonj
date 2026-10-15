@@ -16,7 +16,7 @@ serviceName=${DW_SVC_VERSION}
 graphite_host=${DW_GRAPHITE_HOST}
 graphite_port=2003
 
-all=("30m2y" "5m7d" "60s24h" "60s30d" "index-id" "index-name")
+all=("30m2y" "5m7d" "60s24h" "60s30d" "60s90d" "index-id" "index-name")
 
 for db in "${all[@]}"
 do

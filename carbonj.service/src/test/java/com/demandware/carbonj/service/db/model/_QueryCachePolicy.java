@@ -15,6 +15,7 @@ public class _QueryCachePolicy
 {
     RetentionPolicy _60s24h = RetentionPolicy.getInstance( "60s:24h" );
     RetentionPolicy _60s30d = RetentionPolicy.getInstance( "60s:30d" );
+    RetentionPolicy _60s90d = RetentionPolicy.getInstance( "60s:90d" );
     RetentionPolicy _5m7d = RetentionPolicy.getInstance( "5m:7d" );
     RetentionPolicy _30m2y = RetentionPolicy.getInstance( "30m:2y" );
 
@@ -22,9 +23,10 @@ public class _QueryCachePolicy
     public void cacheEnabledFor60s24hOnly()
     {
 
-        QueryCachePolicy qcp = new QueryCachePolicy( true, false, false, false );
+        QueryCachePolicy qcp = new QueryCachePolicy( true, false, false, false, false );
         assertTrue(qcp.useCache(_60s24h));
         assertFalse(qcp.useCache( _60s30d ));
+        assertFalse(qcp.useCache( _60s90d ));
         assertFalse(qcp.useCache( _5m7d ));
         assertFalse(qcp.useCache( _30m2y ));
     }
@@ -32,9 +34,10 @@ public class _QueryCachePolicy
     @Test
     public void cacheDisabledForAll()
     {
-        QueryCachePolicy qcp = new QueryCachePolicy( false, false, false, false );
+        QueryCachePolicy qcp = new QueryCachePolicy( false, false, false, false, false );
         assertFalse(qcp.useCache( _60s24h ));
         assertFalse(qcp.useCache( _60s30d ));
+        assertFalse(qcp.useCache( _60s90d ));
         assertFalse(qcp.useCache( _5m7d ));
         assertFalse(qcp.useCache( _30m2y ));
     }
@@ -42,7 +45,7 @@ public class _QueryCachePolicy
     @Test
     public void cacheDisabledForNull()
     {
-        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true );
+        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true, true );
         assertFalse(qcp.useCache( null ));
     }
 
@@ -50,7 +53,7 @@ public class _QueryCachePolicy
     public void cacheDisabledForUnknown()
     {
         RetentionPolicy _120s2d = RetentionPolicy.getInstance( "120s:2d" );
-        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true );
+        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true, true );
         assertFalse(qcp.useCache( _120s2d ));
     }
 
@@ -58,9 +61,10 @@ public class _QueryCachePolicy
     @Test
     public void cacheEnabledForAll()
     {
-        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true );
+        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true, true );
         assertTrue(qcp.useCache( _60s24h ));
         assertTrue(qcp.useCache( _60s30d ));
+        assertTrue(qcp.useCache( _60s90d ));
         assertTrue(qcp.useCache( _5m7d ));
         assertTrue(qcp.useCache( _30m2y ));
     }
@@ -68,9 +72,10 @@ public class _QueryCachePolicy
     @Test
     public void cacheDisabledFor30m2yOnly()
     {
-        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, false );
+        QueryCachePolicy qcp = new QueryCachePolicy( true, true, true, true, false );
         assertTrue(qcp.useCache( _60s24h ));
         assertTrue(qcp.useCache( _60s30d ));
+        assertTrue(qcp.useCache( _60s90d ));
         assertTrue(qcp.useCache( _5m7d ));
         assertFalse(qcp.useCache( _30m2y ));
     }

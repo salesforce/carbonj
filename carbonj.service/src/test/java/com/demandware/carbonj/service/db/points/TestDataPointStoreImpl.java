@@ -36,7 +36,7 @@ public class TestDataPointStoreImpl {
         DataPointArchiveFactory dataPointArchiveFactory = new DataPointArchiveFactory(metricRegistry, new File("/tmp/testdb"), rocksDBConfig, true);
         DataPointStore dataPointStore = new DataPointStoreImpl(metricRegistry, dataPointArchiveFactory, databaseMetrics, null,
                 true, 1, 0,
-                new QueryCachePolicy(false, false, false, false), new Predicate<String>() {
+                new QueryCachePolicy(false, false, false, false, false), new Predicate<String>() {
             @Override
             public boolean test(String s) {
                 return !s.endsWith(".invalid");

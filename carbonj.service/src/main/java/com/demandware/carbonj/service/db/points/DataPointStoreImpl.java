@@ -280,7 +280,7 @@ class DataPointStoreImpl
             List<Double> points;
 
             // for empty one
-            if( (archivePolicy.is5m7d() || archivePolicy.is60s24h() || archivePolicy.is60s30d()) && !metricNamePresent.test(key.m.name)  )
+            if( (archivePolicy.is5m7d() || archivePolicy.is60s24h() || archivePolicy.is60s30d() || archivePolicy.is60s90d()) && !metricNamePresent.test(key.m.name)  )
             {
                 DatabaseMetrics.obsoleteSeriesAccessMeter.mark();
 

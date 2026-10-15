@@ -67,6 +67,9 @@ public class cfgDataPoints
     @Value("${metrics.store.query.useTimeSeriesCacheFor60s30d:true}")
     boolean useTimeSeriesCacheFor60s30d = true;
 
+    @Value("${metrics.store.query.useTimeSeriesCacheFor60s90d:true}")
+    boolean useTimeSeriesCacheFor60s90d = true;
+
     @Value("${metrics.store.query.useTimeSeriesCacheFor5m7d:false}")
     boolean useTimeSeriesCacheFor5m7d = false;
 
@@ -140,7 +143,7 @@ public class cfgDataPoints
                                   @Autowired(required = false) DataPointStagingStore stagingStore, NamespaceCounter nsCounter)
     {
         QueryCachePolicy qcp = new QueryCachePolicy( useTimeSeriesCacheFor60s24h, useTimeSeriesCacheFor60s30d,
-                useTimeSeriesCacheFor5m7d, useTimeSeriesCacheFor30m2y );
+                useTimeSeriesCacheFor60s90d, useTimeSeriesCacheFor5m7d, useTimeSeriesCacheFor30m2y );
 
         Predicate<String> nameSpaceCounterCheck;
         if (disableNameSpaceCounterCheck) {

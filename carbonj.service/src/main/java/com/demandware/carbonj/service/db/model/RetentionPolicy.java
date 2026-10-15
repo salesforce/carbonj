@@ -25,6 +25,7 @@ public class RetentionPolicy
 
     private static final String _60s24h = "60s24h";
     private static final String _60s30d = "60s30d";
+    private static final String _60s90d = "60s90d";
     private static final String _5m7d = "5m7d";
     private static final String _30m2y = "30m2y";
 
@@ -109,6 +110,11 @@ public class RetentionPolicy
     public boolean is60s30d()
     {
         return _60s30d.equals( dbName );
+    }
+
+    public boolean is60s90d()
+    {
+        return _60s90d.equals( dbName );
     }
 
     public boolean is5m7d()
