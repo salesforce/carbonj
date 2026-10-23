@@ -17,7 +17,7 @@ RUN yum update -y && \
   yum install -y libevent perl wget util-linux-ng cronie procps nc lsof hostname && \
   yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel && \
   rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
-  yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
+  yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-2.noarch.rpm && \
   yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-conf-6.3.7-9.el9.$(uname -m).rpm && \
   yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-libs-6.3.7-9.el9.$(uname -m).rpm  && \
   #
@@ -28,9 +28,10 @@ RUN yum update -y && \
   yum install -y https://dl.fedoraproject.org/pub/epel/9/Everything/$(uname -m)/Packages/p/perl-URI-Encode-1.1.1-17.el9.noarch.rpm && \
   yum install -y https://rpmfind.net/linux/centos-stream/9-stream/BaseOS/$(uname -m)/os/Packages/snappy-1.1.8-8.el9.$(uname -m).rpm && \
   yum update -y && \
-  yum install -y zulu21-jdk python3 perl-Data-Dumper && \
+  yum clean metadata && yum makecache && \
+  yum install -y zulu21-jdk-21.0.13 python3 perl-Data-Dumper && \
   yum clean all && \
-  dnf update && \
+  dnf -y update && \
   dnf -y install chkconfig && \
   dnf clean all && \
   pip3 install --upgrade pip && \
