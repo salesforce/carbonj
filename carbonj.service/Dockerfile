@@ -17,7 +17,7 @@ RUN yum update -y && \
   yum install -y libevent perl wget util-linux-ng cronie procps nc lsof hostname && \
   yum install -y gcc-c++ gcc make libtool automake autoconf make python3-devel && \
   rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
-  yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-1.noarch.rpm && \
+  yum install -y https://cdn.azul.com/zulu/bin/zulu-repo-1.0.0-2.noarch.rpm && \
   yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-conf-6.3.7-9.el9.$(uname -m).rpm && \
   yum install -y https://mirror.stream.centos.org/9-stream/AppStream/$(uname -m)/os/Packages/pcp-libs-6.3.7-9.el9.$(uname -m).rpm  && \
   #
@@ -28,7 +28,14 @@ RUN yum update -y && \
   yum install -y https://dl.fedoraproject.org/pub/epel/9/Everything/$(uname -m)/Packages/p/perl-URI-Encode-1.1.1-17.el9.noarch.rpm && \
   yum install -y https://rpmfind.net/linux/centos-stream/9-stream/BaseOS/$(uname -m)/os/Packages/snappy-1.1.8-8.el9.$(uname -m).rpm && \
   yum update -y && \
-  yum install -y zulu21-jdk python3 perl-Data-Dumper && \
+  yum clean metadata && yum makecache && \
+  yum install -y zulu21-jdk-21.0.12.1 python3 perl-Data-Dumper && \
+  JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) && \
+  curl -fsSL -o /tmp/blocked.certs https://docs.azul.com/assets/2026-10/emudhra-block-unix.certs && \
+  echo "2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10  /tmp/blocked.certs" | sha256sum -c - && \
+  cp "$JAVA_HOME/lib/security/blocked.certs" "$JAVA_HOME/lib/security/blocked.certs.bak-emudhra" && \
+  install -m 0644 /tmp/blocked.certs "$JAVA_HOME/lib/security/blocked.certs" && \
+  rm /tmp/blocked.certs && \
   yum clean all && \
   dnf update && \
   dnf -y install chkconfig && \
