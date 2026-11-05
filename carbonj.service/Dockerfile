@@ -29,7 +29,7 @@ RUN yum update -y && \
   yum install -y https://rpmfind.net/linux/centos-stream/9-stream/BaseOS/$(uname -m)/os/Packages/snappy-1.1.8-8.el9.$(uname -m).rpm && \
   yum update -y && \
   yum clean metadata && yum makecache && \
-  yum install -y zulu21-jdk-21.0.13 python3 perl-Data-Dumper && \
+  yum install -y zulu21-jdk-21.0.13.0.3 python3 perl-Data-Dumper && \
   yum clean all && \
   dnf -y update && \
   dnf -y install chkconfig && \
