@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
+      with:
+        persist-credentials: false
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
@@ -18,15 +20,21 @@ jobs:
       run: chmod +x gradlew
     - name: Set git user
       run: /usr/bin/git config --global user.name release-build && /usr/bin/git config --global user.email release-build@salesforce.com
+    - name: Create release bot token
+      id: release-bot-token
+      uses: actions/create-github-app-token@v2
+      with:
+        app-id: ${{ secrets.CARBONJ_RELEASE_APP_ID }}
+        private-key: ${{ secrets.CARBONJ_RELEASE_APP_PRIVATE_KEY }}
+        owner: salesforce
+        repositories: carbonj
     - name: Configure git credentials
       env:
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
-      uses: OleksiyRudenko/gha-git-credentials@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_BOT_TOKEN: ${{ steps.release-bot-token.outputs.token }}
+      run: git remote set-url origin "https://x-access-token:${RELEASE_BOT_TOKEN}@github.com/salesforce/carbonj.git"
     - name: Log into registry
       run: echo "${{ secrets.SALESFORCE_DOCKER_HUB_SECRET }}" | docker login --username slodha342 --password-stdin
     - name: Release with Gradle
       env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ steps.release-bot-token.outputs.token }}
       run: docker buildx create --driver docker-container --driver-opt='image=moby/buildkit:buildx-stable-1' --name buildbase --platform linux/arm64,linux/amd64 && ./gradlew  -PdockerRepo=salesforce/ clean build -Prelease.useAutomaticVersion=true -x test :carbonj.service:release --info --stacktrace
