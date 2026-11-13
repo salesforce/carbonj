@@ -134,7 +134,9 @@ public class GraphiteSeriesDataServlet
             LOG.warn(msg);
 
             logger.log(new BlackListedQueryEvent(target, from, until, nowText));
-            throw new RuntimeException(msg);
+            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            res.getWriter().write("The query " + target + " is denylisted.");
+            return;
         }
 
         if( json )

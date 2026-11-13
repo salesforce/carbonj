@@ -18,8 +18,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.test.context.TestPropertySource;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -28,8 +30,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@TestPropertySource(properties = { "blacklist=src/test/resources/query-blacklist-test.conf" })
 public class TestGraphiteSeriesDataServlet extends CarbonJSvcLongIdTest {
 
     @Test
@@ -76,6 +80,20 @@ public class TestGraphiteSeriesDataServlet extends CarbonJSvcLongIdTest {
         MsgPackSeries msgPackSeries = msgPackSeriesList.get(0);
         assertEquals("a.b.c", msgPackSeries.name);
         assertEquals(60, msgPackSeries.step);
+
+        queryParams.put("target", "blocked.metric");
+        uri = UriComponentsBuilder.fromHttpUrl("http://127.0.0.1:2001/render")
+                .queryParam("format", "{format}")
+                .queryParam("target", "{target}")
+                .queryParam("from", "{from}")
+                .queryParam("until", "{until}")
+                .build(queryParams);
+        try {
+            restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
+            fail("Should have thrown exception");
+        } catch (HttpClientErrorException.Forbidden e) {
+            assertEquals("The query blocked.metric is denylisted.", e.getResponseBodyAsString());
+        }
     }
 
     @Test
