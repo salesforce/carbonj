@@ -92,7 +92,7 @@ public class TestGraphiteSeriesDataServlet extends CarbonJSvcLongIdTest {
             restTemplate.exchange(uri, HttpMethod.GET, httpEntity, String.class);
             fail("Should have thrown exception");
         } catch (HttpClientErrorException.Forbidden e) {
-            assertEquals("The query blocked.metric is denylisted.", e.getResponseBodyAsString());
+            assertEquals("The query is denylisted.", e.getResponseBodyAsString());
         }
     }
 

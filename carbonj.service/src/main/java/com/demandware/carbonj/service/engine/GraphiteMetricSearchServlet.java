@@ -118,7 +118,7 @@ public class GraphiteMetricSearchServlet
 
                 logger.log(new BlackListedQueryEvent(query));
                 res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                res.getWriter().write("The query " + query + " is denylisted.");
+                res.getWriter().write("The query is denylisted.");
                 return;
             }
 
